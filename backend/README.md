@@ -197,6 +197,7 @@ package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
 |---|---|---|
 | User | `app/domain/user/` | Section 4.1 (User / Account). `UserProfile` is a value object here, not the Bible's standalone `Profile` aggregate (Section 4.2) — see `docs/adr/0005-user-aggregate-first-increment.md` for why and the migration path. No persistence exists for this aggregate yet: no ORM model, no repository implementation, no migration. |
 | Workout | `app/domain/workout/` | Closest to Section 4.7 (`WorkoutSession`), but a standalone aggregate — no owning `WorkoutPlan`/`WorkoutTemplate`, no `ExerciseSet` — with a simpler four-state lifecycle (`Planned`/`InProgress`/`Completed`/`Cancelled`) than the Bible's five. See `docs/adr/0006-workout-aggregate-first-increment.md`. No persistence yet, same as User. |
+| Exercise | `app/domain/exercise/` | Closest to Section 4.5 (`ExerciseGraph`), but the catalog node only — no `ExerciseRelation`, no graph traversal — with a simpler two-state lifecycle (`Active`/`Deprecated`) than the Bible's four. Unlike User and Workout, carries no `user_id`: a shared, global catalog, not tenant-scoped. See `docs/adr/0007-exercise-aggregate-first-increment.md`. No persistence yet. |
 
 ## Continuous integration
 
@@ -214,7 +215,7 @@ Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
 (`app/domain/shared_kernel/`) is in place — base types only, no product-specific
 business logic (see "Domain Core" above).
 
-Sprint 2 is underway: `User` and `Workout` (see "Domain aggregates" above) are
-implemented, domain logic only — no ORM model, repository implementation, or
-migration yet for either. The remaining aggregates and the nine rule engines
-are still ahead.
+Sprint 2 is underway: `User`, `Workout`, and `Exercise` (see "Domain
+aggregates" above) are implemented, domain logic only — no ORM model,
+repository implementation, or migration yet for any of them. The remaining
+aggregates and the nine rule engines are still ahead.
