@@ -67,8 +67,12 @@ ignore = [
     "S105", "S106", # tests deliberately use fake secrets to exercise the guard in app/core/config.py.
 ]
 
-[tool.ruff.format]
-quote-style = "single"
+# No [tool.ruff.format] overrides: the default (double quotes, matching
+# every docstring's """) is what the whole codebase already uses. An
+# earlier version of this file set quote-style = "single" without a real
+# reason and every existing file failed `ruff format --check` as a
+# result — reverted rather than reformatting correct code to fit an
+# arbitrary preference.
 
 [tool.mypy]
 python_version = "3.10"

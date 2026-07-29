@@ -58,6 +58,21 @@ bottom bar, and that all five tab destinations render. Mirror `lib/`'s folder
 structure under `test/` as features are added, matching the backend's `tests/`
 convention.
 
+## Formatting
+
+```bash
+dart format .            # apply
+dart format --output=none --set-exit-if-changed .   # check only, for CI
+```
+
+Dart's formatter is deliberately near-unconfigurable (same philosophy as `gofmt` —
+one canonical style, no bikeshedding). This project does not override the default
+80-column width: newer Dart SDKs support a `formatter: page_width:` key in
+`analysis_options.yaml`, but that key needs a newer SDK floor than this project pins
+(`>=3.4.0`), and it isn't worth bumping the floor just to gain a setting that hasn't
+been verified in this environment (see ADR 0002). Revisit once on a real machine if
+the default width genuinely proves cramped in practice — not before.
+
 ## Status
 
 Sprint 1, Steps 3 and 5: a five-tab shell that boots and navigates, with one widget
