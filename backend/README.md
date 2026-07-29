@@ -200,6 +200,7 @@ package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
 | Exercise | `app/domain/exercise/` | Closest to Section 4.5 (`ExerciseGraph`), but the catalog node only — no `ExerciseRelation`, no graph traversal — with a simpler two-state lifecycle (`Active`/`Deprecated`) than the Bible's four. Unlike User and Workout, carries no `user_id`: a shared, global catalog, not tenant-scoped. See `docs/adr/0007-exercise-aggregate-first-increment.md`. No persistence yet. |
 | WorkoutSession | `app/domain/workout_session/` | Closest to Section 4.7 (`WorkoutSession`, Table 10) — the execution record of a `Workout`, referenced by `workout_id` only. Four-state lifecycle (`Planned`/`Active`/`Completed`/`Abandoned`) versus the Bible's five, and `plan()` raises no creation event, unlike every other aggregate's factory. Owns `ExercisePerformance` (entity) and `ExerciseSet` (value object) — what was actually performed, exercise by exercise, set by set — as child objects with no repository of their own. See `docs/adr/0008-workout-session-execution-record.md` and `docs/adr/0009-exercise-performance-owned-entity.md`. No persistence yet. |
 | Progress | `app/domain/progress/` | Closest to Section 4.10 (`Measurement`, Table 13), broadened to cover body composition (`BodyFatPercentage`/`LeanBodyMass`/`MuscleMass`) and two extra tape sites (`Calf`/`Neck`) beyond the Bible's own weight/waist/hip/chest/arm/thigh list. No status enum and no lifecycle — a check-in is a fact, not a workflow. "Immutable after recording" is documented policy, not a domain-layer guard: `update_body_composition`/`update_measurements`/`update_notes` are real, unconditionally-callable mutations. See `docs/adr/0010-progress-immutability-is-a-policy-not-a-guard.md`. No persistence yet. |
+| Nutrition | `app/domain/nutrition/` | Closest to Section 4.9 (`Meal`, "a single logged eating event", Table 12), scoped down to canonical storage only — no AI assessment, `FoodItem` references, or Logged/Assessed/Confirmed/Disputed lifecycle. One record per logged entry, not a daily rollup; `meal_type`/`source` are both optional. See `docs/adr/0011-nutrition-is-a-per-entry-log-not-a-daily-rollup.md`. No persistence yet. |
 
 ## Continuous integration
 
@@ -217,8 +218,8 @@ Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
 (`app/domain/shared_kernel/`) is in place — base types only, no product-specific
 business logic (see "Domain Core" above).
 
-Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`, and
-`Progress` (see "Domain aggregates" above) are implemented, domain logic
-only — no ORM model, repository implementation, or migration yet for any
-of them. The remaining aggregates and the nine rule engines are still
-ahead.
+Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
+`Progress`, and `Nutrition` (see "Domain aggregates" above) are
+implemented, domain logic only — no ORM model, repository implementation,
+or migration yet for any of them. The remaining aggregates and the nine
+rule engines are still ahead.
