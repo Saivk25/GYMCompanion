@@ -1,0 +1,32 @@
+# Runs before every commit. Mirrors (a fast subset of) the CI checks from
+# Sprint 1, Step 11 — this catches mistakes locally, in seconds, instead of
+# waiting for a CI run. `pre-commit install` (see backend/README.md and the
+# root Makefile's `precommit-install` target) wires this into git.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        name: ruff (lint, backend)
+        args: ["--fix"]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff format (backend)
+        files: ^backend/
+
+# mypy is deliberately not a pre-commit hook: it needs the project's installed
+# dependencies to type-check against, which pre-commit's isolated hook
+# environments don't have without extra setup. It runs in CI (Step 11) and
+# via `make backend-typecheck` instead — matching the Engineering Master
+# Plan's instruction to delay tooling complexity until it earns its cost.
