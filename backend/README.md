@@ -202,6 +202,7 @@ package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
 | Progress | `app/domain/progress/` | Closest to Section 4.10 (`Measurement`, Table 13), broadened to cover body composition (`BodyFatPercentage`/`LeanBodyMass`/`MuscleMass`) and two extra tape sites (`Calf`/`Neck`) beyond the Bible's own weight/waist/hip/chest/arm/thigh list. No status enum and no lifecycle — a check-in is a fact, not a workflow. "Immutable after recording" is documented policy, not a domain-layer guard: `update_body_composition`/`update_measurements`/`update_notes` are real, unconditionally-callable mutations. See `docs/adr/0010-progress-immutability-is-a-policy-not-a-guard.md`. No persistence yet. |
 | Nutrition | `app/domain/nutrition/` | Closest to Section 4.9 (`Meal`, "a single logged eating event", Table 12), scoped down to canonical storage only — no AI assessment, `FoodItem` references, or Logged/Assessed/Confirmed/Disputed lifecycle. One record per logged entry, not a daily rollup; `meal_type`/`source` are both optional. See `docs/adr/0011-nutrition-is-a-per-entry-log-not-a-daily-rollup.md`. No persistence yet. |
 | Readiness | `app/domain/readiness/` | Closest to Section 4.8 (`ReadinessCheckIn`, "today's snapshot", Table 11). Stores observations only — no readiness/recovery score, deload triggers, or anything derived from a window of check-ins (that's `RecoveryState`, not built yet). Adds `RestingHeartRate`/`HeartRateVariability` beyond the Bible's own sleep/stress/soreness list; `pain_flags`/`GI_symptoms` are deliberately not modeled (routed through `SafetyFlag` in the Bible, a separate aggregate not built yet). The Bible's "one check-in per day" rule is not enforced at the domain layer — an application/repository-layer concern, same as every other aggregate's uniqueness constraints. No persistence yet. |
+| Goal | `app/domain/goal/` | Closest to Section 4.4 (`Goal`, Table 6), with a four-state lifecycle (`Active`/`Completed`/`Cancelled`/`Expired`) simplified from the Bible's own six-state model (`Proposed -> Active -> Achieved / Abandoned / Superseded -> Archived`, Section 7.4). `GoalStatus.EXPIRED` is a legal status value with no method that transitions into it — no `GoalExpired` event was named for this increment. No priority-ranking or conflict-resolution logic across a user's concurrent goals is implemented. See `docs/adr/0012-goal-lifecycle-and-expired-with-no-transition.md`. No persistence yet. |
 
 ## Continuous integration
 
@@ -220,7 +221,7 @@ Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
 business logic (see "Domain Core" above).
 
 Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
-`Progress`, `Nutrition`, and `Readiness` (see "Domain aggregates" above)
-are implemented, domain logic only — no ORM model, repository
+`Progress`, `Nutrition`, `Readiness`, and `Goal` (see "Domain aggregates"
+above) are implemented, domain logic only — no ORM model, repository
 implementation, or migration yet for any of them. The remaining
 aggregates and the nine rule engines are still ahead.
