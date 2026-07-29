@@ -1,0 +1,8 @@
+include: package:flutter_lints/flutter.yaml
+
+# Full linter ruleset is expanded in Sprint 1, Step 6. This include already
+# gives the project real linting from the moment `flutter pub get` succeeds.
+linter:
+  rules:
+    prefer_single_quotes: true
+    always_declare_return_types: true
