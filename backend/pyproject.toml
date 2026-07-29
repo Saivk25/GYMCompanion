@@ -17,9 +17,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Everything a developer needs beyond runtime deps: testing (Step 5), linting
-# (Step 6), formatting (Step 7), and the pre-commit framework wiring them
-# together on every commit, not just in CI.
+# Everything a developer needs beyond runtime deps: testing, linting,
+# formatting, and the pre-commit framework wiring them together.
 dev = [
     "pytest>=8.3",
     "pytest-cov>=5.0",
@@ -44,5 +43,32 @@ target-version = "py310"
 # development mount this project was scaffolded on reports every file as
 # executable regardless of chmod — a filesystem artifact, not a code issue.
 # The full rule selection is curated in Sprint 1, Step 6; this entry exists
-# now only so Step 4's tooling actually runs clean.
+# now only so Step 4's tooling runs clean.
 ignore = ["EXE002"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+# --strict-markers: a typo'd @pytest.mark.unti is a collection error, not a
+# silently-ignored no-op marker.
+# --strict-config: an unrecognised ini option fails the run instead of being
+# silently ignored — the whole point of pinning config is that it's obeyed.
+addopts = "-ra --strict-markers --strict-config --cov=app --cov-report=term-missing"
+markers = [
+    "unit: fast, isolated tests with no I/O — primarily app/domain.",
+    "integration: tests that exercise a real database or other external system.",
+]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# No repo-wide fail_under yet — most of the repo is thin wiring (app/main.py,
+# app/core/config.py) that integration/E2E tests exercise better than unit
+# coverage numbers reward. Sprint 1, Step 12 adds a real, high floor scoped
+# specifically to app/domain, per the Engineering Master Plan's instruction
+# that Domain Core coverage is merge-blocking and everything else scales to
+# its own risk tier — a single blanket number today would be theater, not a
+# quality gate.

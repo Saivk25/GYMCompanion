@@ -44,7 +44,22 @@ they don't already exist. If it prompts to overwrite `pubspec.yaml`, `lib/main.d
 or `test/`, decline (or restore afterward with `git checkout -- pubspec.yaml lib/main.dart test/`)
 — those are already hand-written for this project.
 
+## Testing
+
+```bash
+flutter test                       # all widget tests
+flutter test --coverage            # writes coverage/lcov.info
+```
+
+No separate config file is needed beyond `analysis_options.yaml` (Step 6) — Flutter
+discovers `test/**/*_test.dart` by convention. `test/shell/app_shell_test.dart` is the
+first test: it verifies the app lands on Today and can navigate to Train via the
+bottom bar, and that all five tab destinations render. Mirror `lib/`'s folder
+structure under `test/` as features are added, matching the backend's `tests/`
+convention.
+
 ## Status
 
-Sprint 1, Step 3: a five-tab shell that boots and navigates, no real feature data yet.
-Domain-driven screens land starting Sprint 2 of the Engineering Master Plan.
+Sprint 1, Steps 3 and 5: a five-tab shell that boots and navigates, with one widget
+test, no real feature data yet. Domain-driven screens land starting Sprint 2 of the
+Engineering Master Plan.
