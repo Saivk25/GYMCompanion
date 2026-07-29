@@ -49,12 +49,13 @@ Postgres, Alembic, CI, and the framework-independent Domain Core skeleton
 (`backend/app/domain/shared_kernel/` — see `backend/README.md`'s "Domain Core" section)
 are all done (Steps 1–12).
 
-Sprint 2 is underway: `User`, the first real aggregate, is implemented
-(`backend/app/domain/user/` — see `backend/README.md`'s "Domain aggregates" section).
-No persistence (SQLAlchemy model, repository implementation, migration) exists for it
-yet — this increment is domain logic only. The remaining twelve aggregates and the nine
-rule engines are still ahead. See `docs/adr/` for decisions made during implementation
-that weren't already pinned down by the six planning documents.
+Sprint 2 is underway: `User` and `Workout` are implemented
+(`backend/app/domain/user/`, `backend/app/domain/workout/` — see `backend/README.md`'s
+"Domain aggregates" section). No persistence (SQLAlchemy model, repository
+implementation, migration) exists for either yet — domain logic only. The remaining
+aggregates and the nine rule engines are still ahead. See `docs/adr/` for decisions
+made during implementation that weren't already pinned down by the six planning
+documents.
 
 ## Getting started
 
