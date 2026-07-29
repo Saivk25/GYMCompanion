@@ -1,33 +1,48 @@
-# Python
+# --- Python (backend) ---
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.db
+*.sqlite
+*.sqlite3
 
-# Flutter
-.dart_tool/
-build/
-.flutter-plugins
-.flutter-plugins-dependencies
+# --- Flutter / Dart (apps/mobile) ---
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/.pub-cache/
+apps/mobile/build/
+apps/mobile/**/ephemeral/
+*.g.dart.bak
 
-# IDE
+# --- IDE ---
 .vscode/
 .idea/
 .cursor/
 
-# OS
+# --- OS ---
 .DS_Store
 Thumbs.db
 
-# Logs
+# --- Logs ---
 *.log
 
-# Models
+# --- Models / datasets (reserved, not yet in use) ---
 *.pt
 *.pth
 *.onnx
+*.tflite
 
-# Database
-*.db
-*.sqlite
+# --- Docker / infra local state ---
+infra/.pgdata/
