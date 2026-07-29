@@ -1,0 +1,39 @@
+# Local development only. No orchestration platform (Kubernetes etc.) — a
+# single small deployment target is enough at this project's scale; see the
+# Engineering Master Plan's "what we are deliberately not building yet"
+# table (Section 1).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gymcompanion
+      POSTGRES_PASSWORD: gymcompanion
+      POSTGRES_DB: gymcompanion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymcompanion -d gymcompanion"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      GYM_ENVIRONMENT: local
+      GYM_DATABASE_URL: postgresql+psycopg://gymcompanion:gymcompanion@postgres:5432/gymcompanion
+      GYM_SECRET_KEY: change-me-in-every-real-environment
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

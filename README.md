@@ -38,4 +38,6 @@ made during implementation that weren't already pinned down by the six planning 
 
 ## Getting started
 
-See `backend/README.md` and `apps/mobile/README.md` once those exist (Sprint 1, steps 2-3).
+- Backend: `backend/README.md`
+- Mobile: `apps/mobile/README.md`
+- Local Postgres + backend together: `infra/README.md`
