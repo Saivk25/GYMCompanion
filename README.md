@@ -49,18 +49,27 @@ Postgres, Alembic, CI, and the framework-independent Domain Core skeleton
 (`backend/app/domain/shared_kernel/` — see `backend/README.md`'s "Domain Core" section)
 are all done (Steps 1–12).
 
-Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
-`Progress`, `Nutrition`, `Readiness`, and `Goal` are implemented
+Sprint 2's aggregates are implemented: `User`, `Workout`, `Exercise`,
+`WorkoutSession`, `Progress`, `Nutrition`, `Readiness`, and `Goal`
 (`backend/app/domain/user/`, `backend/app/domain/workout/`,
 `backend/app/domain/exercise/`, `backend/app/domain/workout_session/`,
 `backend/app/domain/progress/`, `backend/app/domain/nutrition/`,
 `backend/app/domain/readiness/`, `backend/app/domain/goal/` — see
 `backend/README.md`'s "Domain aggregates" section). No persistence
 (SQLAlchemy model, repository implementation, migration) exists for any of
-them yet — domain logic only. The remaining aggregates and the nine rule
-engines are still ahead. See `docs/adr/` for decisions made during
-implementation that weren't already pinned down by the six planning
-documents.
+them yet — domain logic only.
+
+Sprint 3, Phase 1 is done: the reusable Rule Engine foundation
+(`backend/app/domain/rules/` — see `backend/README.md`'s "Rule Engine
+foundation" section) that every future deterministic rule engine builds
+on. No fitness-specific rules exist yet — this phase implemented only the
+shared architecture (`Rule`, `RuleEngine`, `RuleContext`, `RuleResult`,
+`Recommendation`, `RecommendationSeverity`). The nine concrete rule
+engines named in the Domain Model & Decision Engine Bible (Workout,
+Nutrition, Recovery, Safety, Recommendation, Notification, Progress,
+Analytics, AI Validation) are still ahead. See `docs/adr/` for decisions
+made during implementation that weren't already pinned down by the six
+planning documents.
 
 ## Getting started
 

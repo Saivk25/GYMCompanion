@@ -204,6 +204,28 @@ package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
 | Readiness | `app/domain/readiness/` | Closest to Section 4.8 (`ReadinessCheckIn`, "today's snapshot", Table 11). Stores observations only — no readiness/recovery score, deload triggers, or anything derived from a window of check-ins (that's `RecoveryState`, not built yet). Adds `RestingHeartRate`/`HeartRateVariability` beyond the Bible's own sleep/stress/soreness list; `pain_flags`/`GI_symptoms` are deliberately not modeled (routed through `SafetyFlag` in the Bible, a separate aggregate not built yet). The Bible's "one check-in per day" rule is not enforced at the domain layer — an application/repository-layer concern, same as every other aggregate's uniqueness constraints. No persistence yet. |
 | Goal | `app/domain/goal/` | Closest to Section 4.4 (`Goal`, Table 6), with a four-state lifecycle (`Active`/`Completed`/`Cancelled`/`Expired`) simplified from the Bible's own six-state model (`Proposed -> Active -> Achieved / Abandoned / Superseded -> Archived`, Section 7.4). `GoalStatus.EXPIRED` is a legal status value with no method that transitions into it — no `GoalExpired` event was named for this increment. No priority-ranking or conflict-resolution logic across a user's concurrent goals is implemented. See `docs/adr/0012-goal-lifecycle-and-expired-with-no-transition.md`. No persistence yet. |
 
+## Rule Engine foundation
+
+Sprint 3, Phase 1's shared infrastructure (`app/domain/rules/`, mirrored by
+`tests/domain/rules/`) that every future deterministic rule engine builds
+on — Bible Section 8.1's "Deterministic Rule Layer" and Section 10's nine
+named engines (Workout, Nutrition, Recovery, Safety, Recommendation,
+Notification, Progress, Analytics, AI Validation), none of which are built
+yet. This phase implements no fitness-specific logic at all.
+
+`Rule[TContext]` (abstract; concrete rules subclass it and implement only
+`evaluate()`) and `RuleEngine[TContext]` (evaluates a fixed, ordered set
+of rules against one `TContext` and aggregates their outcomes) are both
+generic over `RuleContext` — an intentionally empty marker base class each
+future engine's own context subclasses. `RuleResult` is deliberately one
+type used identically whether it's a single rule's outcome or
+`RuleEngine.evaluate()`'s aggregated outcome. `RuleId` is a plain,
+non-empty string (not the shared kernel's UUID-based `EntityId`) because
+rules are code-defined, versioned instances, not runtime-created
+aggregates. No `repository.py` — rules aren't persisted. See
+`docs/adr/0013-rule-engine-foundation.md` for the full reasoning behind
+all of these.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -220,8 +242,11 @@ Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
 (`app/domain/shared_kernel/`) is in place — base types only, no product-specific
 business logic (see "Domain Core" above).
 
-Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
-`Progress`, `Nutrition`, `Readiness`, and `Goal` (see "Domain aggregates"
-above) are implemented, domain logic only — no ORM model, repository
-implementation, or migration yet for any of them. The remaining
-aggregates and the nine rule engines are still ahead.
+Sprint 2's aggregates are implemented: `User`, `Workout`, `Exercise`,
+`WorkoutSession`, `Progress`, `Nutrition`, `Readiness`, and `Goal` (see
+"Domain aggregates" above), domain logic only — no ORM model, repository
+implementation, or migration yet for any of them.
+
+Sprint 3, Phase 1 is done: the Rule Engine foundation (see "Rule Engine
+foundation" above) — shared architecture only, no fitness-specific rules.
+The nine concrete rule engines it exists to support are still ahead.
