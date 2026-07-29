@@ -188,6 +188,15 @@ of the backend (`pyproject.toml`'s `[tool.coverage.report]` explains why it can'
 one repo-wide number) — matching the Engineering Master Plan's testing strategy table:
 "Domain Core ... near-100% coverage ... merge-blocking."
 
+## Domain aggregates
+
+Real, product-specific aggregates, built on the Domain Core above. One
+package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
+
+| Aggregate | Package | Bible reference |
+|---|---|---|
+| User | `app/domain/user/` | Section 4.1 (User / Account). `UserProfile` is a value object here, not the Bible's standalone `Profile` aggregate (Section 4.2) — see `docs/adr/0005-user-aggregate-first-increment.md` for why and the migration path. No persistence exists for this aggregate yet: no ORM model, no repository implementation, no migration. |
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -200,7 +209,11 @@ sequential one, and why there's no Python-version/OS matrix.
 
 ## Status
 
-Sprint 1, Step 12: the Domain Core skeleton (`app/domain/shared_kernel/`) is in place —
-base types only, no product-specific business logic yet (see "Domain Core" above). Every
-one of Sprint 1's twelve steps is now done. Real aggregates, the nine rule engines, and
-everything product-specific start with Sprint 2.
+Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
+(`app/domain/shared_kernel/`) is in place — base types only, no product-specific
+business logic (see "Domain Core" above).
+
+Sprint 2 is underway: `User` (see "Domain aggregates" above) is the first real
+aggregate, domain logic only — no ORM model, repository implementation, or
+migration yet. The remaining twelve aggregates and the nine rule engines are
+still ahead.

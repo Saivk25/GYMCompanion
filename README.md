@@ -47,10 +47,14 @@ Sprint 1 (environment setup) of the Engineering Master Plan is complete: reposit
 structure, backend and Flutter scaffolds, tooling, testing, linting, formatting, Docker,
 Postgres, Alembic, CI, and the framework-independent Domain Core skeleton
 (`backend/app/domain/shared_kernel/` — see `backend/README.md`'s "Domain Core" section)
-are all done (Steps 1–12). No product-specific business logic exists yet — real
-aggregates and the nine rule engines start with Sprint 2. See `docs/adr/` for decisions
-made during implementation that weren't already pinned down by
-the six planning documents.
+are all done (Steps 1–12).
+
+Sprint 2 is underway: `User`, the first real aggregate, is implemented
+(`backend/app/domain/user/` — see `backend/README.md`'s "Domain aggregates" section).
+No persistence (SQLAlchemy model, repository implementation, migration) exists for it
+yet — this increment is domain logic only. The remaining twelve aggregates and the nine
+rule engines are still ahead. See `docs/adr/` for decisions made during implementation
+that weren't already pinned down by the six planning documents.
 
 ## Getting started
 

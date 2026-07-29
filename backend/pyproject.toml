@@ -14,6 +14,16 @@ dependencies = [
     "sqlalchemy>=2.0,<2.1",
     "alembic>=1.13,<2.0",
     "psycopg[binary]>=3.2,<4.0",
+    # Sprint 2's User aggregate validates Timezone values against the real IANA
+    # database via the stdlib zoneinfo module (app/domain/user/value_objects.py).
+    # zoneinfo works with no extra package on Linux/macOS (system tz db), but
+    # Windows ships no system IANA database at all — CPython's own docs say
+    # zoneinfo falls back to this exact package there. Sai's own dev machine is
+    # Windows (see repository path), so this is not a hypothetical: without an
+    # explicit pin, Timezone("UTC") would raise ZoneInfoNotFoundError on that
+    # machine while working fine in this Linux sandbox. Pinning it unconditionally
+    # is a documented no-op on platforms that already have a system tz db.
+    "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
