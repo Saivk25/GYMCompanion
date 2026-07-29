@@ -9,12 +9,17 @@ from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
 from app.domain.workout_session.enums import SessionStatus
 from app.domain.workout_session.events import (
+    ExerciseAddedToSession,
+    ExercisePerformanceUpdated,
+    ExerciseRemovedFromSession,
+    ExerciseSetCompleted,
     WorkoutSessionAbandoned,
     WorkoutSessionCompleted,
     WorkoutSessionNotesUpdated,
     WorkoutSessionStarted,
 )
-from app.domain.workout_session.identifiers import WorkoutSessionId
+from app.domain.workout_session.exercise_performance import ExercisePerformance, PerformanceNotes
+from app.domain.workout_session.identifiers import ExercisePerformanceId, WorkoutSessionId
 from app.domain.workout_session.value_objects import (
     CompletionPercentage,
     SessionDate,
@@ -23,7 +28,13 @@ from app.domain.workout_session.value_objects import (
     SessionRating,
 )
 from app.domain.workout_session.workout_session import WorkoutSession
-from tests.domain.workout_session.factories import a_fixed_clock, a_planned_session
+from tests.domain.workout_session.factories import (
+    a_fixed_clock,
+    a_planned_session,
+    an_active_session,
+    an_exercise_id,
+    an_exercise_set,
+)
 
 # --- plan() ---
 
@@ -500,3 +511,400 @@ def test_constructor_accepts_explicit_optional_fields() -> None:
     assert session.started_at == now
     assert session.completed_at == now
     assert session.abandoned_at is None
+
+
+@pytest.mark.unit
+def test_constructor_accepts_explicit_exercise_performances() -> None:
+    performance = ExercisePerformance(
+        ExercisePerformanceId.generate(), exercise_id=an_exercise_id()
+    )
+    session = WorkoutSession(
+        WorkoutSessionId.generate(),
+        workout_id=WorkoutId.generate(),
+        user_id=UserId.generate(),
+        session_date=SessionDate(date(2026, 1, 1)),
+        planned_at=datetime.now(timezone.utc),
+        exercise_performances=(performance,),
+    )
+    assert session.exercise_performances == (performance,)
+
+
+# --- add_exercise() ---
+
+
+@pytest.mark.unit
+def test_add_exercise_creates_a_new_performance_and_returns_its_id() -> None:
+    session = a_planned_session()
+    exercise_id = an_exercise_id()
+
+    performance_id = session.add_exercise(exercise_id, clock=a_fixed_clock())
+
+    assert len(session.exercise_performances) == 1
+    performance = session.exercise_performances[0]
+    assert performance.id == performance_id
+    assert performance.exercise_id == exercise_id
+    assert performance.sets == ()
+
+
+@pytest.mark.unit
+def test_add_exercise_accepts_optional_notes() -> None:
+    session = a_planned_session()
+    notes = PerformanceNotes("Warm-up sets excluded.")
+
+    session.add_exercise(an_exercise_id(), clock=a_fixed_clock(), notes=notes)
+
+    assert session.exercise_performances[0].notes == notes
+
+
+@pytest.mark.unit
+def test_add_exercise_records_an_exercise_added_to_session_event() -> None:
+    session = a_planned_session()
+    exercise_id = an_exercise_id()
+    clock = a_fixed_clock()
+
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+
+    events = session.pull_domain_events()
+    assert len(events) == 1
+    assert isinstance(events[0], ExerciseAddedToSession)
+    assert events[0].session_id == session.id
+    assert events[0].performance_id == performance_id
+    assert events[0].exercise_id == exercise_id
+    assert events[0].occurred_at == clock.now()
+
+
+@pytest.mark.unit
+def test_add_exercise_is_allowed_while_active() -> None:
+    session = an_active_session()
+    session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    assert len(session.exercise_performances) == 1
+
+
+@pytest.mark.unit
+def test_cannot_add_exercise_once_completed() -> None:
+    session = an_active_session()
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=a_fixed_clock(),
+    )
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_add_exercise_once_abandoned() -> None:
+    session = a_planned_session()
+    session.abandon(clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+
+
+# --- remove_exercise() ---
+
+
+@pytest.mark.unit
+def test_remove_exercise_removes_the_performance() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+
+    session.remove_exercise(performance_id, clock=a_fixed_clock())
+
+    assert session.exercise_performances == ()
+
+
+@pytest.mark.unit
+def test_remove_exercise_leaves_other_performances_untouched() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    kept_id = session.add_exercise(an_exercise_id(), clock=clock)
+    removed_id = session.add_exercise(an_exercise_id(), clock=clock)
+
+    session.remove_exercise(removed_id, clock=clock)
+
+    assert [p.id for p in session.exercise_performances] == [kept_id]
+
+
+@pytest.mark.unit
+def test_remove_exercise_records_an_exercise_removed_from_session_event() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    exercise_id = an_exercise_id()
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+    session.pull_domain_events()  # drain ExerciseAddedToSession
+
+    session.remove_exercise(performance_id, clock=clock)
+
+    events = session.pull_domain_events()
+    assert len(events) == 1
+    assert isinstance(events[0], ExerciseRemovedFromSession)
+    assert events[0].session_id == session.id
+    assert events[0].performance_id == performance_id
+    assert events[0].exercise_id == exercise_id
+
+
+@pytest.mark.unit
+def test_remove_exercise_raises_for_an_unknown_performance_id() -> None:
+    session = a_planned_session()
+    with pytest.raises(DomainInvariantViolationError, match="no exercise performance"):
+        session.remove_exercise(ExercisePerformanceId.generate(), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_remove_exercise_once_completed() -> None:
+    session = an_active_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=a_fixed_clock(),
+    )
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.remove_exercise(performance_id, clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_remove_exercise_once_abandoned() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.abandon(clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.remove_exercise(performance_id, clock=a_fixed_clock())
+
+
+# --- log_set() ---
+
+
+@pytest.mark.unit
+def test_log_set_appends_a_set_to_the_named_performance() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    exercise_set = an_exercise_set(set_number=1)
+
+    session.log_set(performance_id, exercise_set, clock=a_fixed_clock())
+
+    assert session.exercise_performances[0].sets == (exercise_set,)
+
+
+@pytest.mark.unit
+def test_log_set_rejects_a_duplicate_set_number() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=a_fixed_clock())
+
+    with pytest.raises(DomainInvariantViolationError, match="duplicate set number"):
+        session.log_set(performance_id, an_exercise_set(set_number=1), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_log_set_records_an_exercise_performance_updated_event() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    exercise_id = an_exercise_id()
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+    session.pull_domain_events()  # drain ExerciseAddedToSession
+
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=clock)
+
+    events = session.pull_domain_events()
+    assert len(events) == 1
+    assert isinstance(events[0], ExercisePerformanceUpdated)
+    assert events[0].session_id == session.id
+    assert events[0].performance_id == performance_id
+    assert events[0].exercise_id == exercise_id
+
+
+@pytest.mark.unit
+def test_log_set_raises_for_an_unknown_performance_id() -> None:
+    session = a_planned_session()
+    with pytest.raises(DomainInvariantViolationError, match="no exercise performance"):
+        session.log_set(ExercisePerformanceId.generate(), an_exercise_set(), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_log_set_once_completed() -> None:
+    session = an_active_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=a_fixed_clock(),
+    )
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.log_set(performance_id, an_exercise_set(), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_log_set_once_abandoned() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.abandon(clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.log_set(performance_id, an_exercise_set(), clock=a_fixed_clock())
+
+
+# --- complete_set() ---
+
+
+@pytest.mark.unit
+def test_complete_set_marks_the_set_complete() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=a_fixed_clock())
+
+    session.complete_set(performance_id, 1, clock=a_fixed_clock())
+
+    assert session.exercise_performances[0].sets[0].completed is True
+
+
+@pytest.mark.unit
+def test_complete_set_records_an_exercise_set_completed_event() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    exercise_id = an_exercise_id()
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=clock)
+    session.pull_domain_events()  # drain ExerciseAddedToSession, ExercisePerformanceUpdated
+
+    session.complete_set(performance_id, 1, clock=clock)
+
+    events = session.pull_domain_events()
+    assert len(events) == 1
+    assert isinstance(events[0], ExerciseSetCompleted)
+    assert events[0].session_id == session.id
+    assert events[0].performance_id == performance_id
+    assert events[0].exercise_id == exercise_id
+    assert events[0].exercise_set.completed is True
+    assert events[0].exercise_set.set_number.value == 1
+
+
+@pytest.mark.unit
+def test_complete_set_raises_for_an_unknown_performance_id() -> None:
+    session = a_planned_session()
+    with pytest.raises(DomainInvariantViolationError, match="no exercise performance"):
+        session.complete_set(ExercisePerformanceId.generate(), 1, clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_complete_set_raises_for_an_unknown_set_number() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="no set numbered"):
+        session.complete_set(performance_id, 1, clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_complete_set_once_completed() -> None:
+    session = an_active_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=a_fixed_clock())
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=a_fixed_clock(),
+    )
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.complete_set(performance_id, 1, clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_complete_set_once_abandoned() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=a_fixed_clock())
+    session.abandon(clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.complete_set(performance_id, 1, clock=a_fixed_clock())
+
+
+# --- update_exercise_notes() ---
+
+
+@pytest.mark.unit
+def test_update_exercise_notes_replaces_the_performance_notes() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    notes = PerformanceNotes("Switched to dumbbells.")
+
+    session.update_exercise_notes(performance_id, notes, clock=a_fixed_clock())
+
+    assert session.exercise_performances[0].notes == notes
+
+
+@pytest.mark.unit
+def test_update_exercise_notes_records_an_exercise_performance_updated_event() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    exercise_id = an_exercise_id()
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+    session.pull_domain_events()  # drain ExerciseAddedToSession
+
+    session.update_exercise_notes(performance_id, PerformanceNotes("Note."), clock=clock)
+
+    events = session.pull_domain_events()
+    assert len(events) == 1
+    assert isinstance(events[0], ExercisePerformanceUpdated)
+    assert events[0].session_id == session.id
+    assert events[0].performance_id == performance_id
+    assert events[0].exercise_id == exercise_id
+
+
+@pytest.mark.unit
+def test_update_exercise_notes_raises_for_an_unknown_performance_id() -> None:
+    session = a_planned_session()
+    with pytest.raises(DomainInvariantViolationError, match="no exercise performance"):
+        session.update_exercise_notes(
+            ExercisePerformanceId.generate(), PerformanceNotes("x"), clock=a_fixed_clock()
+        )
+
+
+@pytest.mark.unit
+def test_cannot_update_exercise_notes_once_completed() -> None:
+    """Deliberately different from `WorkoutSession.update_notes()`, which
+    stays open post-completion — see that method's docstring on
+    `workout_session.py` for why session-level notes and per-exercise
+    performance data are treated differently."""
+    session = an_active_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=a_fixed_clock(),
+    )
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.update_exercise_notes(performance_id, PerformanceNotes("x"), clock=a_fixed_clock())
+
+
+@pytest.mark.unit
+def test_cannot_update_exercise_notes_once_abandoned() -> None:
+    session = a_planned_session()
+    performance_id = session.add_exercise(an_exercise_id(), clock=a_fixed_clock())
+    session.abandon(clock=a_fixed_clock())
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
+        session.update_exercise_notes(performance_id, PerformanceNotes("x"), clock=a_fixed_clock())
+
+
+# --- full lifecycle with exercise performances ---
+
+
+@pytest.mark.unit
+def test_full_lifecycle_with_exercises_and_sets() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+
+    session.start(clock=clock)
+    performance_id = session.add_exercise(an_exercise_id(), clock=clock)
+    session.log_set(performance_id, an_exercise_set(set_number=1), clock=clock)
+    session.log_set(performance_id, an_exercise_set(set_number=2), clock=clock)
+    session.complete_set(performance_id, 1, clock=clock)
+    session.complete(
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+        clock=clock,
+    )
+
+    performance = session.exercise_performances[0]
+    assert len(performance.sets) == 2
+    assert performance.sets[0].completed is True
+    assert performance.sets[1].completed is False
+    assert session.status == SessionStatus.COMPLETED

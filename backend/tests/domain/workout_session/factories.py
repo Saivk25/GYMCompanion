@@ -8,9 +8,17 @@ exactly.
 
 from datetime import date, datetime, timezone
 
+from app.domain.exercise.identifiers import ExerciseId
 from app.domain.shared_kernel.clock import FixedClock
 from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
+from app.domain.workout_session.exercise_set import (
+    ExerciseSet,
+    SetNumber,
+    SetReps,
+    SetRPE,
+    SetWeight,
+)
 from app.domain.workout_session.identifiers import WorkoutSessionId
 from app.domain.workout_session.value_objects import SessionDate
 from app.domain.workout_session.workout_session import WorkoutSession
@@ -38,3 +46,37 @@ def a_planned_session(
         session_date=SessionDate(date(2026, 1, 1)),
         clock=a_fixed_clock(),
     )
+
+
+def an_active_session() -> WorkoutSession:
+    """A WorkoutSession already moved to Active — the common starting point
+    for exercise-performance tests, which need a session that's mutable
+    (Planned or Active both qualify, but Active is the realistic case: you
+    log exercises while actually training)."""
+    session = a_planned_session()
+    session.start(clock=a_fixed_clock())
+    session.pull_domain_events()  # drain WorkoutSessionStarted, keep tests focused
+    return session
+
+
+def an_exercise_set(
+    *,
+    set_number: int = 1,
+    weight: float = 100.0,
+    reps: int = 5,
+    rpe: int = 7,
+    completed: bool = False,
+) -> ExerciseSet:
+    """A fully-populated `ExerciseSet` with sensible defaults, overridable
+    per test."""
+    return ExerciseSet(
+        set_number=SetNumber(set_number),
+        weight=SetWeight(weight),
+        reps=SetReps(reps),
+        rpe=SetRPE(rpe),
+        completed=completed,
+    )
+
+
+def an_exercise_id() -> ExerciseId:
+    return ExerciseId.generate()

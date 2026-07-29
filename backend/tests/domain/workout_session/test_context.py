@@ -5,10 +5,15 @@ from datetime import timedelta
 
 import pytest
 
-from app.domain.workout_session.context import WorkoutSessionContext
+from app.domain.workout_session.context import ExercisePerformanceContext, WorkoutSessionContext
 from app.domain.workout_session.enums import SessionStatus
 from app.domain.workout_session.value_objects import CompletionPercentage, SessionDuration
-from tests.domain.workout_session.factories import a_fixed_clock, a_planned_session
+from tests.domain.workout_session.factories import (
+    a_fixed_clock,
+    a_planned_session,
+    an_exercise_id,
+    an_exercise_set,
+)
 
 
 @pytest.mark.unit
@@ -26,6 +31,26 @@ def test_from_workout_session_snapshots_every_relevant_field() -> None:
     assert context.duration is None
     assert context.completion_percentage is None
     assert context.rating is None
+    assert context.exercise_performances == ()
+
+
+@pytest.mark.unit
+def test_from_workout_session_snapshots_exercise_performances_and_their_sets() -> None:
+    session = a_planned_session()
+    clock = a_fixed_clock()
+    exercise_id = an_exercise_id()
+    performance_id = session.add_exercise(exercise_id, clock=clock)
+    exercise_set = an_exercise_set(set_number=1)
+    session.log_set(performance_id, exercise_set, clock=clock)
+
+    context = WorkoutSessionContext.from_workout_session(session)
+
+    assert len(context.exercise_performances) == 1
+    performance_context = context.exercise_performances[0]
+    assert isinstance(performance_context, ExercisePerformanceContext)
+    assert performance_context.performance_id == performance_id
+    assert performance_context.exercise_id == exercise_id
+    assert performance_context.sets == (exercise_set,)
 
 
 @pytest.mark.unit

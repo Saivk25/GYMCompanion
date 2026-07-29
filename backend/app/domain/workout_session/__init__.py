@@ -13,27 +13,48 @@ creation event, unlike every other aggregate here) and why
 `update_notes()` is not blocked once the session is Completed or Abandoned
 (unlike `Workout`/`Exercise`'s equivalent methods).
 
+Sprint 2 Step 5 adds `ExercisePerformance`/`ExerciseSet` — what was
+actually performed, exercise by exercise, set by set — as entities/value
+objects owned by this aggregate, not a separate aggregate with its own
+repository. See `docs/adr/0009-exercise-performance-owned-entity.md` for
+why.
+
 Scope of this increment — deliberately smaller than the Bible's full
-`WorkoutSession`, not an oversight: `ExerciseSet`/`LoggedExercise` (the
-individual logged sets a session actually contains), progressive overload,
-and rest timers are not modeled yet.
+`WorkoutSession`, not an oversight: progressive overload, personal
+records, volume/fatigue calculations, and rest timers are not modeled yet.
 
 Depends on nothing outside the Python standard library,
 `app.domain.shared_kernel`, `app.domain.user` (for the owning `UserId`),
-and `app.domain.workout` (for the executed `WorkoutId`) — enforced by the
-same statically-checked rule as the rest of `app/domain`
-(`tests/domain/test_import_boundaries.py`).
+`app.domain.workout` (for the executed `WorkoutId`), and
+`app.domain.exercise` (for `ExerciseId`, a typed reference only — no
+repository lookup) — enforced by the same statically-checked rule as the
+rest of `app/domain` (`tests/domain/test_import_boundaries.py`).
 """
 
-from app.domain.workout_session.context import WorkoutSessionContext
+from app.domain.workout_session.context import (
+    ExercisePerformanceContext,
+    WorkoutSessionContext,
+)
 from app.domain.workout_session.enums import SessionStatus
 from app.domain.workout_session.events import (
+    ExerciseAddedToSession,
+    ExercisePerformanceUpdated,
+    ExerciseRemovedFromSession,
+    ExerciseSetCompleted,
     WorkoutSessionAbandoned,
     WorkoutSessionCompleted,
     WorkoutSessionNotesUpdated,
     WorkoutSessionStarted,
 )
-from app.domain.workout_session.identifiers import WorkoutSessionId
+from app.domain.workout_session.exercise_performance import ExercisePerformance, PerformanceNotes
+from app.domain.workout_session.exercise_set import (
+    ExerciseSet,
+    SetNumber,
+    SetReps,
+    SetRPE,
+    SetWeight,
+)
+from app.domain.workout_session.identifiers import ExercisePerformanceId, WorkoutSessionId
 from app.domain.workout_session.repository import WorkoutSessionRepository
 from app.domain.workout_session.value_objects import (
     CompletionPercentage,
@@ -46,11 +67,24 @@ from app.domain.workout_session.workout_session import WorkoutSession
 
 __all__ = [
     "CompletionPercentage",
+    "ExerciseAddedToSession",
+    "ExercisePerformance",
+    "ExercisePerformanceContext",
+    "ExercisePerformanceId",
+    "ExercisePerformanceUpdated",
+    "ExerciseRemovedFromSession",
+    "ExerciseSet",
+    "ExerciseSetCompleted",
+    "PerformanceNotes",
     "SessionDate",
     "SessionDuration",
     "SessionNotes",
     "SessionRating",
     "SessionStatus",
+    "SetNumber",
+    "SetRPE",
+    "SetReps",
+    "SetWeight",
     "WorkoutSession",
     "WorkoutSessionAbandoned",
     "WorkoutSessionCompleted",
