@@ -102,5 +102,15 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# No repo-wide fail_under yet — see Step 12, which adds a real, high floor
-# scoped specifically to app/domain rather than a theatrical blanket number.
+# No repo-wide fail_under: app/infra and app/api are expected to carry
+# untested scaffolding for a while yet (e.g. FastAPI's own get_session()
+# dependency-injection wiring, exercised only once real endpoints use it —
+# see app/infra/database.py's Missing column). A single blanket number
+# would either be too strict for those or too loose to mean anything for
+# app/domain, which is why app/domain gets its own, separate, 100% gate
+# instead — see the Makefile's backend-test-domain-coverage target and
+# `[tool.coverage.report:domain]`-equivalent invocation via --cov-fail-under
+# on the command line (coverage.py has no way to scope fail_under to a
+# subpackage from this config file alone). Matches the Engineering Master
+# Plan's testing strategy table: "Domain Core ... near-100% coverage ...
+# merge-blocking."

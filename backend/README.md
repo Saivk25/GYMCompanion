@@ -6,7 +6,10 @@ FastAPI service over a framework-free domain core. See `docs/Gym_Companion_Engin
 ## Layout
 
 - `app/domain/` — framework-free business logic (entities, state machines, rule engines).
-  Imports nothing from `api/` or `infra/`. Populated starting Sprint 1, Step 12.
+  Depends on nothing outside the Python standard library — not `api/`, not `infra/`, not
+  even `pydantic` — enforced by a static test, not just convention (see "Domain Core"
+  below). `app/domain/shared_kernel/` is the base-type toolkit every future aggregate
+  builds on (Sprint 2 onward); no per-aggregate business logic exists yet.
 - `app/api/` — thin FastAPI routers and Pydantic schemas over `app/domain/`.
 - `app/ai/` — the AI Adapter Layer (vendor-agnostic vision/language provider interfaces).
   Empty until Sprint 1 (Alpha milestone) per the Engineering Master Plan.
@@ -144,18 +147,60 @@ Review the diff before committing a regenerated lock file — it's the only way 
 dependency bump becomes visible in code review, since `pyproject.toml`'s own ranges
 often don't change at all when only a transitive dependency moves.
 
+## Domain Core
+
+`app/domain/shared_kernel/` is the framework-independent foundation every real aggregate
+(Sprint 2 onward) is built from — not business logic itself, but the base types that make
+writing it consistent:
+
+| Module | Provides |
+|---|---|
+| `identifiers.py` | `EntityId` — subclass per aggregate (`class UserId(EntityId)`) for compile-time-checked, non-interchangeable ids. |
+| `clock.py` | `Clock` / `SystemClock` / `FixedClock` — time as an injected dependency, never a bare `datetime.now()` call. |
+| `value_object.py` | `ValueObject` — immutable, equality-by-value base; frozen-dataclass inheritance makes forgetting `frozen=True` a `TypeError` at import time, not a runtime bug. |
+| `entity.py` | `Entity` — identity-based (not field-based) equality and hashing. |
+| `aggregate_root.py` | `AggregateRoot` — adds the domain-event recording/draining lifecycle on top of `Entity`. |
+| `events.py` | `DomainEvent` — immutable, `occurred_at`-stamped record of something that already happened. |
+| `errors.py` | `DomainError` (an expected, returnable failure) vs. `DomainInvariantViolationError` (a raised bug) — see the module docstring for the distinction. |
+| `result.py` | `Ok[T]` / `Err[E]` — expected failures as values instead of exceptions. |
+| `repository.py` | `Repository[TAggregate, TId]` — the persistence contract `app/infra/` implements; domain code depends on this interface, never on SQLAlchemy. |
+| `service.py` | `DomainService` — marker base for stateless cross-aggregate logic (the nine rule engines, starting Sprint 2+). |
+| `validation.py` | `ensure()` / `ensure_not_empty()` / `ensure_positive()` — guard clauses that raise `DomainInvariantViolationError`. |
+
+Every name is re-exported from `app.domain.shared_kernel` directly, so real aggregate
+code writes one import instead of several — see that package's `__init__.py`.
+
+### The one architecture rule, enforced statically
+
+"Domain depends on nothing but the Python standard library" is not just documented — it's
+a real test. `tests/domain/test_import_boundaries.py` parses every file under
+`app/domain/` with `ast` and checks every import's target against
+`sys.stdlib_module_names` (a positive allow-list, so a *new* forbidden dependency is
+caught automatically, not just the ones anyone thought to ban). This runs as part of the
+normal test suite and again as CI's own dedicated gate — see below.
+
+```bash
+make backend-test-domain-coverage   # import-boundary test + 100%-coverage gate, domain only
+```
+
+`app/domain` carries its own, stricter, 100%-coverage requirement, separate from the rest
+of the backend (`pyproject.toml`'s `[tool.coverage.report]` explains why it can't just be
+one repo-wide number) — matching the Engineering Master Plan's testing strategy table:
+"Domain Core ... near-100% coverage ... merge-blocking."
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
 mypy strict, migration verification and drift detection, the destructive-migration
-content check (`scripts/check_destructive_migrations.py`), the full pytest suite against
-a real Postgres service container, a Docker image build with an import smoke test, and
-Flutter analyze/test. See the workflow file itself for why it's structured as
-independent parallel jobs rather than one long sequential one, and why there's no
-Python-version/OS matrix.
+content check (`scripts/check_destructive_migrations.py`), the Domain Core import-boundary
+and 100%-coverage gate, the full pytest suite against a real Postgres service container, a
+Docker image build with an import smoke test, and Flutter analyze/test. See the workflow
+file itself for why it's structured as independent parallel jobs rather than one long
+sequential one, and why there's no Python-version/OS matrix.
 
 ## Status
 
-Sprint 1, Step 11: CI is wired end to end (see above). All eleven of Sprint 1's steps
-that don't depend on product code are done; the initial Domain Core skeleton (Step 12)
-is what's left.
+Sprint 1, Step 12: the Domain Core skeleton (`app/domain/shared_kernel/`) is in place —
+base types only, no product-specific business logic yet (see "Domain Core" above). Every
+one of Sprint 1's twelve steps is now done. Real aggregates, the nine rule engines, and
+everything product-specific start with Sprint 2.

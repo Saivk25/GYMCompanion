@@ -18,7 +18,7 @@ VENV ?= .venv
 PY := $(abspath $(VENV))/bin/python
 
 .PHONY: backend-install backend-install-locked backend-lock backend-test backend-lint \
-        backend-format backend-typecheck backend-run \
+        backend-format backend-typecheck backend-run backend-test-domain-coverage \
         backend-migrate backend-migrate-down backend-migration backend-migrate-check \
         backend-check-destructive-migrations \
         mobile-get mobile-analyze mobile-test mobile-run \
@@ -62,6 +62,25 @@ backend-typecheck:
 
 backend-run:
 	cd backend && PYTHONPATH=. $(PY) -m uvicorn app.main:app --reload
+
+# app/domain's own, stricter coverage gate: 100%, merge-blocking, run
+# separately from backend-test because coverage.py's fail_under in
+# pyproject.toml is a single repo-wide number and app/infra/app/api
+# legitimately aren't at 100% yet (see pyproject.toml's [tool.coverage.report]
+# comment). Only tests/domain is in scope here — this is specifically about
+# the Domain Core's own promise, not a proxy for overall backend health.
+#
+# Wrapped with the standalone `coverage` command (--source=app.domain) and
+# pytest-cov disabled for this one run (--no-cov) rather than just adding
+# --cov=app.domain on top of pytest-cov: pytest-cov *adds* --cov sources to
+# whatever addopts already has (--cov=app), it does not replace them, which
+# would silently measure and fail this gate against the whole app/ package
+# instead of app/domain alone — found by actually running this target, not
+# assumed to work.
+backend-test-domain-coverage:
+	cd backend && PYTHONPATH=. $(PY) -m coverage run --source=app.domain \
+		-m pytest tests/domain --no-cov -q
+	cd backend && $(PY) -m coverage report --fail-under=100 -m
 
 # Applies every migration up to the latest. Reads the target database from
 # GYM_DATABASE_URL (see backend/.env.example) — same variable the app itself
@@ -121,4 +140,5 @@ precommit-install:
 # one command, before you push. backend-migrate-check is deliberately
 # excluded: it needs a real database, so it can't be part of an offline
 # target — CI runs it separately, against a service container.
-check: backend-lint backend-typecheck backend-test backend-check-destructive-migrations
+check: backend-lint backend-typecheck backend-test backend-check-destructive-migrations \
+       backend-test-domain-coverage

@@ -76,6 +76,12 @@ jobs:
       - name: Destructive-migration content check
         run: python scripts/check_destructive_migrations.py
 
+      - name: Domain Core import boundaries + 100% coverage gate
+        run: |
+          cd backend
+          PYTHONPATH=. python -m coverage run --source=app.domain -m pytest tests/domain --no-cov -q
+          python -m coverage report --fail-under=100 -m
+
   # --- Needs a real database: migration application + full test suite. ---
   backend-test:
     name: Backend / migrations + pytest (real Postgres)

@@ -43,10 +43,13 @@ README only orients you around the code; it does not restate product behavior.
 
 ## Status
 
-Sprint 1 (environment setup) of the Engineering Master Plan: repository structure, backend
-and Flutter scaffolds, tooling, testing, linting, formatting, Docker, Postgres, Alembic, and
-CI are done (Steps 1–11). Remaining: the initial Domain Core skeleton (Step 12). See
-`docs/adr/` for decisions made during implementation that weren't already pinned down by
+Sprint 1 (environment setup) of the Engineering Master Plan is complete: repository
+structure, backend and Flutter scaffolds, tooling, testing, linting, formatting, Docker,
+Postgres, Alembic, CI, and the framework-independent Domain Core skeleton
+(`backend/app/domain/shared_kernel/` — see `backend/README.md`'s "Domain Core" section)
+are all done (Steps 1–12). No product-specific business logic exists yet — real
+aggregates and the nine rule engines start with Sprint 2. See `docs/adr/` for decisions
+made during implementation that weren't already pinned down by
 the six planning documents.
 
 ## Getting started
