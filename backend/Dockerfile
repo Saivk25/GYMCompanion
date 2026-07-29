@@ -13,10 +13,9 @@ RUN groupadd --system gymcompanion \
 
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir .
-# Alembic migration files (backend/alembic/, alembic.ini) are added to this
-# COPY in Sprint 1, Step 10, once they exist — deliberately not referenced
-# yet so this Dockerfile stays buildable at every intermediate step.
 COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./alembic.ini
 
 RUN chown -R gymcompanion:gymcompanion /app
 USER gymcompanion

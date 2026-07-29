@@ -21,6 +21,11 @@ services:
       retries: 10
 
   backend:
+    # Migrations are not run automatically on container start (see
+    # infra/README.md) — run `docker compose exec backend alembic upgrade
+    # head` explicitly after the stack is up. Auto-migrating on every boot
+    # is easy to get wrong with more than one replica; a solo developer
+    # with one backend instance doesn't need that risk for the convenience.
     build:
       context: ../backend
       dockerfile: Dockerfile

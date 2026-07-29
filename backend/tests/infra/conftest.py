@@ -17,20 +17,20 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.infra.database import build_engine
 
-_TEST_DATABASE_URL = os.environ.get(
-    "GYM_TEST_DATABASE_URL",
+TEST_DATABASE_URL = os.environ.get(
+    "GYMTEST_DATABASE_URL",
     "postgresql+psycopg://gymcompanion:gymcompanion@localhost:5432/gymcompanion",
 )
 
 
 @pytest.fixture
 def pg_session() -> Generator[Session, None, None]:
-    engine = build_engine(_TEST_DATABASE_URL)
+    engine = build_engine(TEST_DATABASE_URL)
     try:
         with engine.connect():
             pass
     except sqlalchemy.exc.OperationalError as exc:
-        pytest.skip(f"no reachable Postgres at {_TEST_DATABASE_URL}: {exc}")
+        pytest.skip(f"no reachable Postgres at {TEST_DATABASE_URL}: {exc}")
 
     session_factory = sessionmaker(bind=engine)
     session = session_factory()

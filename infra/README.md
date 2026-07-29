@@ -20,6 +20,13 @@ Verify it's up:
 curl http://localhost:8000/health
 ```
 
+Apply database migrations (not run automatically — see the comment in
+`docker-compose.yml`):
+
+```bash
+docker compose exec backend alembic upgrade head
+```
+
 ## Status and a verification note
 
 Not yet run in this environment — the implementation sandbox this project was
@@ -30,5 +37,3 @@ multi-stage-free pattern deliberately kept simple because `psycopg[binary]` need
 compiler toolchain), but `docker compose up` on a real machine is this configuration's
 first real test, not a formality.
 
-The backend's `Dockerfile` does not yet copy `alembic/` — that lands in Sprint 1,
-Step 10, alongside the migration setup itself.
