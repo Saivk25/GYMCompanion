@@ -32,6 +32,11 @@ python3 -m venv ~/.venvs/gym-backend
 
 (The `dev` extra — pytest, ruff, mypy, pre-commit — is added in Sprint 1, Step 4.)
 
+For a reproducible install that matches exactly what CI ran — the exact, hash-pinned
+dependency versions in `requirements-lock.txt`, rather than pyproject.toml's ranges
+resolved fresh — use `make backend-install-locked` instead. See "Reproducible builds"
+below.
+
 Copy `.env.example` to `.env` and adjust `GYM_DATABASE_URL` once Postgres is available.
 
 Run the API:
@@ -123,11 +128,34 @@ testing against a real database, not by reading the code:
    the time Postgres evaluates `RETURNING`. `tests/infra/test_migrations.py`'s
    cross-tenant test exercises exactly this pattern.
 
+## Reproducible builds
+
+`requirements-lock.txt` pins every dependency (direct and transitive) to an exact,
+hash-verified version. CI (`.github/workflows/ci.yml`) installs from this file, not from
+`pyproject.toml`'s ranges — so a build today and a build in six months resolve to
+identical versions, until someone deliberately regenerates the lock file:
+
+```bash
+make backend-lock                 # regenerate after changing a dependency
+make backend-install-locked       # install exactly what's locked (what CI does)
+```
+
+Review the diff before committing a regenerated lock file — it's the only way a
+dependency bump becomes visible in code review, since `pyproject.toml`'s own ranges
+often don't change at all when only a transitive dependency moves.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
+mypy strict, migration verification and drift detection, the destructive-migration
+content check (`scripts/check_destructive_migrations.py`), the full pytest suite against
+a real Postgres service container, a Docker image build with an import smoke test, and
+Flutter analyze/test. See the workflow file itself for why it's structured as
+independent parallel jobs rather than one long sequential one, and why there's no
+Python-version/OS matrix.
+
 ## Status
 
-Sprint 1, Step 10: Alembic is configured end to end — naming convention, autogenerate,
-a real initial migration (`users`, matching the frozen Domain Model Bible's User/Account
-aggregate fields verbatim), row-level security enforced and verified with a genuine
-cross-tenant-leak test, rollback tested for real, and Makefile targets for the whole
-workflow. `backend/Dockerfile` now ships `alembic/` and `alembic.ini`. CI wiring
-(running these against a service-container database on every push) is Step 11.
+Sprint 1, Step 11: CI is wired end to end (see above). All eleven of Sprint 1's steps
+that don't depend on product code are done; the initial Domain Core skeleton (Step 12)
+is what's left.

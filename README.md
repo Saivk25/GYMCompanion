@@ -1,5 +1,14 @@
 # Gym Companion
 
+<!--
+CI badge: this repository doesn't have a GitHub remote configured yet
+(everything so far has been built and committed locally). Once it's pushed
+to GitHub, uncomment the line below and replace OWNER/REPO — GitHub Actions
+generates this badge URL automatically from .github/workflows/ci.yml, no
+separate setup needed.
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+-->
+
 A private, AI-assisted fitness operating system — not a workout tracker, not a calorie
 counter, not a chatbot. Built first for one user, generalized later only once proven.
 
@@ -25,16 +34,20 @@ README only orients you around the code; it does not restate product behavior.
 | `apps/mobile/` | The Flutter client — one app, five tabs, per the UX/UI Design Bible. |
 | `backend/` | The FastAPI service. `app/domain/` is framework-free business logic; everything else is a thin layer around it. |
 | `infra/` | Local development infrastructure (Docker Compose for Postgres + backend). No Kubernetes — see the Engineering Master Plan's over-engineering table for why. |
+| `.github/workflows/` | CI only (lint, typecheck, tests, migrations, Docker build, Flutter analyze/test). No deployment workflow exists yet — see the Engineering Master Plan Section 10, release process is manual during MVP through Beta. |
 | `docs/` | The six planning documents plus `adr/` for architecture decision records raised during implementation. |
-| `scripts/` | One-off developer scripts (database seeding, environment bootstrap). |
+| `scripts/` | One-off developer scripts (database seeding, environment bootstrap, local Postgres, CI-adjacent checks). |
 | `tests/e2e/` | Full-stack end-to-end tests spanning the mobile app and backend together. Unit/widget/integration tests live inside `apps/mobile/test/` and `backend/tests/` respectively. |
 | `assets/` | Shared design assets referenced by the UX/UI Design Bible (icons, fonts) — not yet populated. |
 | `datasets/`, `models/` | Reserved for future use if a custom model is ever justified. Per the Engineering Master Plan, no custom model training is planned for MVP through v1 — these exist so the layout doesn't need to change if that ever becomes justified. |
 
 ## Status
 
-Sprint 1 (environment setup) of the Engineering Master Plan. See `docs/adr/` for decisions
-made during implementation that weren't already pinned down by the six planning documents.
+Sprint 1 (environment setup) of the Engineering Master Plan: repository structure, backend
+and Flutter scaffolds, tooling, testing, linting, formatting, Docker, Postgres, Alembic, and
+CI are done (Steps 1–11). Remaining: the initial Domain Core skeleton (Step 12). See
+`docs/adr/` for decisions made during implementation that weren't already pinned down by
+the six planning documents.
 
 ## Getting started
 

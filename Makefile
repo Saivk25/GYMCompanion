@@ -17,13 +17,36 @@
 VENV ?= .venv
 PY := $(abspath $(VENV))/bin/python
 
-.PHONY: backend-install backend-test backend-lint backend-format backend-typecheck backend-run \
+.PHONY: backend-install backend-install-locked backend-lock backend-test backend-lint \
+        backend-format backend-typecheck backend-run \
         backend-migrate backend-migrate-down backend-migration backend-migrate-check \
+        backend-check-destructive-migrations \
         mobile-get mobile-analyze mobile-test mobile-run \
         precommit-install check
 
 backend-install:
 	$(PY) -m pip install "./backend[dev]"
+
+# The reproducible counterpart to backend-install: installs the exact,
+# hash-verified versions in backend/requirements-lock.txt instead of letting
+# pip re-resolve pyproject.toml's ranges fresh. This is what CI uses (Step
+# 11) so a build never silently picks up a new transitive dependency
+# release between one run and the next. Local dev defaults to
+# backend-install for faster iteration; reach for this when you specifically
+# need to reproduce what CI saw.
+backend-install-locked:
+	$(PY) -m pip install -r backend/requirements-lock.txt
+	$(PY) -m pip install --no-deps ./backend
+
+# Regenerates backend/requirements-lock.txt from backend/pyproject.toml.
+# Run this after changing a dependency, review the diff, then commit the
+# lock file alongside the pyproject.toml change — the two must move
+# together. Needs pip-tools, which is deliberately not a permanent project
+# dependency (only needed for this one occasional task):
+#   $(PY) -m pip install pip-tools
+backend-lock:
+	cd backend && $(PY) -m piptools compile --extra dev --generate-hashes \
+		--output-file=requirements-lock.txt pyproject.toml
 
 backend-test:
 	cd backend && PYTHONPATH=. $(PY) -m pytest
@@ -69,6 +92,16 @@ backend-migration:
 backend-migrate-check:
 	cd backend && PYTHONPATH=. $(PY) -m alembic check
 
+# Static check (no database needed): fails if any migration's upgrade()
+# contains a destructive operation (DROP TABLE/COLUMN, TRUNCATE) without an
+# explicit review marker comment. Implements the Engineering Master Plan's
+# CI/CD section: "no destructive migration runs without a prior backup
+# step, enforced by a CI check on migration file content." See
+# scripts/check_destructive_migrations.py for the exact rule and how to
+# acknowledge an intentional destructive migration.
+backend-check-destructive-migrations:
+	$(PY) scripts/check_destructive_migrations.py
+
 mobile-get:
 	cd apps/mobile && flutter pub get
 
@@ -84,8 +117,8 @@ mobile-run:
 precommit-install:
 	$(PY) -m pre_commit install
 
-# Everything CI runs on the backend, in one command, before you push.
-# backend-migrate-check is deliberately excluded: it needs a real database,
-# and this target must stay runnable offline (e.g. before Postgres is
-# started locally). CI runs it separately, against a service container.
-check: backend-lint backend-typecheck backend-test
+# Everything CI runs on the backend that doesn't need a real database, in
+# one command, before you push. backend-migrate-check is deliberately
+# excluded: it needs a real database, so it can't be part of an offline
+# target — CI runs it separately, against a service container.
+check: backend-lint backend-typecheck backend-test backend-check-destructive-migrations
