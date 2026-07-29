@@ -34,7 +34,7 @@ backend-format:
 	cd backend && $(PY) -m ruff format .
 
 backend-typecheck:
-	cd backend && PYTHONPATH=. $(PY) -m mypy app
+	cd backend && PYTHONPATH=. $(PY) -m mypy app tests
 
 backend-run:
 	cd backend && PYTHONPATH=. $(PY) -m uvicorn app.main:app --reload

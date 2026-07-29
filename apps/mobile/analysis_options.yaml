@@ -1,8 +1,36 @@
 include: package:flutter_lints/flutter.yaml
 
-# Full linter ruleset is expanded in Sprint 1, Step 6. This include already
-# gives the project real linting from the moment `flutter pub get` succeeds.
+# A curated set on top of flutter_lints' defaults — mirrors the backend's
+# philosophy in ruff's config (backend/pyproject.toml): each addition earns
+# its place rather than turning on every available rule.
 linter:
   rules:
     prefer_single_quotes: true
     always_declare_return_types: true
+
+    # Performance: cheap for the analyzer to check, real savings at runtime.
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+
+    # Correctness: these catch real bugs, not just style.
+    unawaited_futures: true   # a fire-and-forget async call is almost always a mistake.
+    cancel_subscriptions: true
+    close_sinks: true
+    avoid_returning_null_for_void: true
+
+    # Consistency: one canonical way to write each of these, across a
+    # multi-year, daily-use codebase (Engineering Master Plan, "consistency
+    # over novelty").
+    unnecessary_this: true
+    sort_child_properties_last: true
+    require_trailing_commas: true
+
+    # A logger, not print(), belongs in production code — avoid_print catches
+    # debug leftovers before they ship.
+    avoid_print: true
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true

@@ -17,12 +17,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Everything a developer needs beyond runtime deps: testing, linting,
-# formatting, and the pre-commit framework wiring them together.
 dev = [
     "pytest>=8.3",
     "pytest-cov>=5.0",
-    "httpx>=0.27",          # required by fastapi.testclient.TestClient
+    "httpx>=0.27",
     "ruff>=0.7",
     "mypy>=1.11",
     "pre-commit>=3.8",
@@ -37,22 +35,57 @@ packages = ["app"]
 
 [tool.ruff]
 target-version = "py310"
+line-length = 100
 
 [tool.ruff.lint]
-# EXE002 (executable file without a shebang) is disabled repository-wide: the
-# development mount this project was scaffolded on reports every file as
-# executable regardless of chmod — a filesystem artifact, not a code issue.
-# The full rule selection is curated in Sprint 1, Step 6; this entry exists
-# now only so Step 4's tooling runs clean.
-ignore = ["EXE002"]
+# A curated selection, not "ALL" — enabling every rule category is its own
+# form of over-engineering for a solo developer (constant noqa management
+# with no proportional safety benefit). Each group earns its place:
+select = [
+    "E", "F",   # pycodestyle errors + pyflakes: correctness basics.
+    "I",        # isort: one deterministic import order, no bikeshedding.
+    "UP",       # pyupgrade: keep syntax current for the pinned Python floor.
+    "B",        # flake8-bugbear: catches real bug patterns (mutable defaults, etc).
+    "C4",       # flake8-comprehensions: unnecessary list()/dict() wrapping.
+    "SIM",      # flake8-simplify: de-nest and de-duplicate obvious cases.
+    "N",        # pep8-naming: consistent naming across a codebase one person writes alone.
+    "ASYNC",    # flake8-async: real footguns in an async framework (blocking calls, etc).
+    "S",        # flake8-bandit: basic security checks — worth it given this app handles health data.
+    "RUF",      # ruff-specific checks not covered above.
+]
+ignore = [
+    # Filesystem artifact of this development environment (see Step 4) — every
+    # file here reports as executable regardless of chmod.
+    "EXE002",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately use assert (S101-style) and long, repetitive fixtures —
+# neither is a code smell in test code the way it would be in app/.
+"tests/**" = [
+    "S101",         # assert is the point of a test, not a smell.
+    "S105", "S106", # tests deliberately use fake secrets to exercise the guard in app/core/config.py.
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_configs = true
+# The codebase is small enough today that starting at `strict` costs nothing
+# and is far cheaper than retrofitting strictness onto a larger one later —
+# consistent with the Engineering Master Plan's "near-100% coverage is cheap
+# now" reasoning applied to types instead of tests.
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
-# --strict-markers: a typo'd @pytest.mark.unti is a collection error, not a
-# silently-ignored no-op marker.
-# --strict-config: an unrecognised ini option fails the run instead of being
-# silently ignored — the whole point of pinning config is that it's obeyed.
 addopts = "-ra --strict-markers --strict-config --cov=app --cov-report=term-missing"
 markers = [
     "unit: fast, isolated tests with no I/O — primarily app/domain.",
@@ -65,10 +98,5 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# No repo-wide fail_under yet — most of the repo is thin wiring (app/main.py,
-# app/core/config.py) that integration/E2E tests exercise better than unit
-# coverage numbers reward. Sprint 1, Step 12 adds a real, high floor scoped
-# specifically to app/domain, per the Engineering Master Plan's instruction
-# that Domain Core coverage is merge-blocking and everything else scales to
-# its own risk tier — a single blanket number today would be theater, not a
-# quality gate.
+# No repo-wide fail_under yet — see Step 12, which adds a real, high floor
+# scoped specifically to app/domain rather than a theatrical blanket number.
