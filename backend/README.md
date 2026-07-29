@@ -201,6 +201,7 @@ package per aggregate under `app/domain/`, mirrored 1:1 by `tests/domain/`.
 | WorkoutSession | `app/domain/workout_session/` | Closest to Section 4.7 (`WorkoutSession`, Table 10) — the execution record of a `Workout`, referenced by `workout_id` only. Four-state lifecycle (`Planned`/`Active`/`Completed`/`Abandoned`) versus the Bible's five, and `plan()` raises no creation event, unlike every other aggregate's factory. Owns `ExercisePerformance` (entity) and `ExerciseSet` (value object) — what was actually performed, exercise by exercise, set by set — as child objects with no repository of their own. See `docs/adr/0008-workout-session-execution-record.md` and `docs/adr/0009-exercise-performance-owned-entity.md`. No persistence yet. |
 | Progress | `app/domain/progress/` | Closest to Section 4.10 (`Measurement`, Table 13), broadened to cover body composition (`BodyFatPercentage`/`LeanBodyMass`/`MuscleMass`) and two extra tape sites (`Calf`/`Neck`) beyond the Bible's own weight/waist/hip/chest/arm/thigh list. No status enum and no lifecycle — a check-in is a fact, not a workflow. "Immutable after recording" is documented policy, not a domain-layer guard: `update_body_composition`/`update_measurements`/`update_notes` are real, unconditionally-callable mutations. See `docs/adr/0010-progress-immutability-is-a-policy-not-a-guard.md`. No persistence yet. |
 | Nutrition | `app/domain/nutrition/` | Closest to Section 4.9 (`Meal`, "a single logged eating event", Table 12), scoped down to canonical storage only — no AI assessment, `FoodItem` references, or Logged/Assessed/Confirmed/Disputed lifecycle. One record per logged entry, not a daily rollup; `meal_type`/`source` are both optional. See `docs/adr/0011-nutrition-is-a-per-entry-log-not-a-daily-rollup.md`. No persistence yet. |
+| Readiness | `app/domain/readiness/` | Closest to Section 4.8 (`ReadinessCheckIn`, "today's snapshot", Table 11). Stores observations only — no readiness/recovery score, deload triggers, or anything derived from a window of check-ins (that's `RecoveryState`, not built yet). Adds `RestingHeartRate`/`HeartRateVariability` beyond the Bible's own sleep/stress/soreness list; `pain_flags`/`GI_symptoms` are deliberately not modeled (routed through `SafetyFlag` in the Bible, a separate aggregate not built yet). The Bible's "one check-in per day" rule is not enforced at the domain layer — an application/repository-layer concern, same as every other aggregate's uniqueness constraints. No persistence yet. |
 
 ## Continuous integration
 
@@ -219,7 +220,7 @@ Sprint 1 (Steps 1–12) is complete: the Domain Core skeleton
 business logic (see "Domain Core" above).
 
 Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
-`Progress`, and `Nutrition` (see "Domain aggregates" above) are
-implemented, domain logic only — no ORM model, repository implementation,
-or migration yet for any of them. The remaining aggregates and the nine
-rule engines are still ahead.
+`Progress`, `Nutrition`, and `Readiness` (see "Domain aggregates" above)
+are implemented, domain logic only — no ORM model, repository
+implementation, or migration yet for any of them. The remaining
+aggregates and the nine rule engines are still ahead.

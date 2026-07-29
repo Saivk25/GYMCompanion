@@ -50,10 +50,11 @@ Postgres, Alembic, CI, and the framework-independent Domain Core skeleton
 are all done (Steps 1–12).
 
 Sprint 2 is underway: `User`, `Workout`, `Exercise`, `WorkoutSession`,
-`Progress`, and `Nutrition` are implemented (`backend/app/domain/user/`,
-`backend/app/domain/workout/`, `backend/app/domain/exercise/`,
-`backend/app/domain/workout_session/`, `backend/app/domain/progress/`,
-`backend/app/domain/nutrition/` — see `backend/README.md`'s "Domain
+`Progress`, `Nutrition`, and `Readiness` are implemented
+(`backend/app/domain/user/`, `backend/app/domain/workout/`,
+`backend/app/domain/exercise/`, `backend/app/domain/workout_session/`,
+`backend/app/domain/progress/`, `backend/app/domain/nutrition/`,
+`backend/app/domain/readiness/` — see `backend/README.md`'s "Domain
 aggregates" section). No persistence (SQLAlchemy model, repository
 implementation, migration) exists for any of them yet — domain logic only.
 The remaining aggregates and the nine rule engines are still ahead. See
