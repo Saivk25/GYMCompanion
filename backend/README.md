@@ -226,6 +226,28 @@ aggregates. No `repository.py` — rules aren't persisted. See
 `docs/adr/0013-rule-engine-foundation.md` for the full reasoning behind
 all of these.
 
+## Readiness Rule Engine
+
+Sprint 3, Phase 2's first concrete rule engine
+(`app/domain/readiness/rules/`, mirrored by
+`tests/domain/readiness/rules/`), built on the Rule Engine foundation
+above and the Readiness aggregate. Evaluates a `ReadinessRuleContext`
+(sleep duration, energy/stress/soreness levels, resting heart rate, and
+heart rate variability — only the six fields readiness rules need, not
+the full aggregate) against five independent rules — `SleepRule`,
+`EnergyRule`, `StressRule`, `SorenessRule`, `RecoveryRule` (the one rule
+spanning two fields: resting heart rate and HRV) — each with its own
+configurable threshold and severity, defaulting to this phase's own
+general-purpose figures (7h sleep, energy/stress/soreness at 4/7/7 out of
+10, 70 bpm resting heart rate, 40 ms HRV). A missing input is treated as
+"nothing to flag," never a failure. `ReadinessRuleEngine` composes all
+five by default via the shared `RuleEngine[ReadinessRuleContext]` — a
+thin, behavior-preserving subclass that only wires up the default rule
+set. Produces no recovery score, fatigue score, or training load — see
+`docs/adr/0014-readiness-rule-composition.md` for why independent rules
+were chosen over one monolithic evaluator, and for the reasoning behind
+every other design choice in this package.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -249,4 +271,9 @@ implementation, or migration yet for any of them.
 
 Sprint 3, Phase 1 is done: the Rule Engine foundation (see "Rule Engine
 foundation" above) — shared architecture only, no fitness-specific rules.
-The nine concrete rule engines it exists to support are still ahead.
+
+Sprint 3, Phase 2 is done: the Readiness Rule Engine (see "Readiness Rule
+Engine" above) — the first of the Bible's nine concrete rule engines.
+Workout, Nutrition, Recovery (scoring), Safety, Recommendation,
+Notification, Progress, Analytics, and AI Validation rule engines are
+still ahead.

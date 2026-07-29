@@ -64,9 +64,15 @@ Sprint 3, Phase 1 is done: the reusable Rule Engine foundation
 foundation" section) that every future deterministic rule engine builds
 on. No fitness-specific rules exist yet — this phase implemented only the
 shared architecture (`Rule`, `RuleEngine`, `RuleContext`, `RuleResult`,
-`Recommendation`, `RecommendationSeverity`). The nine concrete rule
-engines named in the Domain Model & Decision Engine Bible (Workout,
-Nutrition, Recovery, Safety, Recommendation, Notification, Progress,
+`Recommendation`, `RecommendationSeverity`).
+
+Sprint 3, Phase 2 is done: the Readiness Rule Engine
+(`backend/app/domain/readiness/rules/` — see `backend/README.md`'s
+"Readiness Rule Engine" section), the first of the Bible's nine concrete
+rule engines — five independent rules (sleep, energy, stress, soreness,
+recovery metrics) evaluating a `Readiness` check-in and producing
+deterministic `Recommendation`s. The remaining eight (Workout, Nutrition,
+Recovery scoring, Safety, Recommendation, Notification, Progress,
 Analytics, AI Validation) are still ahead. See `docs/adr/` for decisions
 made during implementation that weren't already pinned down by the six
 planning documents.
