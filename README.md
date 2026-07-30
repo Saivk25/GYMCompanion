@@ -92,11 +92,19 @@ Sprint 3, Phase 5 is done: the Progressive Overload Rule Engine
 "Progressive Overload Rule Engine" section), the first rule engine
 evaluating a history of snapshots rather than one point in time — five
 independent rules (volume, intensity, frequency, progression, deload)
-evaluating training trends across a user's `WorkoutSession` history. Of
-the Bible's nine named engines, Workout, Recovery scoring, Safety,
-Recommendation, Notification, Progress, Analytics, and AI Validation are
-still ahead. See `docs/adr/` for decisions made during implementation
-that weren't already pinned down by the six planning documents.
+evaluating training trends across a user's `WorkoutSession` history.
+
+Sprint 3, Phase 6 is done: the Safety Rule Engine
+(`backend/app/domain/safety/rules/` — see `backend/README.md`'s "Safety
+Rule Engine" section), the first rule engine with no aggregate of its
+own — it composes two other engines' context types (Readiness,
+Progressive Overload) instead — five independent rules (readiness
+safety, soreness, workload spike, contraindication, injury) evaluating
+whether it is currently safe for a user to train. Of the Bible's nine
+named engines, Workout, Recovery scoring, Recommendation, Notification,
+Progress, Analytics, and AI Validation are still ahead. See `docs/adr/`
+for decisions made during implementation that weren't already pinned
+down by the six planning documents.
 
 ## Getting started
 

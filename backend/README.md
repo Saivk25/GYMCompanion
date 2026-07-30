@@ -315,6 +315,34 @@ simplification every volume/load number carries.
 shared `RuleEngine[ProgressiveOverloadRuleContext]`. Produces no workout
 generation, exercise substitution, fatigue scoring, or scheduling.
 
+## Safety Rule Engine
+
+Sprint 3, Phase 6's fifth concrete rule engine
+(`app/domain/safety/rules/`, mirrored by `tests/domain/safety/rules/`),
+the first with no aggregate of its own — no `SafetyFlag` aggregate
+exists yet, so `app/domain/safety/` holds only this rules package.
+`SafetyRuleContext` composes two other engines' whole context types
+(`readiness: ReadinessContext | None`, `recent_training:
+ProgressiveOverloadRuleContext | None`) plus two small, new value
+objects no aggregate carries yet (`DeclaredRestriction`, `ActiveInjury`
+— "supplied in the context" per this phase's own task, since no
+`SafetyFlag` aggregate exists to source them from). Five independent
+rules — `ReadinessSafetyRule` and `SorenessRule` (CRITICAL-severity red
+flags from sleep/stress/heart-rate/soreness signals, stricter than and
+deliberately independent of Readiness's own advisory rules on the same
+fields), `WorkloadRule` (flags a sudden training-volume spike relative
+to a recent baseline — a "too much, too soon" injury-risk pattern,
+distinct from Progressive Overload's `DeloadRule`), `ContraindicationRule`
+(surfaces declared restrictions on file, ADVISORY — ​can only say a
+restriction exists, never that a specific exercise violates it),
+`InjuryRule` (CRITICAL when any active injury still restricts training)
+— see `docs/adr/0018-safety-rule-engine-composition-and-authority.md`
+for the full reasoning, including this engine's evaluation-only
+authority: it computes findings, it cannot itself block a session or
+override another engine's output. `SafetyRuleEngine` composes all five
+by default via the shared `RuleEngine[SafetyRuleContext]`. Produces no
+exercise substitution, workout planning or generation, or AI coaching.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -351,8 +379,11 @@ and Progress).
 
 Sprint 3, Phase 5 is done: the Progressive Overload Rule Engine (see
 "Progressive Overload Rule Engine" above) — the first evaluating a
-history of snapshots rather than one point in time. Of the Bible's nine
-named engines, Workout, Recovery (scoring), Safety, Recommendation,
-Notification, Progress, Analytics, and AI Validation are still ahead;
-Exercise Recommendation, Training Load, Safety, and an Application Layer
-remain unbuilt as well.
+history of snapshots rather than one point in time.
+
+Sprint 3, Phase 6 is done: the Safety Rule Engine (see "Safety Rule
+Engine" above) — the first with no aggregate of its own, composing two
+other engines' context types instead. Of the Bible's nine named engines,
+Workout, Recovery (scoring), Recommendation, Notification, Progress,
+Analytics, and AI Validation are still ahead; Exercise Recommendation,
+Training Load, and an Application Layer remain unbuilt as well.
