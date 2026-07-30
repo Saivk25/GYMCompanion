@@ -343,6 +343,35 @@ override another engine's output. `SafetyRuleEngine` composes all five
 by default via the shared `RuleEngine[SafetyRuleContext]`. Produces no
 exercise substitution, workout planning or generation, or AI coaching.
 
+## Progress Evaluation Rule Engine
+
+Sprint 3, Phase 7's sixth concrete rule engine
+(`app/domain/progress/rules/`, mirrored by
+`tests/domain/progress/rules/`), the first context to combine a
+*history* of snapshots (`progress_history: tuple[ProgressContext, ...]`,
+Progressive Overload's shape) with a *whole referenced snapshot*
+(`goal: GoalContext | None`, Goal Alignment's shape) at the same time —
+needed because `BodyWeightRule`/`BodyFatRule` compare a trend across
+history against a goal's target. `reference_date: date` is also
+carried, but only `ConsistencyRule` actually reads it. Five independent
+rules — `BodyWeightRule` and `BodyFatRule` (fail when the gap to an
+active goal's target hasn't narrowed across history, pass when no
+active goal or insufficient entries exist), `MeasurementTrendRule`
+(surfaces notable changes across nine tape/body-composition fields with
+no `Goal` target to fail against — always passes, same precedent as
+Goal Alignment's `StrengthGoalRule`), `ConsistencyRule` (the first rule
+in the codebase to deliberately *fail*, not pass, on missing or stale
+data — grounded in the Bible's Table 54 "Minimum evidence rule"),
+`PlateauRule` (flags a trailing run of consecutive entries with no
+meaningful body-weight or body-fat movement, approximating the Bible's
+"consecutive flat weeks" as consecutive entries since `Progress` has no
+weekly cadence — a stated simplification) — see
+`docs/adr/0019-progress-evaluation-consistency-and-plateau-scope.md`
+for the full reasoning. `ProgressEvaluationRuleEngine` composes all five
+by default via the shared `RuleEngine[ProgressEvaluationRuleContext]`.
+Produces no training load, exercise recommendation, workout planning,
+or AI coaching.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -383,7 +412,13 @@ history of snapshots rather than one point in time.
 
 Sprint 3, Phase 6 is done: the Safety Rule Engine (see "Safety Rule
 Engine" above) — the first with no aggregate of its own, composing two
-other engines' context types instead. Of the Bible's nine named engines,
-Workout, Recovery (scoring), Recommendation, Notification, Progress,
+other engines' context types instead.
+
+Sprint 3, Phase 7 is done: the Progress Evaluation Rule Engine (see
+"Progress Evaluation Rule Engine" above) — the first context to combine
+a history of snapshots with a whole referenced snapshot at once, and
+the first rule engine with a deliberate exception to the "missing data
+passes" convention (`ConsistencyRule`). Of the Bible's nine named
+engines, Workout, Recovery (scoring), Recommendation, Notification,
 Analytics, and AI Validation are still ahead; Exercise Recommendation,
 Training Load, and an Application Layer remain unbuilt as well.

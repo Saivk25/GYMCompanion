@@ -100,11 +100,22 @@ Rule Engine" section), the first rule engine with no aggregate of its
 own — it composes two other engines' context types (Readiness,
 Progressive Overload) instead — five independent rules (readiness
 safety, soreness, workload spike, contraindication, injury) evaluating
-whether it is currently safe for a user to train. Of the Bible's nine
-named engines, Workout, Recovery scoring, Recommendation, Notification,
-Progress, Analytics, and AI Validation are still ahead. See `docs/adr/`
-for decisions made during implementation that weren't already pinned
-down by the six planning documents.
+whether it is currently safe for a user to train.
+
+Sprint 3, Phase 7 is done: the Progress Evaluation Rule Engine
+(`backend/app/domain/progress/rules/` — see `backend/README.md`'s
+"Progress Evaluation Rule Engine" section), the first context to combine
+a history of snapshots with a whole referenced snapshot at once — five
+independent rules (body weight trend, body fat trend, measurement trend,
+consistency, plateau) evaluating whether a user's historical
+body-composition trends are progressing toward an active goal.
+`ConsistencyRule` is the first rule in the codebase to deliberately fail
+(rather than pass) on missing or stale data, grounded in the Bible's
+"Minimum evidence rule." Of the Bible's nine named engines, Workout,
+Recovery scoring, Recommendation, Notification, Analytics, and AI
+Validation are still ahead. See `docs/adr/` for decisions made during
+implementation that weren't already pinned down by the six planning
+documents.
 
 ## Getting started
 
