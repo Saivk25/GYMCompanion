@@ -372,6 +372,36 @@ by default via the shared `RuleEngine[ProgressEvaluationRuleContext]`.
 Produces no training load, exercise recommendation, workout planning,
 or AI coaching.
 
+## Training Load Rule Engine
+
+Sprint 3, Phase 8's seventh concrete rule engine
+(`app/domain/training_load/rules/`, mirrored by
+`tests/domain/training_load/rules/`), the first package whose context
+derives nothing at all — `TrainingLoadRuleContext` only sorts and
+windows `TrainingLoadSummary` values the application layer already
+computed (`TrainingLoad`, a single opaque, non-negative daily scalar),
+unlike Progressive Overload's `from_session_contexts()`, which builds
+`WorkoutSessionSummary` from raw session data itself.
+`trailing_window()` centralizes acute/chronic date-range selection in
+one place, anchored to the latest supplied entry's date, never to
+`Clock`/today. Five independent rules — `AcuteLoadRule` and
+`ChronicLoadRule` (flag a 7-day sum, respectively a 28-day
+weekly-equivalent sum, exceeding a configurable ceiling),
+`LoadRatioRule` (the acute:chronic workload ratio — "ACWR" in the
+sports-science literature — flags a ratio outside a configured
+"sweet spot," e.g. Gabbett 2016), `MonotonyRule` and `StrainRule`
+(Foster 1998's training monotony `mean/stdev` and strain
+`total x monotony`, using population standard deviation, with an
+explicit zero-variance special case for both) — see
+`docs/adr/0020-training-load-supplied-summaries.md` for the full
+reasoning, including why every window size and ceiling is explicitly
+literature-grounded rather than Bible-mandated, and how this engine's
+rules stay a deliberately independent opinion from Safety's
+`WorkloadRule` and Progressive Overload's `VolumeRule`/`DeloadRule`
+rather than duplicating either. `TrainingLoadRuleEngine` composes all
+five by default via the shared `RuleEngine[TrainingLoadRuleContext]`.
+Produces no exercise recommendation, workout planning, or AI coaching.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -418,7 +448,12 @@ Sprint 3, Phase 7 is done: the Progress Evaluation Rule Engine (see
 "Progress Evaluation Rule Engine" above) — the first context to combine
 a history of snapshots with a whole referenced snapshot at once, and
 the first rule engine with a deliberate exception to the "missing data
-passes" convention (`ConsistencyRule`). Of the Bible's nine named
-engines, Workout, Recovery (scoring), Recommendation, Notification,
-Analytics, and AI Validation are still ahead; Exercise Recommendation,
-Training Load, and an Application Layer remain unbuilt as well.
+passes" convention (`ConsistencyRule`).
+
+Sprint 3, Phase 8 is done: the Training Load Rule Engine (see "Training
+Load Rule Engine" above) — the first package whose context derives no
+summaries of its own, only sorting and windowing what the application
+layer already supplied. Of the Bible's nine named engines, Workout,
+Recovery (scoring), Recommendation, Notification, Analytics, and AI
+Validation are still ahead; Exercise Recommendation and an Application
+Layer remain unbuilt as well.

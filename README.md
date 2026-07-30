@@ -111,7 +111,18 @@ consistency, plateau) evaluating whether a user's historical
 body-composition trends are progressing toward an active goal.
 `ConsistencyRule` is the first rule in the codebase to deliberately fail
 (rather than pass) on missing or stale data, grounded in the Bible's
-"Minimum evidence rule." Of the Bible's nine named engines, Workout,
+"Minimum evidence rule."
+
+Sprint 3, Phase 8 is done: the Training Load Rule Engine
+(`backend/app/domain/training_load/rules/` — see `backend/README.md`'s
+"Training Load Rule Engine" section), the first package whose context
+builds no summaries of its own at all — every `TrainingLoadSummary` is
+supplied pre-computed by the application layer — five independent
+rules (acute load, chronic load, acute:chronic load ratio, monotony,
+strain) evaluating accumulated training load using sports-science
+concepts (Foster's monotony/strain, the acute:chronic workload ratio)
+the Bible names only implicitly, as an input to `RecoveryState`, not by
+these terms directly. Of the Bible's nine named engines, Workout,
 Recovery scoring, Recommendation, Notification, Analytics, and AI
 Validation are still ahead. See `docs/adr/` for decisions made during
 implementation that weren't already pinned down by the six planning
