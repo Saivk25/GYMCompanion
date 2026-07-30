@@ -288,6 +288,33 @@ all share one guard: a goal that isn't Active always passes. Produces no
 workout planning, progressive overload, exercise recommendations,
 training load, or nutrition advice.
 
+## Progressive Overload Rule Engine
+
+Sprint 3, Phase 5's fourth concrete rule engine
+(`app/domain/workout/rules/`, mirrored by `tests/domain/workout/rules/`),
+the first evaluating a *history* of snapshots rather than one point in
+time. `ProgressiveOverloadRuleContext` holds pre-computed
+`WorkoutSessionSummary` values — one per `Completed` `WorkoutSession`,
+each summarizing whole-session `total_volume` (sum of weight x reps) and
+`average_load` (mean set weight), built once via
+`from_session_contexts()` so no rule re-derives these numbers from raw
+`ExerciseSet` data itself. Five independent rules — `VolumeRule` and
+`IntensityRule` (flag a declining average trend between the earlier and
+later half of the evaluated history), `FrequencyRule` (flags a sessions-
+per-week rate below a configurable minimum, computed from the session
+history's own date span, no wall clock), `ProgressionRule` (flags no new
+*peak* volume or load at all — a plateau, distinct from a decline),
+`DeloadRule` (flags a trailing run of sessions all near the historical
+peak volume with no lighter session — a workout-volume-only heuristic,
+not the Bible's Recovery-Rules deload trigger, which needs
+`RecoveryState`/`ReadinessCheckIn` data this phase doesn't have) — see
+`docs/adr/0017-progressive-overload-session-level-trends.md` for the full
+reasoning, including the stated whole-session/mixed-exercise
+simplification every volume/load number carries.
+`ProgressiveOverloadRuleEngine` composes all five by default via the
+shared `RuleEngine[ProgressiveOverloadRuleContext]`. Produces no workout
+generation, exercise substitution, fatigue scoring, or scheduling.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -320,7 +347,12 @@ Engine" above) — the second.
 
 Sprint 3, Phase 4 is done: the Goal Alignment Rule Engine (see "Goal
 Alignment Rule Engine" above) — the first spanning two aggregates (Goal
-and Progress). Of the Bible's nine named engines, Workout, Recovery
-(scoring), Safety, Recommendation, Notification, Progress, Analytics, and
-AI Validation are still ahead; Progressive Overload, Exercise
-Recommendation, and Training Load rule engines remain unbuilt as well.
+and Progress).
+
+Sprint 3, Phase 5 is done: the Progressive Overload Rule Engine (see
+"Progressive Overload Rule Engine" above) — the first evaluating a
+history of snapshots rather than one point in time. Of the Bible's nine
+named engines, Workout, Recovery (scoring), Safety, Recommendation,
+Notification, Progress, Analytics, and AI Validation are still ahead;
+Exercise Recommendation, Training Load, Safety, and an Application Layer
+remain unbuilt as well.

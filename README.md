@@ -85,7 +85,14 @@ Sprint 3, Phase 4 is done: the Goal Alignment Rule Engine
 Alignment Rule Engine" section), the first rule engine spanning two
 aggregates (`Goal` and `Progress`) — five independent rules (target
 date, body weight, body fat, strength-data-sufficiency, priority)
-evaluating whether a user's current state aligns with an active goal. Of
+evaluating whether a user's current state aligns with an active goal.
+
+Sprint 3, Phase 5 is done: the Progressive Overload Rule Engine
+(`backend/app/domain/workout/rules/` — see `backend/README.md`'s
+"Progressive Overload Rule Engine" section), the first rule engine
+evaluating a history of snapshots rather than one point in time — five
+independent rules (volume, intensity, frequency, progression, deload)
+evaluating training trends across a user's `WorkoutSession` history. Of
 the Bible's nine named engines, Workout, Recovery scoring, Safety,
 Recommendation, Notification, Progress, Analytics, and AI Validation are
 still ahead. See `docs/adr/` for decisions made during implementation
