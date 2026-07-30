@@ -248,6 +248,28 @@ set. Produces no recovery score, fatigue score, or training load — see
 were chosen over one monolithic evaluator, and for the reasoning behind
 every other design choice in this package.
 
+## Nutrition Rule Engine
+
+Sprint 3, Phase 3's second concrete rule engine
+(`app/domain/nutrition/rules/`, mirrored by
+`tests/domain/nutrition/rules/`), built on the Rule Engine foundation and
+the Nutrition aggregate, following the same independent-rule composition
+strategy ADR 0014 established. Evaluates a `NutritionRuleContext`
+(calories, protein, carbohydrates, fat, fiber, water intake — only the
+six fields nutrition rules need, not the full aggregate, and notably not
+`sugar`) against six independent rules — `CaloriesRule`, `ProteinRule`,
+`CarbohydratesRule`, `FatRule`, `FiberRule`, `HydrationRule` — each
+validating its field against a configurable `[minimum, maximum]` range
+(unlike Readiness's single-sided thresholds — see
+`docs/adr/0015-nutrition-rules-use-range-thresholds.md` for why), with
+generic single-day sanity defaults (e.g. 1200-4000 kcal, 50-250 g
+protein). A missing input is treated as "nothing to flag," never a
+failure. `NutritionRuleEngine` composes all six by default via the shared
+`RuleEngine[NutritionRuleContext]` — a thin, behavior-preserving subclass
+that only wires up the default rule set. Produces no meal plans, food
+database lookups, macro recommendations, or personalized calorie
+targets.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -274,6 +296,8 @@ foundation" above) — shared architecture only, no fitness-specific rules.
 
 Sprint 3, Phase 2 is done: the Readiness Rule Engine (see "Readiness Rule
 Engine" above) — the first of the Bible's nine concrete rule engines.
-Workout, Nutrition, Recovery (scoring), Safety, Recommendation,
-Notification, Progress, Analytics, and AI Validation rule engines are
-still ahead.
+
+Sprint 3, Phase 3 is done: the Nutrition Rule Engine (see "Nutrition Rule
+Engine" above) — the second. Workout, Recovery (scoring), Safety,
+Recommendation, Notification, Progress, Analytics, and AI Validation rule
+engines are still ahead.

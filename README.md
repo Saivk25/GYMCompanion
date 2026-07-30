@@ -71,11 +71,18 @@ Sprint 3, Phase 2 is done: the Readiness Rule Engine
 "Readiness Rule Engine" section), the first of the Bible's nine concrete
 rule engines — five independent rules (sleep, energy, stress, soreness,
 recovery metrics) evaluating a `Readiness` check-in and producing
-deterministic `Recommendation`s. The remaining eight (Workout, Nutrition,
-Recovery scoring, Safety, Recommendation, Notification, Progress,
-Analytics, AI Validation) are still ahead. See `docs/adr/` for decisions
-made during implementation that weren't already pinned down by the six
-planning documents.
+deterministic `Recommendation`s.
+
+Sprint 3, Phase 3 is done: the Nutrition Rule Engine
+(`backend/app/domain/nutrition/rules/` — see `backend/README.md`'s
+"Nutrition Rule Engine" section), the second — six independent rules
+(calories, protein, carbohydrates, fat, fiber, hydration), each
+validating its field against a configurable range, evaluating a
+`Nutrition` entry and producing deterministic `Recommendation`s. The
+remaining seven (Workout, Recovery scoring, Safety, Recommendation,
+Notification, Progress, Analytics, AI Validation) are still ahead. See
+`docs/adr/` for decisions made during implementation that weren't already
+pinned down by the six planning documents.
 
 ## Getting started
 
