@@ -122,11 +122,24 @@ rules (acute load, chronic load, acute:chronic load ratio, monotony,
 strain) evaluating accumulated training load using sports-science
 concepts (Foster's monotony/strain, the acute:chronic workload ratio)
 the Bible names only implicitly, as an input to `RecoveryState`, not by
-these terms directly. Of the Bible's nine named engines, Workout,
-Recovery scoring, Recommendation, Notification, Analytics, and AI
-Validation are still ahead. See `docs/adr/` for decisions made during
-implementation that weren't already pinned down by the six planning
-documents.
+these terms directly.
+
+Sprint 3, Phase 9 is done: the Exercise Recommendation Rule Engine
+(`backend/app/domain/exercise/rules/` — see `backend/README.md`'s
+"Exercise Recommendation Rule Engine" section), the first engine that
+orchestrates other engines' *already-computed* `RuleResult` outputs
+(Safety, Readiness) rather than their raw inputs — five independent
+rules (exercise selection, contraindicated exercise, movement balance,
+equipment, progression stage) recommending whether one candidate
+`Exercise` fits a user's goal, safety restrictions, available
+equipment, recent movement pattern balance, and training experience.
+Only `ContraindicatedExerciseRule` and `EquipmentRule` — the Bible's
+Table 48 "removed from candidates" gates — can exclude a candidate; the
+other three are pure advisory biases, matching Table 48's "biases...
+ranking" language. Of the Bible's nine named engines, Workout, Recovery
+scoring, Recommendation, Notification, Analytics, and AI Validation are
+still ahead. See `docs/adr/` for decisions made during implementation
+that weren't already pinned down by the six planning documents.
 
 ## Getting started
 

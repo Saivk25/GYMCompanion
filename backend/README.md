@@ -402,6 +402,41 @@ rather than duplicating either. `TrainingLoadRuleEngine` composes all
 five by default via the shared `RuleEngine[TrainingLoadRuleContext]`.
 Produces no exercise recommendation, workout planning, or AI coaching.
 
+## Exercise Recommendation Rule Engine
+
+Sprint 3, Phase 9's eighth concrete rule engine
+(`app/domain/exercise/rules/`, mirrored by
+`tests/domain/exercise/rules/`), the first engine whose evaluation is
+scoped to one candidate `Exercise` per call rather than "the user's
+current state" — `ExerciseRecommendationRuleContext.exercise` is the
+one required field. The first engine to compose other engines'
+*already-computed* `RuleResult` outputs (`safety_result`,
+`readiness_result`) instead of their raw contexts, so no rule here ever
+re-evaluates a check Safety or Readiness already performed — see
+`docs/adr/0021-exercise-recommendation-composes-rule-outputs.md` for
+the full reasoning. Five independent rules — `ExerciseSelectionRule`
+(a soft ADVISORY bias toward `STRENGTH`/`ENDURANCE` goal fit and
+current readiness), `ContraindicatedExerciseRule` (the literal Table 48
+"Contraindication gate" — fails when the candidate's contraindication
+tags overlap a declared restriction, reusing Safety's own
+`DeclaredRestriction`, or when `safety_result` is CRITICAL),
+`MovementBalanceRule` (a soft ADVISORY push/pull balance bias from a
+supplied occurrence tally, Table 48's "Push/pull balance," simplified
+from volume to occurrence count), `EquipmentRule` (the literal Table 48
+"Equipment mismatch" gate — fails when required equipment is absent
+from a supplied availability set), `ProgressionStageRule` (a soft
+ADVISORY bias against `ADVANCED`/`INTERMEDIATE` candidates when
+Progressive Overload's own session *count* — not its trend
+verdicts — is thin). Only `ContraindicatedExerciseRule` and
+`EquipmentRule` can fail (Table 48's hard gates); the other three
+never fail, expressing their advice purely through `Recommendation`s
+attached to a passing result — the existing `RuleResult` shape's own
+"passing does not preclude offering advice" capability, no new field
+needed. `ExerciseRecommendationRuleEngine` composes all five by default
+via the shared `RuleEngine[ExerciseRecommendationRuleContext]`.
+Produces no workout generation, scheduling, sets/reps prescriptions, or
+AI coaching.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -453,7 +488,12 @@ passes" convention (`ConsistencyRule`).
 Sprint 3, Phase 8 is done: the Training Load Rule Engine (see "Training
 Load Rule Engine" above) — the first package whose context derives no
 summaries of its own, only sorting and windowing what the application
-layer already supplied. Of the Bible's nine named engines, Workout,
-Recovery (scoring), Recommendation, Notification, Analytics, and AI
-Validation are still ahead; Exercise Recommendation and an Application
-Layer remain unbuilt as well.
+layer already supplied.
+
+Sprint 3, Phase 9 is done: the Exercise Recommendation Rule Engine (see
+"Exercise Recommendation Rule Engine" above) — the first engine scoped
+to one candidate per evaluation, and the first to compose other
+engines' already-computed `RuleResult` outputs rather than their raw
+contexts. Of the Bible's nine named engines, Workout, Recovery
+(scoring), Recommendation, Notification, Analytics, and AI Validation
+are still ahead; an Application Layer remains unbuilt as well.
