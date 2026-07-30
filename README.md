@@ -78,11 +78,18 @@ Sprint 3, Phase 3 is done: the Nutrition Rule Engine
 "Nutrition Rule Engine" section), the second — six independent rules
 (calories, protein, carbohydrates, fat, fiber, hydration), each
 validating its field against a configurable range, evaluating a
-`Nutrition` entry and producing deterministic `Recommendation`s. The
-remaining seven (Workout, Recovery scoring, Safety, Recommendation,
-Notification, Progress, Analytics, AI Validation) are still ahead. See
-`docs/adr/` for decisions made during implementation that weren't already
-pinned down by the six planning documents.
+`Nutrition` entry and producing deterministic `Recommendation`s.
+
+Sprint 3, Phase 4 is done: the Goal Alignment Rule Engine
+(`backend/app/domain/goal/rules/` — see `backend/README.md`'s "Goal
+Alignment Rule Engine" section), the first rule engine spanning two
+aggregates (`Goal` and `Progress`) — five independent rules (target
+date, body weight, body fat, strength-data-sufficiency, priority)
+evaluating whether a user's current state aligns with an active goal. Of
+the Bible's nine named engines, Workout, Recovery scoring, Safety,
+Recommendation, Notification, Progress, Analytics, and AI Validation are
+still ahead. See `docs/adr/` for decisions made during implementation
+that weren't already pinned down by the six planning documents.
 
 ## Getting started
 

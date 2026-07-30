@@ -270,6 +270,24 @@ that only wires up the default rule set. Produces no meal plans, food
 database lookups, macro recommendations, or personalized calorie
 targets.
 
+## Goal Alignment Rule Engine
+
+Sprint 3, Phase 4's third concrete rule engine
+(`app/domain/goal/rules/`, mirrored by `tests/domain/goal/rules/`), the
+first spanning two aggregates. `GoalAlignmentRuleContext` references
+whole `GoalContext` and optional `ProgressContext` snapshots — unlike
+Readiness's/Nutrition's flattened contexts — plus an explicit
+`reference_date` (never a wall-clock read; see
+`docs/adr/0016-goal-alignment-combines-whole-snapshots.md`). Five
+independent rules — `TargetDateRule` (approaching/overdue),
+`BodyWeightRule` and `BodyFatRule` (current vs. target, within a
+configurable tolerance, each passing on missing data),
+`StrengthGoalRule` (always passes — this context carries no strength
+performance data yet), `PriorityRule` (highlights high-priority goals) —
+all share one guard: a goal that isn't Active always passes. Produces no
+workout planning, progressive overload, exercise recommendations,
+training load, or nutrition advice.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -298,6 +316,11 @@ Sprint 3, Phase 2 is done: the Readiness Rule Engine (see "Readiness Rule
 Engine" above) — the first of the Bible's nine concrete rule engines.
 
 Sprint 3, Phase 3 is done: the Nutrition Rule Engine (see "Nutrition Rule
-Engine" above) — the second. Workout, Recovery (scoring), Safety,
-Recommendation, Notification, Progress, Analytics, and AI Validation rule
-engines are still ahead.
+Engine" above) — the second.
+
+Sprint 3, Phase 4 is done: the Goal Alignment Rule Engine (see "Goal
+Alignment Rule Engine" above) — the first spanning two aggregates (Goal
+and Progress). Of the Bible's nine named engines, Workout, Recovery
+(scoring), Safety, Recommendation, Notification, Progress, Analytics, and
+AI Validation are still ahead; Progressive Overload, Exercise
+Recommendation, and Training Load rule engines remain unbuilt as well.
