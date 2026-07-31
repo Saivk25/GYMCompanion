@@ -5,6 +5,7 @@ from datetime import time
 
 import pytest
 
+from app.domain.exercise.value_objects import EquipmentRequirement
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.user.enums import BiologicalSex, ExperienceLevel
 from app.domain.user.value_objects import (
@@ -149,11 +150,16 @@ def test_user_preferences_defaults_are_all_valid() -> None:
     preferences = UserPreferences()
     assert preferences.quiet_hours is None
     assert preferences.biometric_app_lock_enabled is False
+    assert preferences.available_equipment == frozenset()
 
 
 @pytest.mark.unit
 def test_user_preferences_accepts_explicit_values() -> None:
     window = QuietHours(starts_at=time(22, 0), ends_at=time(7, 0))
-    preferences = UserPreferences(quiet_hours=window, biometric_app_lock_enabled=True)
+    equipment = frozenset({EquipmentRequirement("barbell"), EquipmentRequirement("bench")})
+    preferences = UserPreferences(
+        quiet_hours=window, biometric_app_lock_enabled=True, available_equipment=equipment
+    )
     assert preferences.quiet_hours == window
     assert preferences.biometric_app_lock_enabled is True
+    assert preferences.available_equipment == equipment

@@ -476,6 +476,40 @@ infrastructure module — only `app.domain.*`, `app.application.*`, and
 the standard library. No use case, concrete repository, SQLAlchemy,
 FastAPI, authentication, REST, or AI integration exists yet.
 
+## User Application Use Cases
+
+Sprint 4, Phase 2 (`app/application/user/`, mirrored by
+`tests/application/user/`), the first concrete consumer of the
+Application Layer Foundation. Four subpackages: `commands/`
+(`CreateUserCommand`, `UpdateProfileCommand`, `UpdatePreferencesCommand`,
+`UpdateEquipmentCommand`, `DeactivateUserCommand`), `queries/`
+(`GetUserQuery`, `UserExistsQuery`), `dto/` (`UserDTO` — a distinct
+type from `app.domain.user.context.UserContext`, not a reuse of it;
+see the ADR), and `handlers/` (seven `CommandHandler`/`QueryHandler`
+implementations). Every mutating handler follows the same shape: load
+through `uow.get_repository(UserRepository)`, call one named `User`
+method, `uow.commit()`, then `dispatcher.dispatch(user.
+pull_domain_events())` — strictly after commit, never before. Every
+`DomainInvariantViolationError` a handler's aggregate call raises
+propagates untouched, never converted into a failed
+`ApplicationResult` — only repository/`UnitOfWork`-level failures are.
+`UserExistsHandler` treats "no such user" as a successful `False`;
+`GetUserHandler` treats it as a failure — deliberately different
+query/handler pairs, not one query reused two ways. Required a small
+Domain Layer extension made before this phase's own work began:
+`UserPreferences.available_equipment: frozenset[EquipmentRequirement]`
+plus a matching `User.update_equipment()` method, reusing
+`app.domain.exercise.value_objects.EquipmentRequirement` — see
+`docs/adr/0023-user-application-use-cases.md` for the full reasoning,
+including why "deactivate" maps to `User.suspend()`, not `delete()`.
+`tests/application/user/factories.py`'s `FakeUserRepository`/
+`FakeUnitOfWork` are simple in-memory doubles with no database
+anywhere — every handler test passes against them unmodified, proving
+each handler's independence from whatever concrete persistence a
+future infrastructure phase supplies. No use case for any other
+aggregate, no concrete repository implementation, SQLAlchemy, FastAPI,
+authentication, REST, or AI integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -547,3 +581,13 @@ contracts (`Command`, `Query`, handlers, `ApplicationResult`,
 exceptions) every future use case will depend on. No use case,
 concrete repository, SQLAlchemy, FastAPI, or AI integration exists
 yet.
+
+Sprint 4, Phase 2 is done: the User Application Use Cases (see "User
+Application Use Cases" above) — the first concrete consumer of the
+Application Layer Foundation: five commands, two queries, one DTO,
+seven handlers coordinating the `User` aggregate, plus a small Domain
+Layer extension (`UserPreferences.available_equipment`,
+`User.update_equipment()`). No use case for any other aggregate
+(Workout, Nutrition, Progress, Readiness, Goal, ...), no concrete
+repository implementation, SQLAlchemy, FastAPI, authentication, REST,
+or AI integration exists yet.

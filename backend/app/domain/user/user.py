@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from app.domain.exercise.value_objects import EquipmentRequirement
 from app.domain.shared_kernel.aggregate_root import AggregateRoot
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.validation import ensure
@@ -156,6 +157,26 @@ class User(AggregateRoot[UserId]):
         """
         self._ensure_mutable()
         self._preferences = preferences
+
+    def update_equipment(self, available_equipment: frozenset[EquipmentRequirement]) -> None:
+        """Replaces the equipment the user has told the app they own or
+        regularly have access to — a convenience, single-purpose entry
+        point distinct from `update_preferences()` because "what equipment
+        do I have" is a common, standalone user action (e.g. an "Update my
+        equipment" screen) even though it targets the same
+        `UserPreferences.available_equipment` field. No event is raised,
+        for the identical reason `update_preferences()` raises none:
+        nothing in this increment's scope reads equipment changes outside
+        the aggregate itself. Add one when a real consumer (e.g. Exercise
+        Recommendation reading a user's default equipment instead of being
+        handed it per-call) actually needs it.
+        """
+        self._ensure_mutable()
+        self._preferences = UserPreferences(
+            quiet_hours=self._preferences.quiet_hours,
+            biometric_app_lock_enabled=self._preferences.biometric_app_lock_enabled,
+            available_equipment=available_equipment,
+        )
 
     def activate(self) -> None:
         """Invited -> Active, or Suspended -> Active.

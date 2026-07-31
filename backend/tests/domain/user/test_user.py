@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from app.domain.exercise.value_objects import EquipmentRequirement
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.user.enums import AccountStatus, ExperienceLevel
@@ -160,6 +161,41 @@ def test_update_preferences_is_rejected_after_deletion() -> None:
 
     with pytest.raises(DomainInvariantViolationError, match="cannot modify a user"):
         user.update_preferences(UserPreferences(biometric_app_lock_enabled=True))
+
+
+# --- update_equipment() ---
+
+
+@pytest.mark.unit
+def test_update_equipment_replaces_available_equipment_without_an_event() -> None:
+    user = _a_registered_user()
+    user.pull_domain_events()  # drain the UserRegistered event from setup
+    equipment = frozenset({EquipmentRequirement("barbell"), EquipmentRequirement("dumbbell")})
+
+    user.update_equipment(equipment)
+
+    assert user.preferences.available_equipment == equipment
+    assert user.pull_domain_events() == []
+
+
+@pytest.mark.unit
+def test_update_equipment_preserves_the_rest_of_preferences() -> None:
+    user = _a_registered_user()
+    user.update_preferences(UserPreferences(biometric_app_lock_enabled=True))
+
+    user.update_equipment(frozenset({EquipmentRequirement("kettlebell")}))
+
+    assert user.preferences.biometric_app_lock_enabled is True
+    assert user.preferences.available_equipment == frozenset({EquipmentRequirement("kettlebell")})
+
+
+@pytest.mark.unit
+def test_update_equipment_is_rejected_after_deletion() -> None:
+    user = _a_registered_user()
+    user.delete()
+
+    with pytest.raises(DomainInvariantViolationError, match="cannot modify a user"):
+        user.update_equipment(frozenset({EquipmentRequirement("barbell")}))
 
 
 # --- account_status state machine ---

@@ -156,6 +156,18 @@ sitting between the Domain Layer and future infrastructure. See
 `docs/adr/` for decisions made during implementation that weren't
 already pinned down by the six planning documents.
 
+Sprint 4, Phase 2 is done: the User Application Use Cases
+(`backend/app/application/user/` — see `backend/README.md`'s "User
+Application Use Cases" section), the first concrete consumer of the
+Application Layer Foundation — five commands, two queries, one DTO,
+and seven handlers coordinating the `User` aggregate through
+`UserRepository`/`UnitOfWork`, with no business rules of their own.
+Required a small, deliberate Domain Layer extension:
+`UserPreferences.available_equipment` plus `User.update_equipment()`
+(see `docs/adr/0023-user-application-use-cases.md`). No use case for
+any other aggregate, no concrete repository implementation,
+SQLAlchemy, FastAPI, or AI integration exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import time
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from app.domain.exercise.value_objects import EquipmentRequirement
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.shared_kernel.validation import ensure, ensure_not_empty, ensure_positive
 from app.domain.shared_kernel.value_object import ValueObject
@@ -172,6 +173,20 @@ class UserPreferences(ValueObject):
       biometric app-lock"). Enforcement is a device-level concern (see the
       Bible's `DeviceSession` entity), but *whether the user wants it on*
       is naturally an account-level preference.
+    - `available_equipment`: the equipment the user owns or regularly has
+      access to, e.g. a home gym's fixed set — distinct from the Bible's
+      `EnvironmentContext` (Section 4.3, Table 6), which is a per-session
+      "where am I training right now" snapshot (see `context.py`'s module
+      docstring for the same naming distinction on `UserContext`).
+      `EnvironmentContext` doesn't exist yet as a build aggregate, and even
+      once it does, a session-scoped "what's in this specific gym" is a
+      different fact from an account-level "what do I own" default this
+      field represents. Reuses `app.domain.exercise.value_objects.
+      EquipmentRequirement` rather than defining a second equipment type —
+      the same value already used by `Exercise.equipment_requirements` and
+      by `ExerciseRecommendationRuleContext.available_equipment`
+      (`docs/adr/0021-exercise-recommendation-composes-rule-outputs.md`,
+      decision 4) to describe "one piece of equipment."
 
     "Communication style preference" (Identity & Consent, V2 tier) is
     deliberately not included yet — adding an unused field for a V2 feature
@@ -185,3 +200,4 @@ class UserPreferences(ValueObject):
 
     quiet_hours: QuietHours | None = None
     biometric_app_lock_enabled: bool = False
+    available_equipment: frozenset[EquipmentRequirement] = frozenset()
