@@ -510,6 +510,51 @@ future infrastructure phase supplies. No use case for any other
 aggregate, no concrete repository implementation, SQLAlchemy, FastAPI,
 authentication, REST, or AI integration exists yet.
 
+## Workout Application Use Cases
+
+Sprint 4, Phase 3 (`app/application/workout/`, mirrored by
+`tests/application/workout/`), the second concrete consumer of the
+Application Layer Foundation and the first to orchestrate two
+aggregates — `Workout` and `WorkoutSession` — in a single transaction.
+Four subpackages: `commands/` (`CreateWorkoutCommand`,
+`UpdateWorkoutCommand`, `StartWorkoutSessionCommand`,
+`LogExerciseSetCommand`, `CompleteExerciseSetCommand`,
+`CompleteWorkoutSessionCommand`, `CancelWorkoutCommand`), `queries/`
+(`GetWorkoutQuery`, `GetWorkoutSessionQuery`, `ListWorkoutsQuery`),
+`dto/` (`WorkoutDTO`, `WorkoutSessionDTO`/`ExercisePerformanceDTO` —
+distinct types from their `*Context` domain counterparts, same
+reasoning as `UserDTO`), and `handlers/` (ten `CommandHandler`/
+`QueryHandler` implementations). `StartWorkoutSessionHandler` and
+`CompleteWorkoutSessionHandler` both load `Workout` and
+`WorkoutSession` through their own repositories and advance the parent
+`Workout` idempotent-forward (only if it isn't already in the target
+state) within the same `UnitOfWork.commit()` — the cross-aggregate
+consistency check "a session cannot start under a Completed/Cancelled
+workout" lives here, in the Application Layer, because neither
+aggregate can see the other's state. `CancelWorkoutCommand`
+deliberately does not cascade to any `WorkoutSession` executing under
+the cancelled workout. Three deterministic Rule Engines are invoked
+from handlers, after a successful commit, surfaced only as
+`ApplicationResult.warnings` (never a failure reason):
+`ExerciseRecommendationRuleEngine` in `LogExerciseSetHandler` (a
+minimal context — only the required `exercise` field populated, since
+no Safety/Readiness repository access exists in this phase) and
+`ProgressiveOverloadRuleEngine`/`TrainingLoadRuleEngine` in
+`CompleteWorkoutSessionHandler`, built from the user's full session
+history via a new `WorkoutRepository.list_by_user()`/
+`WorkoutSessionRepository.list_by_user()` (added this phase — no
+persistence implementation yet, matching the "add one only once a real
+caller needs it" discipline both interfaces already documented). See
+`docs/adr/0024-workout-application-use-cases.md` for the full
+reasoning, including why `Workout` and `WorkoutSession` remain separate
+aggregates. `tests/application/workout/factories.py`'s
+`FakeWorkoutRepository`/`FakeWorkoutSessionRepository`/
+`FakeExerciseRepository`/`FakeUserRepository`/`FakeUnitOfWork` are
+simple in-memory doubles spanning all four repository types this
+phase's handlers touch. No use case for Nutrition, Progress,
+Readiness, or Goal, no concrete repository implementation, SQLAlchemy,
+FastAPI, authentication, REST, or AI integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -591,3 +636,17 @@ Layer extension (`UserPreferences.available_equipment`,
 (Workout, Nutrition, Progress, Readiness, Goal, ...), no concrete
 repository implementation, SQLAlchemy, FastAPI, authentication, REST,
 or AI integration exists yet.
+
+Sprint 4, Phase 3 is done: the Workout Application Use Cases (see
+"Workout Application Use Cases" above) — the second concrete consumer
+of the Application Layer Foundation and the first to orchestrate two
+aggregates (`Workout`, `WorkoutSession`) in one transaction: seven
+commands, three queries, two DTOs, ten handlers, plus a new
+`list_by_user()` method on both `WorkoutRepository` and
+`WorkoutSessionRepository`. Three deterministic Rule Engines
+(`ExerciseRecommendationRuleEngine`, `ProgressiveOverloadRuleEngine`,
+`TrainingLoadRuleEngine`) are invoked from handlers for the first time,
+surfaced only as advisory warnings. No use case for Nutrition,
+Progress, Readiness, or Goal, no concrete repository implementation,
+SQLAlchemy, FastAPI, authentication, REST, or AI integration exists
+yet.

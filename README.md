@@ -168,6 +168,23 @@ Required a small, deliberate Domain Layer extension:
 any other aggregate, no concrete repository implementation,
 SQLAlchemy, FastAPI, or AI integration exists yet.
 
+Sprint 4, Phase 3 is done: the Workout Application Use Cases
+(`backend/app/application/workout/` — see `backend/README.md`'s
+"Workout Application Use Cases" section), the second concrete consumer
+of the Application Layer Foundation and the first to orchestrate two
+aggregates — `Workout` and `WorkoutSession` — within one transaction.
+Seven commands, three queries, two DTOs, and ten handlers; a new
+`list_by_user()` method was added to both `WorkoutRepository` and
+`WorkoutSessionRepository` (no persistence implementation yet).
+`ExerciseRecommendationRuleEngine`, `ProgressiveOverloadRuleEngine`,
+and `TrainingLoadRuleEngine` are invoked from the Application Layer for
+the first time, surfaced only as advisory warnings, never a reason to
+fail a workflow. See `docs/adr/0024-workout-application-use-cases.md`
+for the full reasoning, including why `Workout` and `WorkoutSession`
+remain separate aggregates. No use case for Nutrition, Progress,
+Readiness, or Goal, no concrete repository implementation, SQLAlchemy,
+FastAPI, or AI integration exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`
