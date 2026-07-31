@@ -437,6 +437,45 @@ via the shared `RuleEngine[ExerciseRecommendationRuleContext]`.
 Produces no workout generation, scheduling, sets/reps prescriptions, or
 AI coaching.
 
+## Application Layer Foundation
+
+Sprint 4, Phase 1 (`app/application/shared/`, mirrored by
+`tests/application/`), the framework-independent orchestration
+contracts every future use case will depend on — no use case exists
+yet. `Command`/`Query` are frozen-dataclass marker base classes (the
+same enforcement trick `ValueObject` uses: a subclass forgetting
+`frozen=True` fails at class-definition time), each paired with a
+`CommandHandler`/`QueryHandler` that both specialize a shared generic
+`Handler[TInput, TResult]` (`interfaces.py`). `ApplicationResult[T]` is
+a frozen dataclass distinct from the Domain Layer's own `Result`/`Ok`/
+`Err` — it expresses a whole workflow's outcome (`success`, `value`,
+a tuple of `errors`, a tuple of `warnings`), not one call's binary
+split, with `__post_init__` invariant checks raising
+`ApplicationResultConstructionError`. `repository.py` re-exports
+`app.domain.shared_kernel.repository.Repository` rather than defining
+a second interface — `tests/application/shared/test_repository.py`
+asserts identity (`Repository is DomainRepository`) to prove it.
+`UnitOfWork` is an `ABC` with abstract `commit()`, `rollback()`, and a
+generic type-indexed `get_repository(repository_type: type[TRepository])
+-> TRepository`; only its context-manager protocol
+(`__enter__`/`__exit__`) is concrete — rollback-only-on-exception,
+never-suppress, never-auto-commit — the one piece of "universal
+coordination glue" this phase treats as legitimately concrete atop an
+otherwise-abstract contract. `DomainEventDispatcher` is a one-method
+`ABC` (`dispatch(events: Sequence[DomainEvent]) -> None`) responsible
+only for *that* dispatch happens, never *when* — always after
+`UnitOfWork.commit()`, per `AggregateRoot`'s own "persist first,
+publish after" contract. Application-specific exceptions
+(`ApplicationError`, `ApplicationResultConstructionError`,
+`UnitOfWorkError`, `DomainEventDispatchError`) are a distinct hierarchy
+from the Domain Layer's own — see
+`docs/adr/0022-application-layer-foundation.md` for the full reasoning.
+`tests/application/test_import_boundaries.py` statically enforces that
+no file under `app/application/` imports FastAPI, SQLAlchemy, or any
+infrastructure module — only `app.domain.*`, `app.application.*`, and
+the standard library. No use case, concrete repository, SQLAlchemy,
+FastAPI, authentication, REST, or AI integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -496,4 +535,15 @@ to one candidate per evaluation, and the first to compose other
 engines' already-computed `RuleResult` outputs rather than their raw
 contexts. Of the Bible's nine named engines, Workout, Recovery
 (scoring), Recommendation, Notification, Analytics, and AI Validation
-are still ahead; an Application Layer remains unbuilt as well.
+are still ahead.
+
+Sprint 3 is complete: all nine Rule Engines are implemented, tested to
+100% domain coverage, and committed.
+
+Sprint 4, Phase 1 is done: the Application Layer Foundation (see
+"Application Layer Foundation" above) — the shared orchestration
+contracts (`Command`, `Query`, handlers, `ApplicationResult`,
+`Repository`, `UnitOfWork`, `DomainEventDispatcher`, application
+exceptions) every future use case will depend on. No use case,
+concrete repository, SQLAlchemy, FastAPI, or AI integration exists
+yet.

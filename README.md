@@ -138,8 +138,23 @@ Table 48 "removed from candidates" gates — can exclude a candidate; the
 other three are pure advisory biases, matching Table 48's "biases...
 ranking" language. Of the Bible's nine named engines, Workout, Recovery
 scoring, Recommendation, Notification, Analytics, and AI Validation are
-still ahead. See `docs/adr/` for decisions made during implementation
-that weren't already pinned down by the six planning documents.
+still ahead.
+
+Sprint 3 is complete: all nine Rule Engines are implemented, tested to
+100% domain coverage, and committed.
+
+Sprint 4, Phase 1 is done: the Application Layer Foundation
+(`backend/app/application/shared/` — see `backend/README.md`'s
+"Application Layer Foundation" section), the shared orchestration
+contracts (`Command`, `Query`, `CommandHandler`, `QueryHandler`,
+`ApplicationResult`, `Repository`, `UnitOfWork`,
+`DomainEventDispatcher`, application-specific exceptions) every future
+use case will depend on. No use case, concrete repository,
+SQLAlchemy, FastAPI, or AI integration exists yet — this phase
+implemented only the framework-independent orchestration contracts
+sitting between the Domain Layer and future infrastructure. See
+`docs/adr/` for decisions made during implementation that weren't
+already pinned down by the six planning documents.
 
 ## Getting started
 
