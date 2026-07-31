@@ -185,6 +185,23 @@ remain separate aggregates. No use case for Nutrition, Progress,
 Readiness, or Goal, no concrete repository implementation, SQLAlchemy,
 FastAPI, or AI integration exists yet.
 
+Sprint 4, Phase 4 is done: the Nutrition Application Use Cases
+(`backend/app/application/nutrition/` — see `backend/README.md`'s
+"Nutrition Application Use Cases" section), the third concrete consumer
+of the Application Layer Foundation and the simplest orchestration shape
+so far — every handler touches at most one `Nutrition` entry, since the
+aggregate has no lifecycle and no cross-aggregate dependency. Four
+commands, two queries, one DTO, and six handlers; a new `list_by_user()`
+method was added to `NutritionRepository` (no persistence implementation
+yet). `NutritionRuleEngine` is invoked from the three mutating handlers
+that touch rule-relevant fields, surfaced only as advisory warnings,
+never a reason to fail a command. See `docs/adr/0025-nutrition-
+application-use-cases.md` for the full reasoning, including why
+`Nutrition` remains an independent aggregate and why handlers never
+compute macros or calorie targets. No use case for Progress, Readiness,
+or Goal, no concrete repository implementation, SQLAlchemy, FastAPI, or
+AI integration exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`

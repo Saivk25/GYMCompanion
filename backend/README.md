@@ -555,6 +555,47 @@ phase's handlers touch. No use case for Nutrition, Progress,
 Readiness, or Goal, no concrete repository implementation, SQLAlchemy,
 FastAPI, authentication, REST, or AI integration exists yet.
 
+## Nutrition Application Use Cases
+
+Sprint 4, Phase 4 (`app/application/nutrition/`, mirrored by
+`tests/application/nutrition/`), the third concrete consumer of the
+Application Layer Foundation and the simplest orchestration shape so
+far — `Nutrition` has no lifecycle and no cross-aggregate dependency, so
+every handler touches at most one `Nutrition` entry (only
+`RecordNutritionHandler` touches a second repository, `UserRepository`,
+for a referential-integrity check). Four subpackages: `commands/`
+(`RecordNutritionCommand`, `UpdateNutritionCommand`,
+`UpdateWaterCommand`, `DeleteNutritionCommand`), `queries/`
+(`GetNutritionQuery`, `ListNutritionQuery`), `dto/` (`NutritionDTO` — a
+distinct type from `app.domain.nutrition.rules.context.
+NutritionRuleContext`, same reasoning as `UserDTO`/`WorkoutDTO`), and
+`handlers/` (six `CommandHandler`/`QueryHandler` implementations).
+`UpdateNutritionCommand`'s `None` fields mean "leave unchanged" —
+mirroring `Nutrition.update_nutrition()`'s own convention exactly — the
+deliberate *opposite* of `UpdateWorkoutCommand`'s "`None` means clear."
+`DeleteNutritionHandler` calls `NutritionRepository.remove()` directly
+(no aggregate method, no event — `Nutrition` has neither a delete method
+nor a `NutritionDeleted` event) and dispatches an empty event tuple
+uniformly on every success. `NutritionRuleEngine` is invoked from the
+three mutating handlers that touch rule-relevant fields
+(`RecordNutritionHandler`, `UpdateNutritionHandler`,
+`UpdateWaterHandler`), built directly from the just-mutated aggregate via
+`NutritionRuleContext.from_nutrition()` — no history or repository
+access needed, unlike Phase 3's trend-based engines — and surfaced only
+as `ApplicationResult.warnings`, never a failure reason. A new
+`NutritionRepository.list_by_user()` was added this phase (no
+persistence implementation yet, matching the "add one only once a real
+caller needs it" discipline the interface already documented). See
+`docs/adr/0025-nutrition-application-use-cases.md` for the full
+reasoning, including why `Nutrition` remains an independent aggregate
+and why handlers never compute macros or calorie targets.
+`tests/application/nutrition/factories.py`'s
+`FakeNutritionRepository`/`FakeUserRepository`/`FakeUnitOfWork` are
+simple in-memory doubles, the same shape as every prior phase's fakes.
+No use case for Progress, Readiness, or Goal, no concrete repository
+implementation, SQLAlchemy, FastAPI, authentication, REST, or AI
+integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -650,3 +691,15 @@ surfaced only as advisory warnings. No use case for Nutrition,
 Progress, Readiness, or Goal, no concrete repository implementation,
 SQLAlchemy, FastAPI, authentication, REST, or AI integration exists
 yet.
+
+Sprint 4, Phase 4 is done: the Nutrition Application Use Cases (see
+"Nutrition Application Use Cases" above) — the third concrete consumer
+of the Application Layer Foundation and the simplest orchestration shape
+so far, since `Nutrition` has no lifecycle and no cross-aggregate
+dependency: four commands, two queries, one DTO, six handlers, plus a
+new `list_by_user()` method on `NutritionRepository`. `NutritionRuleEngine`
+is invoked from the three mutating handlers that touch rule-relevant
+fields, surfaced only as advisory warnings, never a reason to fail a
+command. No use case for Progress, Readiness, or Goal, no concrete
+repository implementation, SQLAlchemy, FastAPI, authentication, REST, or
+AI integration exists yet.
