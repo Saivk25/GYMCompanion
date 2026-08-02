@@ -202,6 +202,22 @@ compute macros or calorie targets. No use case for Progress, Readiness,
 or Goal, no concrete repository implementation, SQLAlchemy, FastAPI, or
 AI integration exists yet.
 
+Sprint 4, Phase 5 is done: the Progress Application Use Cases
+(`backend/app/application/progress/` — see `backend/README.md`'s
+"Progress Application Use Cases" section), the fourth concrete consumer
+of the Application Layer Foundation. Five commands, two queries, one
+DTO, and seven handlers; a new `list_by_user()` method was added to
+`ProgressRepository` (no persistence implementation yet).
+`ProgressEvaluationRuleEngine` is invoked from the three mutating
+handlers that touch rule-relevant fields, evaluated against the user's
+full check-in history (not just the record just touched, since three of
+the engine's five rules are trend-based), surfaced only as advisory
+warnings, never a reason to fail a command. See `docs/adr/0026-progress-
+application-use-cases.md` for the full reasoning, including why handlers
+never calculate trends and why analytics remain outside the Application
+Layer. No use case for Readiness or Goal, no concrete repository
+implementation, SQLAlchemy, FastAPI, or AI integration exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`

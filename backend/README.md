@@ -596,6 +596,54 @@ No use case for Progress, Readiness, or Goal, no concrete repository
 implementation, SQLAlchemy, FastAPI, authentication, REST, or AI
 integration exists yet.
 
+## Progress Application Use Cases
+
+Sprint 4, Phase 5 (`app/application/progress/`, mirrored by
+`tests/application/progress/`), the fourth concrete consumer of the
+Application Layer Foundation. Unlike Nutrition's simplest-so-far
+orchestration shape, this phase's rule-engine integration is
+structurally closer to Phase 3's `CompleteWorkoutSessionHandler`:
+`ProgressEvaluationRuleContext` combines an ordered history of
+snapshots with an optional Goal reference, so three of its five rules
+(`ConsistencyRule`, `MeasurementTrendRule`, `PlateauRule`) are
+inherently about trends across many check-ins, not one record in
+isolation. Four subpackages: `commands/` (`RecordProgressCommand`,
+`UpdateBodyCompositionCommand`, `UpdateMeasurementsCommand`,
+`UpdateNotesCommand`, `DeleteProgressCommand`), `queries/`
+(`GetProgressQuery`, `ListProgressQuery`), `dto/` (`ProgressDTO` — a
+distinct type from `app.domain.progress.context.ProgressContext`, same
+reasoning as `UserDTO`/`WorkoutDTO`/`NutritionDTO`), and `handlers/`
+(seven `CommandHandler`/`QueryHandler` implementations).
+`UpdateBodyCompositionCommand`/`UpdateMeasurementsCommand`'s `None`
+fields mean "leave unchanged" — mirroring `Progress.
+update_body_composition()`/`Progress.update_measurements()`'s own
+convention exactly, the same "carry the aggregate method's own
+semantics through unmodified" choice `docs/adr/0025` documents for
+Nutrition. `DeleteProgressHandler` calls `ProgressRepository.remove()`
+directly (no aggregate method, no event — `Progress` has neither) and
+dispatches an empty event tuple uniformly on every success.
+`ProgressEvaluationRuleEngine` is invoked from the three mutating
+handlers that touch rule-relevant fields (`RecordProgressHandler`,
+`UpdateBodyCompositionHandler`, `UpdateMeasurementsHandler`) — each
+rebuilds the user's *full* check-in history via a new
+`ProgressRepository.list_by_user()` (added this phase, no persistence
+implementation yet) after `commit()`, since the engine's trend-based
+rules need more than the one record just touched; `goal` is always
+`None` in every call this phase makes, since no `GoalRepository` exists
+in this phase's required dependency list (Goal Application Use Cases
+are a later phase). `UpdateNotesHandler` and `DeleteProgressHandler`
+evaluate no rule engine at all — notes are not a field any of the five
+rules read, and deletion removes the very record the engine would
+evaluate. See `docs/adr/0026-progress-application-use-cases.md` for the
+full reasoning, including why handlers never calculate trends and why
+analytics remain outside the Application Layer.
+`tests/application/progress/factories.py`'s
+`FakeProgressRepository`/`FakeUserRepository`/`FakeUnitOfWork` are
+simple in-memory doubles, the same shape as every prior phase's fakes.
+No use case for Readiness or Goal, no concrete repository
+implementation, SQLAlchemy, FastAPI, authentication, REST, or AI
+integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -703,3 +751,16 @@ fields, surfaced only as advisory warnings, never a reason to fail a
 command. No use case for Progress, Readiness, or Goal, no concrete
 repository implementation, SQLAlchemy, FastAPI, authentication, REST, or
 AI integration exists yet.
+
+Sprint 4, Phase 5 is done: the Progress Application Use Cases (see
+"Progress Application Use Cases" above) — the fourth concrete consumer
+of the Application Layer Foundation, and the first Application Layer
+phase whose rule-engine integration needs full-history rebuilding after
+every mutation (three of `ProgressEvaluationRuleEngine`'s five rules are
+trend-based): five commands, two queries, one DTO, seven handlers, plus
+a new `list_by_user()` method on `ProgressRepository`.
+`ProgressEvaluationRuleEngine` is invoked from the three mutating
+handlers that touch rule-relevant fields, surfaced only as advisory
+warnings, never a reason to fail a command. No use case for Readiness or
+Goal, no concrete repository implementation, SQLAlchemy, FastAPI,
+authentication, REST, or AI integration exists yet.
