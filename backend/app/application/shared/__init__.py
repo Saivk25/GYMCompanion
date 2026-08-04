@@ -7,7 +7,11 @@ future use case implements), `ApplicationResult` (what every handler
 returns), `Repository` (re-exported from the Domain Layer, not
 redefined), `UnitOfWork` (the transactional boundary a handler runs
 inside), `DomainEventDispatcher` (how a handler publishes what an
-aggregate recorded), and this layer's own exception hierarchy. No
+aggregate recorded), this layer's own exception hierarchy, and
+`advisory_warnings()` (formats a Domain Layer `RuleResult`'s
+recommendations for a handler to surface as
+`ApplicationResult.warnings` — see that function's own module
+docstring for why it lives here rather than in `app.domain.rules`). No
 concrete command, query, handler, repository implementation, or
 dispatcher exists yet — see `docs/adr/0022-application-layer-
 foundation.md` for the full architecture, including why orchestration
@@ -31,6 +35,7 @@ Depends on nothing outside the Python standard library and
 `tests/domain/test_import_boundaries.py`'s rule for `app/domain`.
 """
 
+from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command import Command
 from app.application.shared.command_handler import CommandHandler
@@ -61,4 +66,5 @@ __all__ = [
     "Repository",
     "UnitOfWork",
     "UnitOfWorkError",
+    "advisory_warnings",
 ]

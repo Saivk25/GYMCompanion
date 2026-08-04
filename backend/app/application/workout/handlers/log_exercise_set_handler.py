@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
@@ -39,7 +40,6 @@ from app.domain.exercise.rules.context import ExerciseRecommendationRuleContext
 from app.domain.exercise.rules.exercise_recommendation_rule_engine import (
     ExerciseRecommendationRuleEngine,
 )
-from app.domain.rules.result import RuleResult
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.shared_kernel.events import DomainEvent
@@ -48,18 +48,6 @@ from app.domain.workout_session.identifiers import ExercisePerformanceId
 from app.domain.workout_session.repository import WorkoutSessionRepository
 
 _recommendation_engine = ExerciseRecommendationRuleEngine()
-
-
-def _advisory_warnings(result: RuleResult) -> tuple[str, ...]:
-    """Formats a `RuleResult`'s `recommendations` as human-readable
-    strings, e.g. `"[advisory] favor a pulling exercise to balance
-    today's push volume"`. Shared by every handler in this package that
-    surfaces rule-engine output as `ApplicationResult.warnings`.
-    """
-    return tuple(
-        f"[{recommendation.severity.value}] {recommendation.message}"
-        for recommendation in result.recommendations
-    )
 
 
 class LogExerciseSetHandler(CommandHandler[LogExerciseSetCommand, ExercisePerformanceId]):
@@ -137,7 +125,7 @@ class LogExerciseSetHandler(CommandHandler[LogExerciseSetCommand, ExercisePerfor
                     exercise=ExerciseContext.from_exercise(exercise)
                 )
                 rule_result = _recommendation_engine.evaluate(recommendation_context)
-                warnings = _advisory_warnings(rule_result)
+                warnings = advisory_warnings(rule_result)
         except DomainInvariantViolationError:
             raise
         except Exception as exc:

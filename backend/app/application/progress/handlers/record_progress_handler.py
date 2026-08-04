@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.application.progress.commands.record_progress import RecordProgressCommand
+from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
@@ -43,28 +44,12 @@ from app.domain.progress.progress import Progress
 from app.domain.progress.repository import ProgressRepository
 from app.domain.progress.rules.context import ProgressEvaluationRuleContext
 from app.domain.progress.rules.progress_evaluation_rule_engine import ProgressEvaluationRuleEngine
-from app.domain.rules.result import RuleResult
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.shared_kernel.events import DomainEvent
 from app.domain.user.repository import UserRepository
 
 _rule_engine = ProgressEvaluationRuleEngine()
-
-
-def _advisory_warnings(result: RuleResult) -> tuple[str, ...]:
-    """Formats a `RuleResult`'s `recommendations` as human-readable
-    strings, e.g. `"[advisory] log progress more regularly..."`.
-    Duplicated per handler file in this package rather than factored
-    into a shared module — the same "two call sites sharing one
-    three-line function is not yet the second real need" reasoning
-    `docs/adr/0024-workout-application-use-cases.md` gives for its own
-    identical helper.
-    """
-    return tuple(
-        f"[{recommendation.severity.value}] {recommendation.message}"
-        for recommendation in result.recommendations
-    )
 
 
 class RecordProgressHandler(CommandHandler[RecordProgressCommand, ProgressId]):
@@ -128,7 +113,7 @@ class RecordProgressHandler(CommandHandler[RecordProgressCommand, ProgressId]):
                     progress_records=history, goal=None, clock=self._clock
                 )
                 rule_result = _rule_engine.evaluate(rule_context)
-                warnings = _advisory_warnings(rule_result)
+                warnings = advisory_warnings(rule_result)
         except DomainInvariantViolationError:
             # Progress.record() only ever raises via `ensure(recorded_at.
             # tzinfo is not None, ...)` (progress.py), and every Clock

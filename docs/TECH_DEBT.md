@@ -14,7 +14,10 @@ the reasoning stays visible in history.
 
 ## TD-0001: `_advisory_warnings()` duplicated across 11 handler files
 
-- Status: Open — **extraction trigger #1 has now fired** (see below).
+- Status: **Resolved 2026-08-05.** Extracted into
+  `app.application.shared.advisory_warnings.advisory_warnings()`. All 11
+  call sites updated to import and call the shared function; zero
+  behavior or API changes. See "Resolution" below.
 - Identified: 2026-08-04, during the post-Phase-5 Application Layer
   consistency review (Workout, Nutrition, Progress).
 - Updated: 2026-08-05, Sprint 4 Phase 6 (Readiness) added three more
@@ -23,11 +26,10 @@ the reasoning stays visible in history.
   performed in Phase 6 — that phase's own task was scoped to "maintain
   the current architecture, do not redesign anything," so introducing
   a new shared module mid-phase would itself have violated that
-  instruction. Resolving this item (either by extracting or by
-  explicitly re-justifying continued deferral) should be treated as a
-  required decision before a 12th copy is added, not an optional
-  cleanup — see `docs/adr/0027-readiness-application-use-cases.md`'s
-  Consequences section.
+  instruction. See `docs/adr/0027-readiness-application-use-cases.md`'s
+  Consequences section for that reasoning at the time.
+- Resolved: 2026-08-05, in the standalone refactor between Sprint 4
+  Phase 6 and Goal Application Use Cases. See "Resolution" below.
 
 ### Current duplication count
 
@@ -142,3 +144,37 @@ unit of work should either perform the extraction or record a new,
 explicit reason for continued deferral; letting this item sit at "Open,
 trigger fired" indefinitely defeats the purpose of naming trigger
 conditions at all.
+
+### Resolution (2026-08-05)
+
+Extracted as a standalone refactor, scoped explicitly to this item and
+nothing else, between Sprint 4 Phase 6 (Readiness) and Goal Application
+Use Cases.
+
+- New module: `app/application/shared/advisory_warnings.py`, exposing
+  `advisory_warnings(result: RuleResult) -> tuple[str, ...]` —
+  byte-for-byte the same logic as all 11 prior copies, re-exported from
+  `app.application.shared.__all__` alongside this package's other
+  interfaces.
+- All 11 call sites listed above updated to import and call the shared
+  function; each local `_advisory_warnings()` definition and its
+  now-redundant `RuleResult` import removed.
+- New tests: `tests/application/shared/test_advisory_warnings.py`
+  (4 tests), covering single-recommendation formatting, ordering across
+  multiple recommendations, the empty-tuple case, and the return type.
+- Zero behavior changes, zero API changes, zero DTO/repository/rule
+  engine changes. Full verification gate passed: Ruff, Mypy, full
+  backend test suite (1850 passed, 5 skipped — the 5 skips are the
+  pre-existing, unrelated "no reachable Postgres" migration tests),
+  import boundary tests, and coverage (100%, 0 missing statements/
+  branches on `app.domain` + `app.application`; total statement count
+  dropped from 5740 to 5723 as the direct, expected effect of collapsing
+  11 duplicate function bodies into 1).
+- Post-extraction duplication review found no newly-emerged shared
+  concept. The `get_repository(X)  # type: ignore[type-abstract]`
+  boilerplate (45 occurrences across 38 files) remains a known,
+  separately-tracked, lower-priority candidate from the original
+  Phase-5 consistency review — it predates this extraction, did not
+  change as a result of it, and has no trigger condition of its own
+  defined here. No new item was opened for it as part of this
+  resolution.

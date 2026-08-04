@@ -25,6 +25,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.application.nutrition.commands.record_nutrition import RecordNutritionCommand
+from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
@@ -34,28 +35,12 @@ from app.domain.nutrition.nutrition import Nutrition
 from app.domain.nutrition.repository import NutritionRepository
 from app.domain.nutrition.rules.context import NutritionRuleContext
 from app.domain.nutrition.rules.nutrition_rule_engine import NutritionRuleEngine
-from app.domain.rules.result import RuleResult
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.shared_kernel.events import DomainEvent
 from app.domain.user.repository import UserRepository
 
 _rule_engine = NutritionRuleEngine()
-
-
-def _advisory_warnings(result: RuleResult) -> tuple[str, ...]:
-    """Formats a `RuleResult`'s `recommendations` as human-readable
-    strings, e.g. `"[advisory] consider adding more fiber-rich foods"`.
-    Duplicated per handler file in this package rather than factored
-    into a shared module — the same "two call sites sharing one
-    three-line function is not yet the second real need" reasoning
-    `docs/adr/0024-workout-application-use-cases.md` gives for its own
-    identical helper.
-    """
-    return tuple(
-        f"[{recommendation.severity.value}] {recommendation.message}"
-        for recommendation in result.recommendations
-    )
 
 
 class RecordNutritionHandler(CommandHandler[RecordNutritionCommand, NutritionId]):
@@ -111,7 +96,7 @@ class RecordNutritionHandler(CommandHandler[RecordNutritionCommand, NutritionId]
                 events = nutrition.pull_domain_events()
 
                 rule_result = _rule_engine.evaluate(NutritionRuleContext.from_nutrition(nutrition))
-                warnings = _advisory_warnings(rule_result)
+                warnings = advisory_warnings(rule_result)
         except DomainInvariantViolationError:
             # Nutrition.record() only ever raises via `ensure(recorded_at.
             # tzinfo is not None, ...)` (nutrition.py), and every Clock

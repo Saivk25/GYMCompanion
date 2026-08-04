@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.application.nutrition.commands.update_nutrition import UpdateNutritionCommand
+from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
@@ -23,21 +24,11 @@ from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.repository import NutritionRepository
 from app.domain.nutrition.rules.context import NutritionRuleContext
 from app.domain.nutrition.rules.nutrition_rule_engine import NutritionRuleEngine
-from app.domain.rules.result import RuleResult
 from app.domain.shared_kernel.clock import Clock
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
 from app.domain.shared_kernel.events import DomainEvent
 
 _rule_engine = NutritionRuleEngine()
-
-
-def _advisory_warnings(result: RuleResult) -> tuple[str, ...]:
-    """Formats a `RuleResult`'s `recommendations` as human-readable
-    strings. See `RecordNutritionHandler`'s identical helper."""
-    return tuple(
-        f"[{recommendation.severity.value}] {recommendation.message}"
-        for recommendation in result.recommendations
-    )
 
 
 class UpdateNutritionHandler(CommandHandler[UpdateNutritionCommand, NutritionId]):
@@ -83,7 +74,7 @@ class UpdateNutritionHandler(CommandHandler[UpdateNutritionCommand, NutritionId]
                 events = nutrition.pull_domain_events()
 
                 rule_result = _rule_engine.evaluate(NutritionRuleContext.from_nutrition(nutrition))
-                warnings = _advisory_warnings(rule_result)
+                warnings = advisory_warnings(rule_result)
         except DomainInvariantViolationError:
             # Nutrition.update_nutrition() has no status/lifecycle guard to
             # violate (nutrition.py's own module docstring: "no status enum
