@@ -706,6 +706,55 @@ scope was "maintain the current architecture"). No use case for Goal,
 no concrete repository implementation, SQLAlchemy, FastAPI,
 authentication, REST, or AI integration exists yet.
 
+TD-0001 was resolved as its own standalone, scoped refactor between
+Phase 6 and Goal Application Use Cases: `_advisory_warnings()` is now
+`app.application.shared.advisory_warnings.advisory_warnings()`, and all
+11 call sites were updated to import and call it — zero behavior or API
+changes, verified by the full test suite, mypy, ruff, import boundaries,
+and 100% coverage. See `docs/TECH_DEBT.md` and the commit that closed it.
+
+## Goal Application Use Cases
+
+Sprint 4's next phase (`app/application/goal/`, mirrored by
+`tests/application/goal/`), the sixth concrete consumer of the
+Application Layer Foundation, and the first built on a status-lifecycle
+aggregate (`GoalStatus`: `Active`/`Completed`/`Cancelled`/`Expired`,
+the same shape `Workout` uses) rather than a fact-at-a-point-in-time
+one. Four subpackages: `commands/` (`CreateGoalCommand`,
+`UpdateGoalCommand`, `CompleteGoalCommand`, `CancelGoalCommand`),
+`queries/` (`GetGoalQuery`, `ListGoalsQuery`), `dto/` (`GoalDTO` — a
+distinct type from `app.domain.goal.context.GoalContext`, the same
+reasoning as every prior DTO), and `handlers/` (six `CommandHandler`/
+`QueryHandler` implementations). `UpdateGoalCommand` wraps
+`Goal.update()`'s whole field set in one command, matching that being a
+single aggregate method rather than several narrower ones (unlike
+Readiness). No `DeleteGoalHandler` exists — `Goal` is cancelled or
+completed, never hard-deleted, the same shape `Workout` already
+established (no `DeleteWorkoutHandler` either).
+
+`GoalAlignmentRuleEngine` is invoked from `CreateGoalHandler`/
+`UpdateGoalHandler` only, surfaced solely as advisory warnings, never a
+reason to fail a command. `CompleteGoalHandler`/`CancelGoalHandler`
+evaluate no rule engine at all — every rule in the engine guards on
+`status is ACTIVE`, and `complete()`/`cancel()` are precisely the
+mutations that make that guard fail, so re-evaluating afterward would
+always produce an empty result. `GoalAlignmentRuleContext`'s optional
+`progress` field is deliberately always `None` in this phase, even
+though `ProgressRepository` already exists — wiring only this direction
+would leave `Progress`'s own already-accepted handlers (which likewise
+always pass `goal=None`, per `docs/adr/0026`) permanently asymmetric
+with no matching update on this phase's side, since editing them is out
+of scope here. `except DomainInvariantViolationError` is genuinely
+reachable in `UpdateGoalHandler`/`CompleteGoalHandler`/
+`CancelGoalHandler` (unlike every guard in the Readiness phase) and is
+re-raised uncaught, the same choice `CancelWorkoutHandler` makes for its
+own reachable transition-table violation. A new `list_by_user()` method
+was added to `GoalRepository` (no persistence implementation yet). See
+`docs/adr/0028-goal-application-use-cases.md` for the full reasoning.
+No use case for anything beyond Workout/User/Nutrition/Progress/
+Readiness/Goal, no concrete repository implementation, SQLAlchemy,
+FastAPI, authentication, REST, or AI integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -856,3 +905,28 @@ call sites brought TD-0001 to 11 total copies, past its own stated
 next unit of work rather than extracted mid-phase. No use case for
 Goal, no concrete repository implementation, SQLAlchemy, FastAPI,
 authentication, REST, or AI integration exists yet.
+
+TD-0001 is resolved: a standalone, scoped refactor extracted
+`_advisory_warnings()` into `app.application.shared.advisory_warnings.
+advisory_warnings()`, updated all 11 call sites, and closed the tech
+debt item — zero behavior or API changes, full verification gate green.
+
+Sprint 4's next phase is done: the Goal Application Use Cases (see
+"Goal Application Use Cases" above) — the sixth concrete consumer of
+the Application Layer Foundation, and the first built on a
+status-lifecycle aggregate (`Goal`, the same `Active`/`Completed`/
+`Cancelled` shape as `Workout`) rather than a fact-at-a-point-in-time
+one: four commands, two queries, one DTO, six handlers, plus a new
+`list_by_user()` method on `GoalRepository`. `GoalAlignmentRuleEngine`
+is invoked from `CreateGoalHandler`/`UpdateGoalHandler` only —
+`CompleteGoalHandler`/`CancelGoalHandler` evaluate nothing, since every
+rule's `status is ACTIVE` guard is always false immediately after
+either mutation. No `DeleteGoalHandler` exists, matching `Workout`'s own
+absence of one. `GoalAlignmentRuleContext.progress` stays deliberately
+`None` in every evaluation this phase performs, mirroring
+`ProgressEvaluationRuleContext.goal`'s own permanent `None` from
+`docs/adr/0026` — both cross-aggregate directions remain deferred
+together rather than only one being wired. No use case for anything
+beyond Workout/User/Nutrition/Progress/Readiness/Goal, no concrete
+repository implementation, SQLAlchemy, FastAPI, authentication, REST, or
+AI integration exists yet.

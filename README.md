@@ -254,6 +254,30 @@ decision for the next unit of work. No use case for Goal, no concrete
 repository implementation, SQLAlchemy, FastAPI, or AI integration
 exists yet.
 
+TD-0001 was then resolved as its own standalone, scoped refactor:
+`_advisory_warnings()` is now `app.application.shared.
+advisory_warnings.advisory_warnings()`, with all 11 call sites updated
+to use it — zero behavior or API changes, full verification gate green.
+See `docs/TECH_DEBT.md`.
+
+Sprint 4's next phase is done: the Goal Application Use Cases
+(`backend/app/application/goal/` — see `backend/README.md`'s "Goal
+Application Use Cases" section), the sixth concrete consumer of the
+Application Layer Foundation, and the first built on a status-lifecycle
+aggregate (`Goal`) rather than a fact-at-a-point-in-time one. Four
+commands, two queries, one DTO, six handlers; a new `list_by_user()`
+method was added to `GoalRepository` (no persistence implementation
+yet). `GoalAlignmentRuleEngine` is invoked only from the two handlers
+where it can produce a meaningful result (`CreateGoalHandler`,
+`UpdateGoalHandler`) — `CompleteGoalHandler`/`CancelGoalHandler`
+evaluate nothing, since the engine's shared "Active goals only" guard
+is always false immediately after either mutation. See
+`docs/adr/0028-goal-application-use-cases.md` for the full reasoning,
+including why `GoalAlignmentRuleContext.progress` stays deliberately
+`None` here, mirroring `ProgressEvaluationRuleContext.goal`'s own
+permanent `None` (`docs/adr/0026`). No concrete repository
+implementation, SQLAlchemy, FastAPI, or AI integration exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`
