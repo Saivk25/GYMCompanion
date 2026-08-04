@@ -565,11 +565,16 @@ every handler touches at most one `Nutrition` entry (only
 `RecordNutritionHandler` touches a second repository, `UserRepository`,
 for a referential-integrity check). Four subpackages: `commands/`
 (`RecordNutritionCommand`, `UpdateNutritionCommand`,
-`UpdateWaterCommand`, `DeleteNutritionCommand`), `queries/`
-(`GetNutritionQuery`, `ListNutritionQuery`), `dto/` (`NutritionDTO` — a
-distinct type from `app.domain.nutrition.rules.context.
-NutritionRuleContext`, same reasoning as `UserDTO`/`WorkoutDTO`), and
-`handlers/` (six `CommandHandler`/`QueryHandler` implementations).
+`UpdateWaterCommand`, `UpdateNutritionNotesCommand`,
+`DeleteNutritionCommand`), `queries/` (`GetNutritionQuery`,
+`ListNutritionQuery`), `dto/` (`NutritionDTO` — a distinct type from
+`app.domain.nutrition.rules.context.NutritionRuleContext`, same
+reasoning as `UserDTO`/`WorkoutDTO`), and `handlers/` (seven
+`CommandHandler`/`QueryHandler` implementations —
+`UpdateNutritionNotesHandler` was added in a post-Phase-5 consistency
+cleanup to close a gap where `Nutrition.update_notes()` had no
+Application Layer exposure; see the addendum in `docs/adr/0025-
+nutrition-application-use-cases.md`).
 `UpdateNutritionCommand`'s `None` fields mean "leave unchanged" —
 mirroring `Nutrition.update_nutrition()`'s own convention exactly — the
 deliberate *opposite* of `UpdateWorkoutCommand`'s "`None` means clear."
@@ -744,8 +749,12 @@ Sprint 4, Phase 4 is done: the Nutrition Application Use Cases (see
 "Nutrition Application Use Cases" above) — the third concrete consumer
 of the Application Layer Foundation and the simplest orchestration shape
 so far, since `Nutrition` has no lifecycle and no cross-aggregate
-dependency: four commands, two queries, one DTO, six handlers, plus a
-new `list_by_user()` method on `NutritionRepository`. `NutritionRuleEngine`
+dependency: five commands, two queries, one DTO, seven handlers (the
+fifth command/seventh handler, `UpdateNutritionNotesCommand`/
+`UpdateNutritionNotesHandler`, was added in a post-Phase-5 consistency
+cleanup — see the addendum in `docs/adr/0025-nutrition-application-use-
+cases.md`), plus a new `list_by_user()` method on `NutritionRepository`.
+`NutritionRuleEngine`
 is invoked from the three mutating handlers that touch rule-relevant
 fields, surfaced only as advisory warnings, never a reason to fail a
 command. No use case for Progress, Readiness, or Goal, no concrete

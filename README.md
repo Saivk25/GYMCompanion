@@ -190,8 +190,11 @@ Sprint 4, Phase 4 is done: the Nutrition Application Use Cases
 "Nutrition Application Use Cases" section), the third concrete consumer
 of the Application Layer Foundation and the simplest orchestration shape
 so far — every handler touches at most one `Nutrition` entry, since the
-aggregate has no lifecycle and no cross-aggregate dependency. Four
-commands, two queries, one DTO, and six handlers; a new `list_by_user()`
+aggregate has no lifecycle and no cross-aggregate dependency. Five
+commands, two queries, one DTO, and seven handlers (`UpdateNutritionNotesCommand`/
+`UpdateNutritionNotesHandler` were added afterward, in a post-Phase-5
+consistency cleanup, closing a gap where `Nutrition.update_notes()` had
+no Application Layer exposure); a new `list_by_user()`
 method was added to `NutritionRepository` (no persistence implementation
 yet). `NutritionRuleEngine` is invoked from the three mutating handlers
 that touch rule-relevant fields, surfaced only as advisory warnings,
@@ -217,6 +220,16 @@ application-use-cases.md` for the full reasoning, including why handlers
 never calculate trends and why analytics remain outside the Application
 Layer. No use case for Readiness or Goal, no concrete repository
 implementation, SQLAlchemy, FastAPI, or AI integration exists yet.
+
+A Principal-Engineer-level consistency review of the Application Layer
+(Workout, Nutrition, Progress) followed Phase 5, before Phase 6 began:
+no Critical findings; two Important findings, both since resolved or
+tracked — `Nutrition.update_notes()` had no Application Layer exposure
+(closed, see the Phase 4 addendum in `docs/adr/0025-nutrition-
+application-use-cases.md`), and `_advisory_warnings()` was duplicated
+across 8 handler files (intentionally deferred, tracked as
+`docs/TECH_DEBT.md`'s TD-0001 with explicit extraction trigger
+conditions rather than extracted speculatively).
 
 ## Getting started
 

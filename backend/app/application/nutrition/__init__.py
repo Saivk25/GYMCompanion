@@ -16,7 +16,7 @@ Four subpackages, one per concern, mirroring `app.application.user`/
 
 - `commands/`: immutable write-intent inputs (`RecordNutritionCommand`,
   `UpdateNutritionCommand`, `UpdateWaterCommand`,
-  `DeleteNutritionCommand`).
+  `UpdateNutritionNotesCommand`, `DeleteNutritionCommand`).
 - `queries/`: immutable read-intent inputs (`GetNutritionQuery`,
   `ListNutritionQuery`).
 - `dto/`: `NutritionDTO`, the read-only shape a query handler returns.

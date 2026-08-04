@@ -229,3 +229,31 @@ caller-supplied input (e.g. a future business rule constraining which
 fields can be updated together) — at that point the guard becomes real
 behavior with its own test, and the pragma comment should be removed
 along with the coverage exclusion it documents.
+
+## Addendum (2026-08-04): `UpdateNutritionNotesCommand`/`UpdateNutritionNotesHandler`
+
+This phase originally shipped four commands
+(`RecordNutritionCommand`/`UpdateNutritionCommand`/`UpdateWaterCommand`/
+`DeleteNutritionCommand`), leaving `Nutrition.update_notes()` — a real
+domain method, with its own event, `MealNotesUpdated` — unreachable
+through the Application Layer. This gap surfaced during the
+post-Phase-5 consistency review across Workout/Nutrition/Progress: both
+sibling aggregates already exposed their own `update_notes()` at this
+layer (`Workout` bundles it into `UpdateWorkoutCommand`; `Progress` has
+a dedicated `UpdateNotesCommand`/`UpdateNotesHandler`,
+`docs/adr/0026`), making Nutrition's omission an inconsistency rather
+than a deliberate scope decision.
+
+`UpdateNutritionNotesCommand`/`UpdateNutritionNotesHandler` close the
+gap, added as a fifth command/seventh handler to this package,
+following the exact shape `UpdateWaterCommand`/`UpdateWaterHandler`
+established for this package's other single-field, no-optional-form
+replace (decision 4): `notes: MealNotes` is required, not optional,
+because `Nutrition.update_notes(notes: MealNotes, ...)` itself takes no
+"leave unchanged" form. `UpdateNutritionNotesHandler` evaluates no
+`NutritionRuleEngine` — `NutritionRuleContext` explicitly excludes
+`notes` (that module's own docstring), the identical "not a
+rule-relevant field" reasoning `docs/adr/0026`'s `UpdateNotesHandler`
+gives for the same decision on `Progress`. No other decision in this
+ADR changes; this addendum adds one handler to an already-accepted
+shape, it does not revisit it.
