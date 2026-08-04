@@ -231,6 +231,29 @@ across 8 handler files (intentionally deferred, tracked as
 `docs/TECH_DEBT.md`'s TD-0001 with explicit extraction trigger
 conditions rather than extracted speculatively).
 
+Sprint 4, Phase 6 is done: the Readiness Application Use Cases
+(`backend/app/application/readiness/` — see `backend/README.md`'s
+"Readiness Application Use Cases" section), the fifth concrete consumer
+of the Application Layer Foundation. Five commands, two queries, one
+DTO, and seven handlers — `UpdateNotesCommand`/`UpdateNotesHandler`
+shipped from the start of this phase rather than as a follow-up fix,
+directly applying the Phase 4 consistency-review lesson; a new
+`list_by_user()` method was added to `ReadinessRepository` (no
+persistence implementation yet). `ReadinessRuleEngine` is invoked from
+the three mutating handlers that touch rule-relevant fields, evaluated
+from the just-mutated check-in alone (no history needed — none of this
+phase's five rules is trend-based, the same shape Nutrition uses),
+surfaced only as advisory warnings, never a reason to fail a command.
+See `docs/adr/0027-readiness-application-use-cases.md` for the full
+reasoning. This phase's three new `_advisory_warnings()` call sites
+brought `docs/TECH_DEBT.md`'s TD-0001 to 11 total copies, past its own
+stated 9-call-site extraction trigger — extraction was still not
+performed, since this phase was scoped to "maintain the current
+architecture," but the fired trigger is now flagged as a required
+decision for the next unit of work. No use case for Goal, no concrete
+repository implementation, SQLAlchemy, FastAPI, or AI integration
+exists yet.
+
 ## Getting started
 
 - Backend: `backend/README.md`

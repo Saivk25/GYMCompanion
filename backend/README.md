@@ -649,6 +649,63 @@ No use case for Readiness or Goal, no concrete repository
 implementation, SQLAlchemy, FastAPI, authentication, REST, or AI
 integration exists yet.
 
+A Principal-Engineer-level consistency review of the Application Layer
+(Workout, Nutrition, Progress) followed Phase 5, before Phase 6 began —
+no Critical findings, Application Layer approved to proceed. Two
+Important findings: `Nutrition.update_notes()` had no Application Layer
+exposure (closed as a Phase 4 addendum, see `docs/adr/0025-nutrition-
+application-use-cases.md`), and `_advisory_warnings()` was duplicated
+across 8 handler files (deferred, tracked as `docs/TECH_DEBT.md`'s
+TD-0001).
+
+## Readiness Application Use Cases
+
+Sprint 4, Phase 6 (`app/application/readiness/`, mirrored by
+`tests/application/readiness/`), the fifth concrete consumer of the
+Application Layer Foundation. Structurally closer to Nutrition's shape
+than Progress's: none of `ReadinessRuleEngine`'s five rules
+(`SleepRule`, `EnergyRule`, `StressRule`, `SorenessRule`,
+`RecoveryRule`) is trend-based, so `ReadinessRuleContext.
+from_readiness()` rebuilds from the just-mutated aggregate alone, no
+history or repository read needed — the same shape
+`NutritionRuleContext.from_nutrition()` uses. Four subpackages:
+`commands/` (`RecordReadinessCommand`, `UpdateSleepCommand`,
+`UpdateRecoveryMetricsCommand`, `UpdateNotesCommand`,
+`DeleteReadinessCommand`), `queries/` (`GetReadinessQuery`,
+`ListReadinessQuery`), `dto/` (`ReadinessDTO` — a distinct type from
+`app.domain.readiness.context.ReadinessContext`, same reasoning as
+`UserDTO`/`WorkoutDTO`/`NutritionDTO`/`ProgressDTO`), and `handlers/`
+(seven `CommandHandler`/`QueryHandler` implementations).
+`UpdateSleepCommand`/`UpdateRecoveryMetricsCommand`'s `None` fields
+mean "leave unchanged," mirroring `Readiness.update_sleep()`/
+`update_recovery_metrics()`'s own convention.
+`UpdateNotesCommand`/`UpdateNotesHandler` shipped as part of this
+phase's original scope rather than as a follow-up fix — directly
+applying the lesson from Nutrition's Phase 4 gap, caught by the
+post-Phase-5 consistency review. `DeleteReadinessHandler` calls
+`ReadinessRepository.remove()` directly (no aggregate method, no event
+— `Readiness` has neither) and dispatches an empty event tuple
+uniformly on every success. `ReadinessRuleEngine` is invoked from the
+three mutating handlers that touch rule-relevant fields
+(`RecordReadinessHandler`, `UpdateSleepHandler`,
+`UpdateRecoveryMetricsHandler`), surfaced only as advisory warnings,
+never a reason to fail a command. `UpdateNotesHandler` and
+`DeleteReadinessHandler` evaluate no rule engine at all — notes are not
+a field any of the five rules read, and deletion removes the very
+record the engine would evaluate. A new `list_by_user()` method was
+added to `ReadinessRepository` (no persistence implementation yet). See
+`docs/adr/0027-readiness-application-use-cases.md` for the full
+reasoning. `tests/application/readiness/factories.py`'s
+`FakeReadinessRepository`/`FakeUserRepository`/`FakeUnitOfWork` are
+simple in-memory doubles, the same shape as every prior phase's fakes.
+This phase's three new `_advisory_warnings()` call sites brought
+`docs/TECH_DEBT.md`'s TD-0001 to 11 total copies, past its own stated
+9-call-site extraction trigger — flagged as a required decision for the
+next unit of work rather than extracted mid-phase (this phase's own
+scope was "maintain the current architecture"). No use case for Goal,
+no concrete repository implementation, SQLAlchemy, FastAPI,
+authentication, REST, or AI integration exists yet.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -771,5 +828,31 @@ a new `list_by_user()` method on `ProgressRepository`.
 `ProgressEvaluationRuleEngine` is invoked from the three mutating
 handlers that touch rule-relevant fields, surfaced only as advisory
 warnings, never a reason to fail a command. No use case for Readiness or
+Goal, no concrete repository implementation, SQLAlchemy, FastAPI,
+authentication, REST, or AI integration exists yet.
+
+A Principal-Engineer-level consistency review of the Application Layer
+(Workout, Nutrition, Progress) followed Phase 5, before Phase 6 began —
+no Critical findings, Application Layer approved to proceed. Two
+Important findings: `Nutrition.update_notes()` had no Application Layer
+exposure (closed as a Phase 4 addendum, `docs/adr/0025-nutrition-
+application-use-cases.md`, five commands/seven handlers now, up from
+four/six), and `_advisory_warnings()` was duplicated across 8 handler
+files (deferred, tracked as `docs/TECH_DEBT.md`'s TD-0001).
+
+Sprint 4, Phase 6 is done: the Readiness Application Use Cases (see
+"Readiness Application Use Cases" above) — the fifth concrete consumer
+of the Application Layer Foundation, structurally closer to Nutrition's
+shape than Progress's (no rule in `ReadinessRuleEngine` is trend-based,
+so no full-history rebuild is needed): five commands, two queries, one
+DTO, seven handlers, plus a new `list_by_user()` method on
+`ReadinessRepository`. `UpdateNotesCommand`/`UpdateNotesHandler`
+shipped from this phase's start, directly applying the Phase 4 lesson.
+`ReadinessRuleEngine` is invoked from the three mutating handlers that
+touch rule-relevant fields, surfaced only as advisory warnings, never a
+reason to fail a command. This phase's three new `_advisory_warnings()`
+call sites brought TD-0001 to 11 total copies, past its own stated
+9-call-site extraction trigger — flagged as a required decision for the
+next unit of work rather than extracted mid-phase. No use case for
 Goal, no concrete repository implementation, SQLAlchemy, FastAPI,
 authentication, REST, or AI integration exists yet.
