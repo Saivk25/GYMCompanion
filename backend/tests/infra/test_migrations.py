@@ -6,62 +6,43 @@ table ... RLS verified by a cross-tenant-leak test").
 These tests run real `alembic upgrade`/`downgrade` commands against
 `TEST_DATABASE_URL` (see conftest.py) and skip themselves, rather than
 fail, when no Postgres is reachable — same convention as
-`tests/infra/test_database.py`.
+`tests/infra/test_database.py`. The `migrated_engine` fixture they share
+lives in `conftest.py` (moved there once `tests/infra/repositories/` needed
+the identical setup for its own round-trip tests).
 """
 
-import os
 import uuid
-from collections.abc import Generator
 
 import pytest
-import sqlalchemy
 from alembic.config import Config
 from sqlalchemy import inspect, select, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from alembic import command
-from app.core.config import get_settings
-from app.infra.database import build_engine, tenant_scope
+from app.infra.database import tenant_scope
 from app.infra.models import UserAccount
-from tests.infra.conftest import TEST_DATABASE_URL
 
-
-@pytest.fixture
-def migrated_engine() -> Generator[Engine, None, None]:
-    """Runs `alembic upgrade head` against TEST_DATABASE_URL, yields an
-    engine bound to it, then runs `alembic downgrade base` — every test
-    using this fixture starts and ends with a clean, unmigrated database,
-    regardless of what the test itself does to the schema in between.
-
-    Alembic's env.py reads the database URL from GYM_DATABASE_URL (via
-    Settings), so pointing it at the test database is a matter of setting
-    that environment variable for the duration of the fixture, exactly as
-    a developer would from the command line — not a special test-only code
-    path.
-    """
-    engine = build_engine(TEST_DATABASE_URL)
-    try:
-        with engine.connect():
-            pass
-    except sqlalchemy.exc.OperationalError as exc:
-        pytest.skip(f"no reachable Postgres at {TEST_DATABASE_URL}: {exc}")
-
-    original_url = os.environ.get("GYM_DATABASE_URL")
-    os.environ["GYM_DATABASE_URL"] = TEST_DATABASE_URL
-    get_settings.cache_clear()
-    cfg = Config("alembic.ini")
-    try:
-        command.upgrade(cfg, "head")
-        yield engine
-    finally:
-        command.downgrade(cfg, "base")
-        if original_url is None:
-            os.environ.pop("GYM_DATABASE_URL", None)
-        else:
-            os.environ["GYM_DATABASE_URL"] = original_url
-        get_settings.cache_clear()
-        engine.dispose()
+# Every tenant-scoped table added since the users-table migration
+# (`e1be8b00d81f`), in creation order — `exercises` is deliberately absent:
+# it carries no `user_id` and gets no RLS at all (see
+# `app/infra/models/exercise.py`'s own module docstring). Re-proving the
+# full cross-tenant-leak scenario for each of these individually would be
+# pure repetition of `test_rls_prevents_cross_tenant_reads` below; this list
+# instead drives a single parametrized "RLS is enabled and forced" check —
+# the structural half of the proof — while the `users` table keeps the one
+# full, concrete leak-proof test as the canonical example every other
+# table's policy is written to match.
+_TENANT_SCOPED_TABLES = (
+    "workouts",
+    "workout_sessions",
+    "exercise_performances",
+    "exercise_sets",
+    "progress_records",
+    "nutrition_entries",
+    "readiness_checkins",
+    "goals",
+)
 
 
 @pytest.mark.integration
@@ -142,3 +123,35 @@ def test_rls_prevents_cross_tenant_reads(migrated_engine: Engine) -> None:
         # instead of every row in the table.
         visible_to_nobody = session.scalars(select(UserAccount)).all()
     assert visible_to_nobody == []
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("table_name", _TENANT_SCOPED_TABLES)
+def test_every_tenant_scoped_table_has_forced_rls(migrated_engine: Engine, table_name: str) -> None:
+    """The structural half of the RLS proof, for every table added after
+    `users` — see `_TENANT_SCOPED_TABLES`'s own comment for why this
+    doesn't repeat `test_rls_prevents_cross_tenant_reads`'s full concrete
+    leak scenario for each one."""
+    with migrated_engine.connect() as conn:
+        relrowsecurity, relforcerowsecurity = conn.execute(
+            text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = :name"),
+            {"name": table_name},
+        ).one()
+
+    assert relrowsecurity is True
+    assert relforcerowsecurity is True
+
+
+@pytest.mark.integration
+def test_exercises_table_has_no_row_level_security(migrated_engine: Engine) -> None:
+    """The deliberate exception: `exercises` is a shared, global catalog
+    with no `user_id` column, so it must not have RLS enabled at all — see
+    `app/infra/models/exercise.py`'s own module docstring."""
+    with migrated_engine.connect() as conn:
+        relrowsecurity, relforcerowsecurity = conn.execute(
+            text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = :name"),
+            {"name": "exercises"},
+        ).one()
+
+    assert relrowsecurity is False
+    assert relforcerowsecurity is False
