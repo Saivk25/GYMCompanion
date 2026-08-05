@@ -178,3 +178,70 @@ Use Cases.
   change as a result of it, and has no trigger condition of its own
   defined here. No new item was opened for it as part of this
   resolution.
+
+---
+
+## TD-0002: No per-resource ownership authorization on 27 `v1` routes
+
+- Status: **Open.**
+- Identified: 2026-08-05, during the Authentication & Authorization
+  phase (`docs/adr/0032-authentication-and-authorization.md`).
+
+### What's missing
+
+Every route in `app/api/routes/v1/` (Workout, Nutrition, Progress,
+Readiness, Goal) now requires a valid authenticated caller
+(`app.api.deps.get_current_user_id`, added this phase). The four
+create/list routes per module that used to accept a client-supplied
+`user_id` now correctly derive it from the authenticated caller. The
+remaining 27 routes — every `GET`/`PATCH`/`PUT`/`DELETE`/action route
+addressing one resource by id (`GET /api/v1/goals/{goal_id}`, `DELETE
+/api/v1/nutrition/{nutrition_id}`, ...) — require *a* valid
+authenticated caller, but do not verify that caller *owns* the
+`{resource_id}` named in the path. Any authenticated user can currently
+read, update, or delete any other user's goal/workout/progress entry/
+etc. by id, provided they know or can guess the id (a UUID — not
+trivially guessable, but not a security boundary either).
+
+### Why this was deferred rather than fixed in this phase
+
+This phase's own directive was explicit and scoped: "Secure the
+existing API... integrate with the existing architecture... No
+shortcuts," but also implicitly bounded by "reuse the existing
+UnitOfWork, Container, and dependency injection" and the broader
+project convention of one architecturally-scoped change per phase.
+Closing this gap requires one of:
+
+1. Each `GetXHandler`/`UpdateXHandler`/`DeleteXHandler`/action handler
+   gaining a `caller_id` (or similar) parameter and comparing it against
+   the loaded aggregate's own `user_id`, failing with an authorization
+   error if they differ — a real signature change to roughly 20+
+   already-accepted Application Layer handlers across five modules.
+2. Or, the API layer loading the resource first (via a query) to check
+   ownership before dispatching the actual command — which would
+   violate this phase's own "No repository access from routes" rule and
+   double the handler resolutions per mutating request.
+
+Option 1 is the architecturally correct fix, but it touches the
+Application Layer signature of every affected handler across five
+modules — exactly the kind of cross-cutting redesign this phase's own
+scope ("secure the API," not "redesign resource authorization") did not
+license doing as a side effect of adding authentication. Implementing
+it here, unreviewed, would have been the "shortcut" the phase's own
+"No shortcuts" rule warns against in the other direction: rushing a
+multi-handler signature change through without its own design pass.
+
+### Trigger conditions for closing this item
+
+1. **The next phase that substantively touches any of Workout,
+   Nutrition, Progress, Readiness, or Goal's Application/API layers**
+   should close this gap for that module as part of its own scope,
+   rather than as an unrelated drive-by change to a phase about
+   something else.
+2. **Before this API is exposed to any real (non-development) network
+   or user base** — this is a real security gap for a multi-tenant
+   deployment, not a cosmetic one, and must close before that point
+   regardless of whether condition 1 has fired yet.
+3. **If a concrete incident or test demonstrates cross-tenant data
+   access in practice** — fires immediately, supersedes normal
+   phase-scoping.

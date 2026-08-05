@@ -40,7 +40,9 @@ from app.domain.user.identifiers import UserId
 
 
 class RecordProgressRequest(BaseModel):
-    user_id: str
+    """No `user_id` field — see `app.api.schemas.goal.CreateGoalRequest`'s
+    identical docstring for why."""
+
     progress_date: date
     unit: MeasurementUnit
     source: ProgressSource
@@ -57,9 +59,9 @@ class RecordProgressRequest(BaseModel):
     neck: float | None = None
     notes: str | None = None
 
-    def to_command(self) -> RecordProgressCommand:
+    def to_command(self, user_id: UserId) -> RecordProgressCommand:
         return RecordProgressCommand(
-            user_id=UserId.parse(self.user_id),
+            user_id=user_id,
             progress_date=ProgressDate(self.progress_date),
             unit=self.unit,
             source=self.source,

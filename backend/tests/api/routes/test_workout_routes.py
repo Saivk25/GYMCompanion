@@ -15,13 +15,11 @@ from app.application.shared.application_result import ApplicationResult
 from app.application.workout.dto.workout_dto import WorkoutDTO
 from app.application.workout.dto.workout_session_dto import WorkoutSessionDTO
 from app.domain.exercise.identifiers import ExerciseId
-from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
 from app.domain.workout_session.identifiers import ExercisePerformanceId, WorkoutSessionId
 from tests.application.workout.factories import a_planned_session, a_planned_workout
 
 _VALID_CREATE_BODY = {
-    "user_id": str(UserId.generate()),
     "name": "Push Day",
     "planned_date": "2026-06-01",
 }
@@ -94,7 +92,7 @@ def test_list_workouts_returns_200_on_success(
 ) -> None:
     client = stub_client(ApplicationResult.ok((_workout_dto(),)))
 
-    response = client.get("/api/v1/workouts", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/workouts")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -106,7 +104,7 @@ def test_list_workouts_returns_500_on_failure(
 ) -> None:
     client = stub_client(ApplicationResult.fail(["db error"]))
 
-    response = client.get("/api/v1/workouts", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/workouts")
 
     assert response.status_code == 500
 

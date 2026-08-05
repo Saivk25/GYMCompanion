@@ -14,11 +14,9 @@ from fastapi.testclient import TestClient
 from app.application.progress.dto.progress_dto import ProgressDTO
 from app.application.shared.application_result import ApplicationResult
 from app.domain.progress.identifiers import ProgressId
-from app.domain.user.identifiers import UserId
 from tests.application.progress.factories import a_recorded_progress
 
 _VALID_RECORD_BODY = {
-    "user_id": str(UserId.generate()),
     "progress_date": "2026-06-01",
     "unit": "metric",
     "source": "manual",
@@ -84,7 +82,7 @@ def test_list_progress_returns_200_on_success(
 ) -> None:
     client = stub_client(ApplicationResult.ok((_progress_dto(),)))
 
-    response = client.get("/api/v1/progress", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/progress")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -96,7 +94,7 @@ def test_list_progress_returns_500_on_failure(
 ) -> None:
     client = stub_client(ApplicationResult.fail(["db error"]))
 
-    response = client.get("/api/v1/progress", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/progress")
 
     assert response.status_code == 500
 

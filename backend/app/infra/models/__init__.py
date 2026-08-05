@@ -15,6 +15,7 @@ matching framework-free aggregate in `app/domain`; nothing in this
 package is ever imported by `app/domain`.
 """
 
+from app.infra.models.credential import CredentialRow
 from app.infra.models.exercise import ExerciseRow
 from app.infra.models.goal import GoalRow
 from app.infra.models.nutrition import NutritionRow
@@ -29,6 +30,7 @@ from app.infra.models.workout_session import (
 )
 
 __all__ = [
+    "CredentialRow",
     "ExercisePerformanceRow",
     "ExerciseRow",
     "ExerciseSetRow",

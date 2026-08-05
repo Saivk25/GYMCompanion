@@ -24,6 +24,14 @@ dependencies = [
     # machine while working fine in this Linux sandbox. Pinning it unconditionally
     # is a documented no-op on platforms that already have a system tz db.
     "tzdata>=2024.1",
+    # Authentication phase: password hashing (app/infra/security/
+    # bcrypt_password_hasher.py) and JWT issuance/decoding (.../
+    # jwt_token_service.py). Both concrete implementations of the
+    # framework-free ports app/domain/auth/ports.py declares — see that
+    # module's own docstring for why the algorithms themselves live only
+    # here, never in app/domain.
+    "bcrypt>=4.2,<5.0",
+    "pyjwt>=2.9,<3.0",
 ]
 
 [project.optional-dependencies]

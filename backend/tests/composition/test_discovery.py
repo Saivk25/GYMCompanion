@@ -14,16 +14,19 @@ from app.application.workout.handlers.complete_workout_session_handler import (
 )
 from app.composition.discovery import discover_handler_types
 
-_EXPECTED_HANDLER_COUNT = 44
+_EXPECTED_HANDLER_COUNT = 49
 
 
 @pytest.mark.unit
 def test_discovers_every_known_handler() -> None:
-    """44, not the 43 a naive single-line-`class X(CommandHandler)` grep
-    would find — `CompleteWorkoutSessionHandler`'s class statement spans
-    multiple lines, which is exactly the kind of formatting variation a
-    hand-maintained or regex-based list is fragile to and an `ast`/
-    `inspect`-based walk is not."""
+    """49 — the 44 handlers this codebase had before the Authentication
+    & Authorization phase, plus that phase's own 5
+    (`app.application.auth.handlers`: Register, Login, Refresh, Logout,
+    GetCurrentUser). Not the 43-then-48 a naive single-line-`class X
+    (CommandHandler)` grep would find — `CompleteWorkoutSessionHandler`'s
+    class statement spans multiple lines, which is exactly the kind of
+    formatting variation a hand-maintained or regex-based list is
+    fragile to and an `ast`/`inspect`-based walk is not."""
     handler_types = discover_handler_types()
     assert len(handler_types) == _EXPECTED_HANDLER_COUNT
     assert CompleteWorkoutSessionHandler in handler_types

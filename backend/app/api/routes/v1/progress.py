@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import handler_dependency
+from app.api.deps import get_current_user_id, handler_dependency
 from app.api.errors import unwrap_or_400, unwrap_or_404, unwrap_or_500
 from app.api.schemas.common import IdResponse
 from app.api.schemas.progress import (
@@ -58,16 +58,20 @@ _get_delete_handler = handler_dependency(DeleteProgressHandler)
 
 @router.post("", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
 def record_progress(
-    body: RecordProgressRequest, handler: RecordProgressHandler = Depends(_get_record_handler)
+    body: RecordProgressRequest,
+    user_id: UserId = Depends(get_current_user_id),
+    handler: RecordProgressHandler = Depends(_get_record_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command())
+    result = handler.handle(body.to_command(user_id))
     progress_id = unwrap_or_400(result)
     return IdResponse(id=str(progress_id), warnings=result.warnings)
 
 
 @router.get("/{progress_id}", response_model=ProgressResponse)
 def get_progress(
-    progress_id: str, handler: GetProgressHandler = Depends(_get_get_handler)
+    progress_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: GetProgressHandler = Depends(_get_get_handler),
 ) -> ProgressResponse:
     result = handler.handle(GetProgressQuery(progress_id=ProgressId.parse(progress_id)))
     return ProgressResponse.from_dto(unwrap_or_404(result))
@@ -75,9 +79,10 @@ def get_progress(
 
 @router.get("", response_model=list[ProgressResponse])
 def list_progress(
-    user_id: str, handler: ListProgressHandler = Depends(_get_list_handler)
+    user_id: UserId = Depends(get_current_user_id),
+    handler: ListProgressHandler = Depends(_get_list_handler),
 ) -> list[ProgressResponse]:
-    result = handler.handle(ListProgressQuery(user_id=UserId.parse(user_id)))
+    result = handler.handle(ListProgressQuery(user_id=user_id))
     return [ProgressResponse.from_dto(dto) for dto in unwrap_or_500(result)]
 
 
@@ -85,6 +90,7 @@ def list_progress(
 def update_body_composition(
     progress_id: str,
     body: UpdateBodyCompositionRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateBodyCompositionHandler = Depends(_get_update_body_composition_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
@@ -96,6 +102,7 @@ def update_body_composition(
 def update_measurements(
     progress_id: str,
     body: UpdateMeasurementsRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateMeasurementsHandler = Depends(_get_update_measurements_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
@@ -107,6 +114,7 @@ def update_measurements(
 def update_progress_notes(
     progress_id: str,
     body: UpdateProgressNotesRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNotesHandler = Depends(_get_update_notes_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
@@ -116,7 +124,9 @@ def update_progress_notes(
 
 @router.delete("/{progress_id}", response_model=IdResponse)
 def delete_progress(
-    progress_id: str, handler: DeleteProgressHandler = Depends(_get_delete_handler)
+    progress_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: DeleteProgressHandler = Depends(_get_delete_handler),
 ) -> IdResponse:
     result = handler.handle(DeleteProgressCommand(progress_id=ProgressId.parse(progress_id)))
     deleted_id = unwrap_or_400(result)

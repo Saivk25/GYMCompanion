@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import handler_dependency
+from app.api.deps import get_current_user_id, handler_dependency
 from app.api.errors import unwrap_or_400, unwrap_or_404, unwrap_or_500
 from app.api.schemas.common import IdResponse
 from app.api.schemas.readiness import (
@@ -56,16 +56,20 @@ _get_delete_handler = handler_dependency(DeleteReadinessHandler)
 
 @router.post("", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
 def record_readiness(
-    body: RecordReadinessRequest, handler: RecordReadinessHandler = Depends(_get_record_handler)
+    body: RecordReadinessRequest,
+    user_id: UserId = Depends(get_current_user_id),
+    handler: RecordReadinessHandler = Depends(_get_record_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command())
+    result = handler.handle(body.to_command(user_id))
     readiness_id = unwrap_or_400(result)
     return IdResponse(id=str(readiness_id), warnings=result.warnings)
 
 
 @router.get("/{readiness_id}", response_model=ReadinessResponse)
 def get_readiness(
-    readiness_id: str, handler: GetReadinessHandler = Depends(_get_get_handler)
+    readiness_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: GetReadinessHandler = Depends(_get_get_handler),
 ) -> ReadinessResponse:
     result = handler.handle(GetReadinessQuery(readiness_id=ReadinessId.parse(readiness_id)))
     return ReadinessResponse.from_dto(unwrap_or_404(result))
@@ -73,9 +77,10 @@ def get_readiness(
 
 @router.get("", response_model=list[ReadinessResponse])
 def list_readiness(
-    user_id: str, handler: ListReadinessHandler = Depends(_get_list_handler)
+    user_id: UserId = Depends(get_current_user_id),
+    handler: ListReadinessHandler = Depends(_get_list_handler),
 ) -> list[ReadinessResponse]:
-    result = handler.handle(ListReadinessQuery(user_id=UserId.parse(user_id)))
+    result = handler.handle(ListReadinessQuery(user_id=user_id))
     return [ReadinessResponse.from_dto(dto) for dto in unwrap_or_500(result)]
 
 
@@ -83,6 +88,7 @@ def list_readiness(
 def update_sleep(
     readiness_id: str,
     body: UpdateSleepRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateSleepHandler = Depends(_get_update_sleep_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
@@ -94,6 +100,7 @@ def update_sleep(
 def update_recovery_metrics(
     readiness_id: str,
     body: UpdateRecoveryMetricsRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateRecoveryMetricsHandler = Depends(_get_update_recovery_metrics_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
@@ -105,6 +112,7 @@ def update_recovery_metrics(
 def update_readiness_notes(
     readiness_id: str,
     body: UpdateReadinessNotesRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNotesHandler = Depends(_get_update_notes_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
@@ -114,7 +122,9 @@ def update_readiness_notes(
 
 @router.delete("/{readiness_id}", response_model=IdResponse)
 def delete_readiness(
-    readiness_id: str, handler: DeleteReadinessHandler = Depends(_get_delete_handler)
+    readiness_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: DeleteReadinessHandler = Depends(_get_delete_handler),
 ) -> IdResponse:
     result = handler.handle(DeleteReadinessCommand(readiness_id=ReadinessId.parse(readiness_id)))
     deleted_id = unwrap_or_400(result)

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import handler_dependency
+from app.api.deps import get_current_user_id, handler_dependency
 from app.api.errors import unwrap_or_400, unwrap_or_404, unwrap_or_500
 from app.api.schemas.common import IdResponse
 from app.api.schemas.workout import (
@@ -83,16 +83,20 @@ _get_complete_set_handler = handler_dependency(CompleteExerciseSetHandler)
 
 @router.post("/workouts", response_model=IdResponse, status_code=status.HTTP_201_CREATED)
 def create_workout(
-    body: CreateWorkoutRequest, handler: CreateWorkoutHandler = Depends(_get_create_handler)
+    body: CreateWorkoutRequest,
+    user_id: UserId = Depends(get_current_user_id),
+    handler: CreateWorkoutHandler = Depends(_get_create_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command())
+    result = handler.handle(body.to_command(user_id))
     workout_id = unwrap_or_400(result)
     return IdResponse(id=str(workout_id), warnings=result.warnings)
 
 
 @router.get("/workouts/{workout_id}", response_model=WorkoutResponse)
 def get_workout(
-    workout_id: str, handler: GetWorkoutHandler = Depends(_get_get_handler)
+    workout_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: GetWorkoutHandler = Depends(_get_get_handler),
 ) -> WorkoutResponse:
     result = handler.handle(GetWorkoutQuery(workout_id=WorkoutId.parse(workout_id)))
     return WorkoutResponse.from_dto(unwrap_or_404(result))
@@ -100,9 +104,10 @@ def get_workout(
 
 @router.get("/workouts", response_model=list[WorkoutResponse])
 def list_workouts(
-    user_id: str, handler: ListWorkoutsHandler = Depends(_get_list_handler)
+    user_id: UserId = Depends(get_current_user_id),
+    handler: ListWorkoutsHandler = Depends(_get_list_handler),
 ) -> list[WorkoutResponse]:
-    result = handler.handle(ListWorkoutsQuery(user_id=UserId.parse(user_id)))
+    result = handler.handle(ListWorkoutsQuery(user_id=user_id))
     return [WorkoutResponse.from_dto(dto) for dto in unwrap_or_500(result)]
 
 
@@ -110,6 +115,7 @@ def list_workouts(
 def update_workout(
     workout_id: str,
     body: UpdateWorkoutRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: UpdateWorkoutHandler = Depends(_get_update_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(WorkoutId.parse(workout_id)))
@@ -119,7 +125,9 @@ def update_workout(
 
 @router.post("/workouts/{workout_id}/cancel", response_model=IdResponse)
 def cancel_workout(
-    workout_id: str, handler: CancelWorkoutHandler = Depends(_get_cancel_handler)
+    workout_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: CancelWorkoutHandler = Depends(_get_cancel_handler),
 ) -> IdResponse:
     result = handler.handle(CancelWorkoutCommand(workout_id=WorkoutId.parse(workout_id)))
     cancelled_id = unwrap_or_400(result)
@@ -139,6 +147,7 @@ def cancel_workout(
 def start_workout_session(
     workout_id: str,
     body: StartWorkoutSessionRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: StartWorkoutSessionHandler = Depends(_get_start_session_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(WorkoutId.parse(workout_id)))
@@ -148,7 +157,9 @@ def start_workout_session(
 
 @router.get("/workout-sessions/{session_id}", response_model=WorkoutSessionResponse)
 def get_workout_session(
-    session_id: str, handler: GetWorkoutSessionHandler = Depends(_get_get_session_handler)
+    session_id: str,
+    _user_id: UserId = Depends(get_current_user_id),
+    handler: GetWorkoutSessionHandler = Depends(_get_get_session_handler),
 ) -> WorkoutSessionResponse:
     result = handler.handle(GetWorkoutSessionQuery(session_id=WorkoutSessionId.parse(session_id)))
     return WorkoutSessionResponse.from_dto(unwrap_or_404(result))
@@ -158,6 +169,7 @@ def get_workout_session(
 def complete_workout_session(
     session_id: str,
     body: CompleteWorkoutSessionRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: CompleteWorkoutSessionHandler = Depends(_get_complete_session_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(WorkoutSessionId.parse(session_id)))
@@ -173,6 +185,7 @@ def complete_workout_session(
 def log_exercise_set(
     session_id: str,
     body: LogExerciseSetRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: LogExerciseSetHandler = Depends(_get_log_set_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(WorkoutSessionId.parse(session_id)))
@@ -184,6 +197,7 @@ def log_exercise_set(
 def complete_exercise_set(
     session_id: str,
     body: CompleteExerciseSetRequest,
+    _user_id: UserId = Depends(get_current_user_id),
     handler: CompleteExerciseSetHandler = Depends(_get_complete_set_handler),
 ) -> IdResponse:
     result = handler.handle(body.to_command(WorkoutSessionId.parse(session_id)))

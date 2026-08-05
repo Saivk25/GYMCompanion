@@ -41,7 +41,9 @@ from app.domain.user.identifiers import UserId
 
 
 class RecordReadinessRequest(BaseModel):
-    user_id: str
+    """No `user_id` field — see `app.api.schemas.goal.CreateGoalRequest`'s
+    identical docstring for why."""
+
     readiness_date: date
     source: ReadinessSource | None = None
     sleep_duration_seconds: float | None = None
@@ -53,9 +55,9 @@ class RecordReadinessRequest(BaseModel):
     heart_rate_variability: float | None = None
     notes: str | None = None
 
-    def to_command(self) -> RecordReadinessCommand:
+    def to_command(self, user_id: UserId) -> RecordReadinessCommand:
         return RecordReadinessCommand(
-            user_id=UserId.parse(self.user_id),
+            user_id=user_id,
             readiness_date=ReadinessDate(self.readiness_date),
             source=self.source,
             sleep_duration=(

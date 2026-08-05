@@ -23,11 +23,9 @@ from app.application.goal.dto.goal_dto import GoalDTO
 from app.application.shared.application_result import ApplicationResult
 from app.domain.goal.enums import GoalType
 from app.domain.goal.identifiers import GoalId
-from app.domain.user.identifiers import UserId
 from tests.application.goal.factories import a_created_goal
 
 _VALID_CREATE_BODY = {
-    "user_id": str(UserId.generate()),
     "goal_type": GoalType.LOSE_FAT.value,
     "name": "Lose 5kg",
     "target_date": "2026-12-31",
@@ -90,7 +88,7 @@ def test_create_goal_missing_required_field_returns_422(
 ) -> None:
     client = stub_client(ApplicationResult.ok(GoalId.generate()))
 
-    response = client.post("/api/v1/goals", json={"user_id": str(UserId.generate())})
+    response = client.post("/api/v1/goals", json={})
 
     assert response.status_code == 422
     assert isinstance(response.json()["detail"], list)
@@ -173,7 +171,7 @@ def test_list_goals_returns_200_and_every_dto_on_success(
     dtos = (_goal_dto(), _goal_dto())
     client = stub_client(ApplicationResult.ok(dtos))
 
-    response = client.get("/api/v1/goals", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/goals")
 
     assert response.status_code == 200
     assert len(response.json()) == 2
@@ -185,20 +183,9 @@ def test_list_goals_returns_500_on_failure(
 ) -> None:
     client = stub_client(ApplicationResult.fail(["unexpected database error"]))
 
-    response = client.get("/api/v1/goals", params={"user_id": str(UserId.generate())})
-
-    assert response.status_code == 500
-
-
-@pytest.mark.unit
-def test_list_goals_missing_required_query_param_returns_422(
-    stub_client: Callable[[ApplicationResult[Any]], TestClient],
-) -> None:
-    client = stub_client(ApplicationResult.ok(()))
-
     response = client.get("/api/v1/goals")
 
-    assert response.status_code == 422
+    assert response.status_code == 500
 
 
 @pytest.mark.unit

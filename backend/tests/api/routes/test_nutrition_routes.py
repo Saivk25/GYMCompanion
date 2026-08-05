@@ -17,11 +17,9 @@ from fastapi.testclient import TestClient
 from app.application.nutrition.dto.nutrition_dto import NutritionDTO
 from app.application.shared.application_result import ApplicationResult
 from app.domain.nutrition.identifiers import NutritionId
-from app.domain.user.identifiers import UserId
 from tests.application.nutrition.factories import a_recorded_nutrition
 
 _VALID_RECORD_BODY = {
-    "user_id": str(UserId.generate()),
     "nutrition_date": "2026-06-01",
     "calories": 500,
 }
@@ -85,7 +83,7 @@ def test_list_nutrition_returns_200_on_success(
 ) -> None:
     client = stub_client(ApplicationResult.ok((_nutrition_dto(),)))
 
-    response = client.get("/api/v1/nutrition", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/nutrition")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -97,7 +95,7 @@ def test_list_nutrition_returns_500_on_failure(
 ) -> None:
     client = stub_client(ApplicationResult.fail(["db error"]))
 
-    response = client.get("/api/v1/nutrition", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/nutrition")
 
     assert response.status_code == 500
 

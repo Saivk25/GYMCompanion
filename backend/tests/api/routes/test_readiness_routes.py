@@ -14,11 +14,9 @@ from fastapi.testclient import TestClient
 from app.application.readiness.dto.readiness_dto import ReadinessDTO
 from app.application.shared.application_result import ApplicationResult
 from app.domain.readiness.identifiers import ReadinessId
-from app.domain.user.identifiers import UserId
 from tests.application.readiness.factories import a_recorded_readiness
 
 _VALID_RECORD_BODY = {
-    "user_id": str(UserId.generate()),
     "readiness_date": "2026-06-01",
     "sleep_quality": 7,
 }
@@ -82,7 +80,7 @@ def test_list_readiness_returns_200_on_success(
 ) -> None:
     client = stub_client(ApplicationResult.ok((_readiness_dto(),)))
 
-    response = client.get("/api/v1/readiness", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/readiness")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -94,7 +92,7 @@ def test_list_readiness_returns_500_on_failure(
 ) -> None:
     client = stub_client(ApplicationResult.fail(["db error"]))
 
-    response = client.get("/api/v1/readiness", params={"user_id": str(UserId.generate())})
+    response = client.get("/api/v1/readiness")
 
     assert response.status_code == 500
 

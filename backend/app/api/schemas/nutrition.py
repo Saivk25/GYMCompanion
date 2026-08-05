@@ -42,7 +42,9 @@ from app.domain.user.identifiers import UserId
 
 
 class RecordNutritionRequest(BaseModel):
-    user_id: str
+    """No `user_id` field — see `app.api.schemas.goal.CreateGoalRequest`'s
+    identical docstring for why."""
+
     nutrition_date: date
     meal_type: MealType | None = None
     source: NutritionSource | None = None
@@ -55,9 +57,9 @@ class RecordNutritionRequest(BaseModel):
     water_intake: float | None = None
     notes: str | None = None
 
-    def to_command(self) -> RecordNutritionCommand:
+    def to_command(self, user_id: UserId) -> RecordNutritionCommand:
         return RecordNutritionCommand(
-            user_id=UserId.parse(self.user_id),
+            user_id=user_id,
             nutrition_date=NutritionDate(self.nutrition_date),
             meal_type=self.meal_type,
             source=self.source,

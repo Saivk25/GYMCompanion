@@ -755,6 +755,33 @@ No use case for anything beyond Workout/User/Nutrition/Progress/
 Readiness/Goal, no concrete repository implementation, SQLAlchemy,
 FastAPI, authentication, REST, or AI integration exists yet.
 
+## Authentication & Authorization
+
+`app/domain/auth/` (a new bounded context, deliberately separate from
+`app/domain/user/`), `app/application/auth/`, `app/infra/security/`, and
+`app/api/routes/auth.py` together secure the API surface the FastAPI API
+Layer phase exposed with no authentication. A new `Credential` aggregate
+(sharing `User`'s `UserId` as its own identity) carries `email`,
+`password_hash`, `role`, and a `token_version` revocation counter;
+`BcryptPasswordHasher` and `JwtTokenService` (`app.domain.auth.ports`)
+are the two new collaborators `Container.handler()` now resolves
+generically alongside `dispatcher`/`clock`. Five endpoints — `POST
+/register`, `POST /login`, `POST /refresh`, `POST /logout`, `GET /me` —
+are mounted root-level (unprefixed, like `/health`), each backed by its
+own Command/Query/Handler pair. `app.api.deps.get_current_user_id` (an
+`HTTPBearer`-based FastAPI dependency) is now required by every one of
+the 37 pre-existing `v1` routes: the four create/list routes that used
+to take a client-supplied `user_id` now derive it from the authenticated
+caller instead; the remaining 27 require *a* valid caller but do not yet
+verify resource ownership (a named, deferred gap — see
+`docs/adr/0032-authentication-and-authorization.md`'s Consequences).
+Password hashing + JWT was chosen over the Master Plan's "passkey
+(WebAuthn)" vision as a deliberate, scoped divergence — no Flutter
+client exists yet to perform WebAuthn ceremonies — documented at length
+in the same ADR, along with the Bearer-vs-cookie decision, the
+no-RLS-on-`credentials` exception, and the token-revocation strategy
+(a `token_version` counter, no Redis/blocklist).
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: lint, format check,
@@ -930,3 +957,31 @@ together rather than only one being wired. No use case for anything
 beyond Workout/User/Nutrition/Progress/Readiness/Goal, no concrete
 repository implementation, SQLAlchemy, FastAPI, authentication, REST, or
 AI integration exists yet.
+
+The Persistence Layer, Composition Root, and FastAPI API Layer phases
+are all done (`docs/adr/0029`, `0030`, `0031`): every aggregate has a
+concrete SQLAlchemy model, repository, and RLS-scoped migration; a
+hand-rolled DI `Container` resolves all discovered Application Layer
+handlers with a fresh `UnitOfWork` per resolution; and 37 endpoints
+across five modules (Workout, Nutrition, Progress, Readiness, Goal) are
+exposed over HTTP with no business logic in the API layer itself. Every
+route trusted a caller-supplied `user_id` with no verification —
+disclosed in ADR 0031 as the one gap the next phase must close.
+
+Authentication & Authorization is done (see "Authentication &
+Authorization" above; `docs/adr/0032`): that gap is closed. A new
+`Credential` aggregate, password hashing (bcrypt), and JWT access/
+refresh tokens back five new endpoints (`POST /register`, `POST
+/login`, `POST /refresh`, `POST /logout`, `GET /me`); every one of the
+37 pre-existing routes now requires a valid bearer token, and the four
+create/list routes that used to trust a client-supplied `user_id` now
+derive it from the authenticated caller. Full verification is green:
+ruff, mypy --strict, the destructive-migration check, 100% Domain Core
+coverage, and the full test suite (2,225 passed, 63 skipped — the
+pre-existing "no reachable Postgres in this sandbox" skip convention
+every integration test in this repository already carries, expected to
+run in CI). Per-resource ownership authorization (a caller can act on
+any resource id, not only their own) and access-token revocation on
+logout are named, disclosed, deferred gaps — see ADR 0032's
+Consequences. No AI integration, no Flutter client wiring to any of
+this, exists yet.

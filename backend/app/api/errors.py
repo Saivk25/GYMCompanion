@@ -24,6 +24,19 @@ the failure*, not on the free-text message):
   "caller-correctable" failure mode for "list everything", so a failure
   here means something broke, not that the caller asked for something
   invalid. Use `unwrap_or_500`.
+- An Authentication command handler whose only documented failure mode
+  is "the caller's claimed identity or credential is not currently
+  valid" (`LoginHandler`: wrong email or password; `RefreshHandler`: an
+  invalid, expired, or revoked refresh token) fails for a reason none of
+  the three cases above describe — it is neither "not found" (`POST
+  /login` isn't addressing a resource by id) nor an ordinary
+  caller-correctable 400 (a 400 implies the *request shape* was wrong;
+  here the request was shaped correctly and the *credential* was
+  rejected) nor an unexpected 500. That is exactly what HTTP 401
+  Unauthorized names. Use `unwrap_or_401`. `RegisterHandler` still uses
+  `unwrap_or_400` — "email already registered" is an ordinary
+  caller-correctable validation failure, the same shape every other
+  command handler's failures already take.
 
 **`DomainInvariantViolationError` maps to 422**, not 500: in practice
 (confirmed by reading `app/domain/*/value_objects.py` in full — see
@@ -104,6 +117,11 @@ def unwrap_or_400(result: ApplicationResult[T]) -> T:
 def unwrap_or_500(result: ApplicationResult[T]) -> T:
     """For list query handlers — see the module docstring."""
     return _unwrap_or(result, failure_status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+def unwrap_or_401(result: ApplicationResult[T]) -> T:
+    """For `LoginHandler`/`RefreshHandler` — see the module docstring."""
+    return _unwrap_or(result, failure_status=status.HTTP_401_UNAUTHORIZED)
 
 
 async def _domain_invariant_violation_handler(

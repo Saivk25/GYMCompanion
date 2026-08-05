@@ -14,7 +14,12 @@ matching two distinct things worth proving about a thin HTTP layer:
    purpose: a handler's own business logic is `tests/application/`'s
    job, not this package's. Since the override replaces `get_container`
    before any route ever reads `request.app.state.container`, these
-   clients never need FastAPI's lifespan to run at all.
+   clients never need FastAPI's lifespan to run at all. `get_current_user_id`
+   is separately overridden to always return one fixed `UserId` (`_A_USER_ID`
+   below) — proving "does this route require authentication" is
+   `app/api/deps.py`'s own dependency's job (see `tests/api/test_deps.py`),
+   not something every route test needs to re-prove by attaching a real
+   bearer token to every single request.
 
 2. **Live-lifespan tests** (`live_client`) prove the small number of
    things that only exist once `app.composition.bootstrap.bootstrap()`
@@ -23,21 +28,42 @@ matching two distinct things worth proving about a thin HTTP layer:
    `GYM_DATABASE_URL` at sqlite (a real, always-reachable connection —
    see `tests/composition/test_bootstrap.py`'s identical reasoning for
    why sqlite is sufficient here without needing a real Postgres).
+
+3. **Full-stack integration tests** (`live_migrated_client`, used only by
+   `tests/api/test_auth_flow_integration.py`) run the real `register` ->
+   `login` -> `refresh` -> `logout` -> `me` flow, and a real protected
+   `v1` route, against an actually-migrated Postgres database — the one
+   place in this package a request travels all the way through
+   `RegisterHandler`/`LoginHandler`/etc. into `bcrypt`/PyJWT/SQLAlchemy
+   and back, rather than a stub. Reuses `tests/infra/conftest.py`'s own
+   `TEST_DATABASE_URL` and `alembic upgrade head`/`downgrade base`
+   pattern (see that module's docstring) — same "skip with a clear
+   reason, don't fail, when no Postgres is reachable" convention every
+   other integration test in this codebase already follows.
 """
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
+import sqlalchemy
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_container
+from alembic import command
+from app.api.deps import get_container, get_current_user_id
 from app.application.shared.application_result import ApplicationResult
 from app.core.config import get_settings
+from app.domain.user.identifiers import UserId
+from app.infra.database import build_engine
 from app.main import create_app
+from tests.infra.conftest import TEST_DATABASE_URL
+
+_A_USER_ID = UserId.generate()
 
 
 class _StubHandler:
@@ -78,6 +104,7 @@ def stub_client() -> Callable[[ApplicationResult[Any]], TestClient]:
     def _make(result: ApplicationResult[Any]) -> TestClient:
         app = create_app()
         app.dependency_overrides[get_container] = lambda: _StubContainer(result)
+        app.dependency_overrides[get_current_user_id] = lambda: _A_USER_ID
         # raise_server_exceptions=False: Starlette's ServerErrorMiddleware
         # always re-raises an unhandled exception after sending its response
         # ("We always continue to raise the exception... allows test clients
@@ -94,6 +121,15 @@ def stub_client() -> Callable[[ApplicationResult[Any]], TestClient]:
 
 
 @pytest.fixture
+def authenticated_user_id() -> UserId:
+    """The exact `UserId` `stub_client` overrides `get_current_user_id`
+    to return — exposed so a test that needs to assert *which* caller a
+    route acted as (rather than just that the call succeeded) doesn't
+    need to reach into `conftest.py`'s own private `_A_USER_ID`."""
+    return _A_USER_ID
+
+
+@pytest.fixture
 def live_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """A `TestClient` whose lifespan actually runs `bootstrap()` against
     sqlite. See the module docstring."""
@@ -104,6 +140,42 @@ def live_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
         with TestClient(create_app(), raise_server_exceptions=False) as client:
             yield client
     finally:
+        get_settings.cache_clear()
+
+
+@pytest.fixture
+def live_migrated_client() -> Iterator[TestClient]:
+    """A `TestClient` running the fully-wired app against a real,
+    freshly `alembic upgrade head`-ed Postgres database — skips with a
+    clear reason if `TEST_DATABASE_URL` (`tests/infra/conftest.py`)
+    isn't reachable, the same convention every other integration test
+    in this codebase follows. Downgrades back to `base` on teardown, so
+    a run of this fixture never leaves state for the next one.
+    """
+    engine = build_engine(TEST_DATABASE_URL)
+    try:
+        with engine.connect():
+            pass
+    except sqlalchemy.exc.OperationalError as exc:
+        pytest.skip(f"no reachable Postgres at {TEST_DATABASE_URL}: {exc}")
+    finally:
+        engine.dispose()
+
+    original_url = os.environ.get("GYM_DATABASE_URL")
+    os.environ["GYM_DATABASE_URL"] = TEST_DATABASE_URL
+    os.environ["GYM_ENVIRONMENT"] = "test"
+    get_settings.cache_clear()
+    cfg = Config("alembic.ini")
+    try:
+        command.upgrade(cfg, "head")
+        with TestClient(create_app(), raise_server_exceptions=False) as client:
+            yield client
+    finally:
+        command.downgrade(cfg, "base")
+        if original_url is None:
+            os.environ.pop("GYM_DATABASE_URL", None)
+        else:
+            os.environ["GYM_DATABASE_URL"] = original_url
         get_settings.cache_clear()
 
 

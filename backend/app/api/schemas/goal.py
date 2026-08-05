@@ -40,7 +40,11 @@ from app.domain.user.identifiers import UserId
 
 
 class CreateGoalRequest(BaseModel):
-    user_id: str
+    """No `user_id` field — the owner of a created Goal is always the
+    authenticated caller (`app.api.deps.get_current_user_id`), never a
+    value the client supplies. See `docs/adr/0032-authentication-and-
+    authorization.md`."""
+
     goal_type: GoalType
     name: str
     target_date: date
@@ -51,9 +55,9 @@ class CreateGoalRequest(BaseModel):
     priority: int | None = None
     notes: str | None = None
 
-    def to_command(self) -> CreateGoalCommand:
+    def to_command(self, user_id: UserId) -> CreateGoalCommand:
         return CreateGoalCommand(
-            user_id=UserId.parse(self.user_id),
+            user_id=user_id,
             goal_type=self.goal_type,
             name=GoalName(self.name),
             target_date=TargetDate(self.target_date),

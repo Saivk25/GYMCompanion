@@ -19,6 +19,13 @@ _EXPECTED_ROUTES: tuple[tuple[str, str], ...] = (
     ("GET", "/health"),
     ("GET", "/health/live"),
     ("GET", "/health/ready"),
+    # Auth — root-level, unprefixed (see app/api/routes/auth.py's own
+    # module docstring for why, mirroring health's own placement).
+    ("POST", "/register"),
+    ("POST", "/login"),
+    ("POST", "/refresh"),
+    ("POST", "/logout"),
+    ("GET", "/me"),
     # Goal
     ("POST", "/api/v1/goals"),
     ("GET", "/api/v1/goals/{goal_id}"),
@@ -110,12 +117,20 @@ def test_no_unexpected_routes_are_registered(live_app: FastAPI) -> None:
 @pytest.mark.unit
 def test_expected_route_count_matches_the_phase_task_list() -> None:
     """37 Application-Handler-backed endpoints (Workout 10, Nutrition 7,
-    Progress 7, Readiness 7, Goal 6) plus 3 health endpoints — the exact
-    count this phase's own task list specifies."""
+    Progress 7, Readiness 7, Goal 6) plus 3 health endpoints plus 5
+    Authentication endpoints (`app/api/routes/auth.py`, added in the
+    Authentication & Authorization phase) — the exact count each
+    phase's own task list specifies."""
     health_routes = [route for route in _EXPECTED_ROUTES if route[1].startswith("/health")]
     api_routes = [route for route in _EXPECTED_ROUTES if route[1].startswith("/api/v1")]
+    auth_routes = [
+        route
+        for route in _EXPECTED_ROUTES
+        if route not in health_routes and route not in api_routes
+    ]
     assert len(health_routes) == 3
     assert len(api_routes) == 37
+    assert len(auth_routes) == 5
 
 
 @pytest.mark.unit

@@ -66,15 +66,17 @@ from app.domain.workout_session.value_objects import (
 
 
 class CreateWorkoutRequest(BaseModel):
-    user_id: str
+    """No `user_id` field — see `app.api.schemas.goal.CreateGoalRequest`'s
+    identical docstring for why."""
+
     name: str
     planned_date: date
     goal: str | None = None
     notes: str | None = None
 
-    def to_command(self) -> CreateWorkoutCommand:
+    def to_command(self, user_id: UserId) -> CreateWorkoutCommand:
         return CreateWorkoutCommand(
-            user_id=UserId.parse(self.user_id),
+            user_id=user_id,
             name=WorkoutName(self.name),
             planned_date=WorkoutDate(self.planned_date),
             goal=WorkoutGoal(self.goal) if self.goal is not None else None,

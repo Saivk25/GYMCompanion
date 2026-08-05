@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "postgresql+psycopg://gymcompanion:gymcompanion@localhost:5432/gymcompanion"
     secret_key: str = _PLACEHOLDER_SECRET_KEY
+    # Consumed by app/infra/security/jwt_token_service.py's JwtTokenService
+    # — the one place these three values are read. Short access-token TTL
+    # by design: an access token cannot be individually revoked (see
+    # app.domain.auth.credential.Credential.token_version's own docstring
+    # for what *can* be revoked, and why), so its blast radius if stolen
+    # is bounded by how quickly it expires, not by any server-side check.
+    access_token_ttl_minutes: int = 15
+    refresh_token_ttl_days: int = 30
+    jwt_algorithm: str = "HS256"
     # Consumed by app/composition/logging_config.py's configure_logging() —
     # the one place this value is read (see that module's own docstring for
     # why logging configuration is a Composition Root concern, not a

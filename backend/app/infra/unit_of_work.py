@@ -56,6 +56,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.application.shared.exceptions import UnitOfWorkError
 from app.application.shared.unit_of_work import UnitOfWork
+from app.domain.auth.repository import CredentialRepository
 from app.domain.exercise.repository import ExerciseRepository
 from app.domain.goal.repository import GoalRepository
 from app.domain.nutrition.repository import NutritionRepository
@@ -65,6 +66,7 @@ from app.domain.shared_kernel.repository import Repository
 from app.domain.user.repository import UserRepository
 from app.domain.workout.repository import WorkoutRepository
 from app.domain.workout_session.repository import WorkoutSessionRepository
+from app.infra.repositories.credential_repository import CredentialSqlRepository
 from app.infra.repositories.exercise_repository import ExerciseSqlRepository
 from app.infra.repositories.goal_repository import GoalSqlRepository
 from app.infra.repositories.nutrition_repository import NutritionSqlRepository
@@ -97,6 +99,7 @@ RepositoryFactory = Callable[[Session], Repository[Any, Any]]
 # parameter, never instantiated directly.
 DEFAULT_REPOSITORY_FACTORIES: Mapping[type[Repository[Any, Any]], RepositoryFactory] = {
     UserRepository: UserSqlRepository,  # type: ignore[type-abstract]
+    CredentialRepository: CredentialSqlRepository,  # type: ignore[type-abstract]
     ExerciseRepository: ExerciseSqlRepository,  # type: ignore[type-abstract]
     WorkoutRepository: WorkoutSqlRepository,  # type: ignore[type-abstract]
     WorkoutSessionRepository: WorkoutSessionSqlRepository,  # type: ignore[type-abstract]

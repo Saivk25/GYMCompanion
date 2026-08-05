@@ -34,7 +34,10 @@ from app.composition.discovery import discover_handler_types
 from app.composition.event_dispatcher import LoggingDomainEventDispatcher
 from app.composition.rule_engines import RuleEngines, build_rule_engines
 from app.core.config import Settings
+from app.domain.auth.ports import PasswordHasher, TokenService
 from app.domain.shared_kernel.clock import Clock, SystemClock
+from app.infra.security.bcrypt_password_hasher import BcryptPasswordHasher
+from app.infra.security.jwt_token_service import JwtTokenService
 from app.infra.unit_of_work import DEFAULT_REPOSITORY_FACTORIES, SqlAlchemyUnitOfWork
 
 H = TypeVar("H", bound=Handler[Any, Any])
@@ -68,6 +71,8 @@ class Container:
     clock: Clock
     dispatcher: LoggingDomainEventDispatcher
     rule_engines: RuleEngines
+    password_hasher: PasswordHasher
+    token_service: TokenService
 
     def is_database_ready(self) -> bool:
         """Opens a connection and runs a trivial query against this
@@ -96,19 +101,32 @@ class Container:
 
     def handler(self, handler_type: type[H]) -> H:
         """Constructs `handler_type`, supplying `uow` (always, a fresh
-        `unit_of_work()`) and `dispatcher`/`clock` (only if
-        `handler_type.__init__` actually declares that parameter — see
-        `docs/adr/0030-composition-root.md` for the three constructor
-        shapes every handler in this codebase already follows). Works for
-        any handler built so far, and for any future one that keeps to
-        the same three shapes, with no per-handler registration needed.
+        `unit_of_work()`) and any of `dispatcher`/`clock`/
+        `password_hasher`/`token_service` that `handler_type.__init__`
+        actually declares a parameter for (see `docs/adr/0030-
+        composition-root.md` for the original three constructor shapes,
+        and `docs/adr/0032-authentication-and-authorization.md` for why
+        this lookup is now name-keyed against every shared singleton
+        `Container` holds, rather than hard-coding a fixed list of
+        shapes — the Authentication phase's handlers need two more
+        collaborators than any handler before them did, and a fourth or
+        fifth hard-coded `if` branch per future collaborator does not
+        scale the way "look up whatever parameter names are declared"
+        does). Works for any handler built so far, and for any future
+        one whose constructor parameters are named after a field this
+        class exposes, with no per-handler registration needed.
         """
         parameters = inspect.signature(handler_type.__init__).parameters
+        available: dict[str, object] = {
+            "dispatcher": self.dispatcher,
+            "clock": self.clock,
+            "password_hasher": self.password_hasher,
+            "token_service": self.token_service,
+        }
         kwargs: dict[str, object] = {"uow": self.unit_of_work()}
-        if "dispatcher" in parameters:
-            kwargs["dispatcher"] = self.dispatcher
-        if "clock" in parameters:
-            kwargs["clock"] = self.clock
+        for name, value in available.items():
+            if name in parameters:
+                kwargs[name] = value
         # `handler_type(**kwargs)` with `kwargs: dict[str, object]` type-checks
         # under mypy --strict without a `# type: ignore` here — `type[H]`
         # called with `**kwargs` of an unrelated mapping type is accepted
@@ -190,6 +208,8 @@ def build_container(settings: Settings, engine: Engine) -> Container:
         clock=SystemClock(),
         dispatcher=LoggingDomainEventDispatcher(),
         rule_engines=build_rule_engines(),
+        password_hasher=BcryptPasswordHasher(),
+        token_service=JwtTokenService(settings),
     )
 
 
