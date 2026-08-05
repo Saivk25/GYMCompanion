@@ -77,6 +77,18 @@ ignore = [
     "S105", "S106", # tests deliberately use fake secrets to exercise the guard in app/core/config.py.
 ]
 
+# `Depends(...)` as an argument default is FastAPI's own dependency-injection
+# pattern (see the framework's own docs) — bugbear's B008 exists to catch
+# accidental mutable-default-style bugs from a *general* function-call-in-
+# default-argument, which is a real footgun everywhere else in this codebase
+# but not here: FastAPI itself inspects the parameter's default at import
+# time via `inspect.signature`, and never lets one shared call result leak
+# across requests the way a real mutable-default bug would. Every route
+# module under app/api/routes/ uses this pattern at every single endpoint
+# (see app/api/deps.py's handler_dependency()), so a per-file ignore here
+# beats a `# noqa: B008` repeated at every route function.
+"app/api/routes/**" = ["B008"]
+
 # No [tool.ruff.format] overrides: the default (double quotes, matching
 # every docstring's """) is what the whole codebase already uses. An
 # earlier version of this file set quote-style = "single" without a real

@@ -121,6 +121,25 @@ def test_validate_succeeds_for_a_correctly_wired_container(container: Container)
 
 
 @pytest.mark.unit
+def test_is_database_ready_returns_true_for_a_reachable_database(container: Container) -> None:
+    # sqlite:// (the fixture's URL) is an in-process, always-reachable
+    # in-memory database — a real "SELECT 1" round trip succeeds here,
+    # unlike validate()'s own construction-only checks.
+    assert container.is_database_ready() is True
+
+
+@pytest.mark.unit
+def test_is_database_ready_returns_false_when_the_engine_cannot_connect() -> None:
+    # An intentionally-unreachable SQLite file path (a directory that does
+    # not exist) — connect() raises OperationalError, which
+    # is_database_ready() must catch and turn into `False`, not let
+    # propagate.
+    engine = create_engine("sqlite:////nonexistent-directory/does-not-exist.db")
+    unreachable_container = build_container(Settings(), engine)
+    assert unreachable_container.is_database_ready() is False
+
+
+@pytest.mark.unit
 def test_validate_detects_a_repository_factory_registered_under_the_wrong_type(
     container: Container, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -25,7 +25,8 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.application.shared.interfaces import Handler
@@ -67,6 +68,25 @@ class Container:
     clock: Clock
     dispatcher: LoggingDomainEventDispatcher
     rule_engines: RuleEngines
+
+    def is_database_ready(self) -> bool:
+        """Opens a connection and runs a trivial query against this
+        container's database, returning whether it succeeded. Never
+        raises — a caller (the API Layer's `/health/ready` endpoint, see
+        `app/api/routes/health.py`) that wants a plain "am I ready"
+        answer without needing to know, or import, which of
+        SQLAlchemy's many driver-specific exceptions to catch. This is
+        the one place outside `validate()` that `Container` does real
+        I/O; every other method on this class does none (see
+        `app/infra/unit_of_work.py`'s module docstring for why
+        constructing a `Session` never opens a connection on its own).
+        """
+        try:
+            with self.engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            return False
+        return True
 
     def unit_of_work(self) -> SqlAlchemyUnitOfWork:
         """A brand-new `UnitOfWork`, bound to this container's shared
