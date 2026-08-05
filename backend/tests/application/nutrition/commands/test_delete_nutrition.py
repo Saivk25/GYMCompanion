@@ -7,10 +7,13 @@ import pytest
 from app.application.nutrition.commands.delete_nutrition import DeleteNutritionCommand
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> DeleteNutritionCommand:
-    return DeleteNutritionCommand(nutrition_id=NutritionId.generate())
+    return DeleteNutritionCommand(
+        nutrition_id=NutritionId.generate(), requester_id=UserId.generate()
+    )
 
 
 @pytest.mark.unit
@@ -21,7 +24,7 @@ def test_delete_nutrition_command_is_a_command() -> None:
 @pytest.mark.unit
 def test_delete_nutrition_command_exposes_its_nutrition_id() -> None:
     nutrition_id = NutritionId.generate()
-    command = DeleteNutritionCommand(nutrition_id=nutrition_id)
+    command = DeleteNutritionCommand(nutrition_id=nutrition_id, requester_id=UserId.generate())
     assert command.nutrition_id == nutrition_id
 
 

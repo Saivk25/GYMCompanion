@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.unit_of_work import UnitOfWork
 from app.application.workout.commands.update_workout import UpdateWorkoutCommand
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
@@ -44,6 +45,11 @@ class UpdateWorkoutHandler(CommandHandler[UpdateWorkoutCommand, WorkoutId]):
                 if workout is None:
                     uow.rollback()
                     return ApplicationResult.fail([f"workout {request.workout_id} not found"])
+
+                denial = ensure_owner(owner_id=workout.user_id, requester_id=request.requester_id)
+                if denial is not None:
+                    uow.rollback()
+                    return ApplicationResult.forbid([denial])
 
                 workout.update_goal(request.goal)
                 workout.update_notes(request.notes)

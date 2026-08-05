@@ -88,9 +88,10 @@ class UpdateGoalRequest(BaseModel):
     priority: int | None = None
     notes: str | None = None
 
-    def to_command(self, goal_id: GoalId) -> UpdateGoalCommand:
+    def to_command(self, goal_id: GoalId, requester_id: UserId) -> UpdateGoalCommand:
         return UpdateGoalCommand(
             goal_id=goal_id,
+            requester_id=requester_id,
             name=GoalName(self.name) if self.name is not None else None,
             description=(
                 GoalDescription(self.description) if self.description is not None else None

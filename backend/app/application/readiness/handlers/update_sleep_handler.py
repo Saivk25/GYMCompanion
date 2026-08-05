@@ -24,6 +24,7 @@ from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.repository import ReadinessRepository
@@ -65,6 +66,11 @@ class UpdateSleepHandler(CommandHandler[UpdateSleepCommand, ReadinessId]):
                     return ApplicationResult.fail(
                         [f"readiness check-in {request.readiness_id} not found"]
                     )
+
+                denial = ensure_owner(owner_id=readiness.user_id, requester_id=request.requester_id)
+                if denial is not None:
+                    uow.rollback()
+                    return ApplicationResult.forbid([denial])
 
                 readiness.update_sleep(
                     sleep_duration=request.sleep_duration,

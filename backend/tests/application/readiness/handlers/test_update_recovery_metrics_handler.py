@@ -11,6 +11,7 @@ from app.application.readiness.handlers.update_recovery_metrics_handler import (
 )
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.value_objects import EnergyLevel, StressLevel
+from app.domain.user.identifiers import UserId
 from tests.application.readiness.factories import (
     FakeReadinessRepository,
     FakeUnitOfWork,
@@ -32,7 +33,10 @@ def test_replaces_given_fields_and_returns_the_readiness_id() -> None:
 
     result = handler.handle(
         UpdateRecoveryMetricsCommand(
-            readiness_id=readiness.id, energy_level=EnergyLevel(7), stress_level=StressLevel(3)
+            readiness_id=readiness.id,
+            requester_id=readiness.user_id,
+            energy_level=EnergyLevel(7),
+            stress_level=StressLevel(3),
         )
     )
 
@@ -55,7 +59,9 @@ def test_leaves_fields_unset_in_the_command_unchanged() -> None:
     )
 
     handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=readiness.id, stress_level=StressLevel(5))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, stress_level=StressLevel(5)
+        )
     )
 
     assert readiness.energy_level == EnergyLevel(7)
@@ -70,7 +76,9 @@ def test_commits_and_dispatches_recovery_metrics_updated_after_commit() -> None:
     handler = UpdateRecoveryMetricsHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=readiness.id, energy_level=EnergyLevel(7))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, energy_level=EnergyLevel(7)
+        )
     )
 
     assert uow.committed is True
@@ -89,7 +97,9 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     handler = UpdateRecoveryMetricsHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=readiness.id, energy_level=EnergyLevel(7))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, energy_level=EnergyLevel(7)
+        )
     )
 
     assert call_order == ["commit", "dispatch"]
@@ -104,7 +114,9 @@ def test_surfaces_a_warning_for_low_energy() -> None:
     )
 
     result = handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=readiness.id, energy_level=EnergyLevel(2))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, energy_level=EnergyLevel(2)
+        )
     )
 
     assert result.success is True
@@ -119,7 +131,9 @@ def test_a_missing_readiness_check_in_is_reported_as_a_failed_result_and_rolls_b
     missing_id = ReadinessId.generate()
 
     result = handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=missing_id, energy_level=EnergyLevel(7))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=missing_id, requester_id=UserId.generate(), energy_level=EnergyLevel(7)
+        )
     )
 
     assert result.success is False
@@ -136,7 +150,9 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
 
     result = handler.handle(
         UpdateRecoveryMetricsCommand(
-            readiness_id=ReadinessId.generate(), energy_level=EnergyLevel(7)
+            readiness_id=ReadinessId.generate(),
+            requester_id=UserId.generate(),
+            energy_level=EnergyLevel(7),
         )
     )
 
@@ -154,9 +170,31 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     handler = UpdateRecoveryMetricsHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateRecoveryMetricsCommand(readiness_id=readiness.id, energy_level=EnergyLevel(7))
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, energy_level=EnergyLevel(7)
+        )
     )
 
     assert result.success is False
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    readiness = a_recorded_readiness()
+    uow = FakeUnitOfWork(entries=FakeReadinessRepository({readiness.id: readiness}))
+    dispatcher = RecordingDispatcher()
+    handler = UpdateRecoveryMetricsHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(
+        UpdateRecoveryMetricsCommand(
+            readiness_id=readiness.id, requester_id=UserId.generate(), energy_level=EnergyLevel(7)
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []

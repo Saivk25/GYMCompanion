@@ -9,6 +9,7 @@ from app.application.workout.handlers.complete_exercise_set_handler import (
 )
 from app.domain.exercise.identifiers import ExerciseId
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
+from app.domain.user.identifiers import UserId
 from app.domain.workout_session.exercise_set import (
     ExerciseSet,
     SetNumber,
@@ -53,7 +54,10 @@ def test_marks_a_set_complete_and_returns_the_session_id() -> None:
 
     result = handler.handle(
         CompleteExerciseSetCommand(
-            session_id=session.id, performance_id=performance_id, set_number=1
+            session_id=session.id,
+            requester_id=session.user_id,
+            performance_id=performance_id,
+            set_number=1,
         )
     )
 
@@ -72,7 +76,10 @@ def test_commits_and_dispatches_after_commit() -> None:
 
     handler.handle(
         CompleteExerciseSetCommand(
-            session_id=session.id, performance_id=performance_id, set_number=1
+            session_id=session.id,
+            requester_id=session.user_id,
+            performance_id=performance_id,
+            set_number=1,
         )
     )
 
@@ -92,7 +99,10 @@ def test_dispatch_happens_strictly_after_commit() -> None:
 
     handler.handle(
         CompleteExerciseSetCommand(
-            session_id=session.id, performance_id=performance_id, set_number=1
+            session_id=session.id,
+            requester_id=session.user_id,
+            performance_id=performance_id,
+            set_number=1,
         )
     )
 
@@ -108,6 +118,7 @@ def test_a_missing_session_is_reported_as_a_failed_result_and_rolls_back() -> No
     result = handler.handle(
         CompleteExerciseSetCommand(
             session_id=WorkoutSessionId.generate(),
+            requester_id=UserId.generate(),
             performance_id=ExercisePerformanceId.generate(),
             set_number=1,
         )
@@ -115,6 +126,29 @@ def test_a_missing_session_is_reported_as_a_failed_result_and_rolls_back() -> No
 
     assert result.success is False
     assert "not found" in result.errors[0]
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    session, performance_id = _a_session_with_a_logged_set()
+    uow = FakeUnitOfWork(sessions=FakeWorkoutSessionRepository({session.id: session}))
+    dispatcher = RecordingDispatcher()
+    handler = CompleteExerciseSetHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(
+        CompleteExerciseSetCommand(
+            session_id=session.id,
+            requester_id=UserId.generate(),
+            performance_id=performance_id,
+            set_number=1,
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []
 
@@ -130,7 +164,10 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
 
     result = handler.handle(
         CompleteExerciseSetCommand(
-            session_id=session.id, performance_id=performance_id, set_number=1
+            session_id=session.id,
+            requester_id=session.user_id,
+            performance_id=performance_id,
+            set_number=1,
         )
     )
 
@@ -149,8 +186,9 @@ def test_completing_an_unknown_set_number_raises_and_is_not_swallowed() -> None:
     with pytest.raises(DomainInvariantViolationError, match="no set numbered"):
         handler.handle(
             CompleteExerciseSetCommand(
-                session_id=session.id, performance_id=performance_id, set_number=99
+                session_id=session.id,
+                requester_id=session.user_id,
+                performance_id=performance_id,
+                set_number=99,
             )
         )
-
-    assert dispatcher.dispatched == []

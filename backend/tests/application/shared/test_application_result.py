@@ -36,6 +36,18 @@ def test_a_successful_result_with_no_value_is_allowed() -> None:
     assert result.value is None
 
 
+@pytest.mark.unit
+def test_a_forbidden_result_that_is_also_successful_is_rejected() -> None:
+    with pytest.raises(ApplicationResultConstructionError):
+        ApplicationResult(success=True, forbidden=True)
+
+
+@pytest.mark.unit
+def test_forbidden_defaults_to_false() -> None:
+    result = ApplicationResult.ok(1)
+    assert result.forbidden is False
+
+
 # --- ok() / fail() factories ---
 
 
@@ -78,6 +90,32 @@ def test_fail_carries_warnings_too() -> None:
 def test_fail_with_multiple_errors() -> None:
     result: ApplicationResult[int] = ApplicationResult.fail(["first", "second"])
     assert result.errors == ("first", "second")
+
+
+# --- forbid() factory ---
+
+
+@pytest.mark.unit
+def test_forbid_builds_a_failed_forbidden_result() -> None:
+    result: ApplicationResult[int] = ApplicationResult.forbid(["not your resource"])
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
+    assert result.errors == ("not your resource",)
+
+
+@pytest.mark.unit
+def test_forbid_carries_warnings_too() -> None:
+    result: ApplicationResult[int] = ApplicationResult.forbid(
+        ["not your resource"], warnings=["also this"]
+    )
+    assert result.warnings == ("also this",)
+
+
+@pytest.mark.unit
+def test_fail_defaults_forbidden_to_false() -> None:
+    result: ApplicationResult[int] = ApplicationResult.fail(["went wrong"])
+    assert result.forbidden is False
 
 
 # --- immutability ---

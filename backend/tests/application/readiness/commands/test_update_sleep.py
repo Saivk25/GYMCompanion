@@ -9,11 +9,13 @@ from app.application.readiness.commands.update_sleep import UpdateSleepCommand
 from app.application.shared.command import Command
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.value_objects import SleepDuration, SleepQuality
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateSleepCommand:
     return UpdateSleepCommand(
         readiness_id=ReadinessId.generate(),
+        requester_id=UserId.generate(),
         sleep_duration=SleepDuration(timedelta(hours=7)),
         sleep_quality=SleepQuality(8),
     )
@@ -33,7 +35,9 @@ def test_update_sleep_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_sleep_command_fields_default_to_none_meaning_unchanged() -> None:
-    command = UpdateSleepCommand(readiness_id=ReadinessId.generate())
+    command = UpdateSleepCommand(
+        readiness_id=ReadinessId.generate(), requester_id=UserId.generate()
+    )
     assert command.sleep_duration is None
     assert command.sleep_quality is None
 

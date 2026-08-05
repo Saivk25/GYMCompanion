@@ -143,6 +143,26 @@ def test_get_goal_returns_404_when_not_found(
 
 
 @pytest.mark.unit
+def test_get_goal_returns_403_when_the_requester_does_not_own_the_goal(
+    stub_client: Callable[[ApplicationResult[Any]], TestClient],
+) -> None:
+    """Proves `ApplicationResult.forbidden` -> 403 (`app/api/errors.py`'s
+    `_unwrap_or`) end-to-end through a route, not just at the
+    `ApplicationResult`/handler unit-test level — the one branch of the
+    shared error-mapping behavior this file's own module docstring
+    promises to exercise that no other test in this package reaches.
+    """
+    client = stub_client(
+        ApplicationResult.forbid(["you do not have permission to access this resource"])
+    )
+
+    response = client.get(f"/api/v1/goals/{GoalId.generate()}")
+
+    assert response.status_code == 403
+    assert "permission" in response.json()["detail"]
+
+
+@pytest.mark.unit
 def test_get_goal_with_malformed_id_returns_422(
     stub_client: Callable[[ApplicationResult[Any]], TestClient],
 ) -> None:

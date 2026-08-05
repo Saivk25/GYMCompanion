@@ -7,22 +7,25 @@ import pytest
 from app.application.goal.commands.cancel_goal import CancelGoalCommand
 from app.application.shared.command import Command
 from app.domain.goal.identifiers import GoalId
+from app.domain.user.identifiers import UserId
 
 
 @pytest.mark.unit
 def test_cancel_goal_command_is_a_command() -> None:
-    assert isinstance(CancelGoalCommand(goal_id=GoalId.generate()), Command)
+    assert isinstance(
+        CancelGoalCommand(goal_id=GoalId.generate(), requester_id=UserId.generate()), Command
+    )
 
 
 @pytest.mark.unit
 def test_cancel_goal_command_exposes_its_goal_id() -> None:
     goal_id = GoalId.generate()
-    command = CancelGoalCommand(goal_id=goal_id)
+    command = CancelGoalCommand(goal_id=goal_id, requester_id=UserId.generate())
     assert command.goal_id == goal_id
 
 
 @pytest.mark.unit
 def test_cancel_goal_command_is_immutable() -> None:
-    command = CancelGoalCommand(goal_id=GoalId.generate())
+    command = CancelGoalCommand(goal_id=GoalId.generate(), requester_id=UserId.generate())
     with pytest.raises(FrozenInstanceError):
         command.goal_id = GoalId.generate()  # type: ignore[misc]

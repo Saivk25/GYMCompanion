@@ -8,11 +8,14 @@ from app.application.progress.commands.update_notes import UpdateNotesCommand
 from app.application.shared.command import Command
 from app.domain.progress.identifiers import ProgressId
 from app.domain.progress.value_objects import ProgressNotes
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateNotesCommand:
     return UpdateNotesCommand(
-        progress_id=ProgressId.generate(), notes=ProgressNotes("measured fasted")
+        progress_id=ProgressId.generate(),
+        requester_id=UserId.generate(),
+        notes=ProgressNotes("measured fasted"),
     )
 
 

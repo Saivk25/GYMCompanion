@@ -32,6 +32,7 @@ from app.application.shared.advisory_warnings import advisory_warnings
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.unit_of_work import UnitOfWork
 from app.application.workout.commands.log_exercise_set import LogExerciseSetCommand
 from app.domain.exercise.context import ExerciseContext
@@ -89,6 +90,11 @@ class LogExerciseSetHandler(CommandHandler[LogExerciseSetCommand, ExercisePerfor
                     return ApplicationResult.fail(
                         [f"workout session {request.session_id} not found"]
                     )
+
+                denial = ensure_owner(owner_id=session.user_id, requester_id=request.requester_id)
+                if denial is not None:
+                    uow.rollback()
+                    return ApplicationResult.forbid([denial])
 
                 exercise_repository = uow.get_repository(
                     ExerciseRepository  # type: ignore[type-abstract]

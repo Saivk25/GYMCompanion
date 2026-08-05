@@ -11,6 +11,7 @@ from app.application.progress.handlers.update_body_composition_handler import (
 )
 from app.domain.progress.identifiers import ProgressId
 from app.domain.progress.value_objects import BodyFatPercentage, BodyWeight, MuscleMass
+from app.domain.user.identifiers import UserId
 from tests.application.progress.factories import (
     FakeProgressRepository,
     FakeUnitOfWork,
@@ -33,6 +34,7 @@ def test_replaces_given_fields_and_returns_the_progress_id() -> None:
     result = handler.handle(
         UpdateBodyCompositionCommand(
             progress_id=progress.id,
+            requester_id=progress.user_id,
             body_weight=BodyWeight(80.0),
             body_fat_percentage=BodyFatPercentage(20.0),
         )
@@ -58,7 +60,9 @@ def test_leaves_fields_unset_in_the_command_unchanged() -> None:
 
     handler.handle(
         UpdateBodyCompositionCommand(
-            progress_id=progress.id, body_fat_percentage=BodyFatPercentage(18.0)
+            progress_id=progress.id,
+            requester_id=progress.user_id,
+            body_fat_percentage=BodyFatPercentage(18.0),
         )
     )
 
@@ -75,7 +79,9 @@ def test_commits_and_dispatches_body_composition_updated_after_commit() -> None:
     handler = UpdateBodyCompositionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     handler.handle(
-        UpdateBodyCompositionCommand(progress_id=progress.id, body_weight=BodyWeight(80.0))
+        UpdateBodyCompositionCommand(
+            progress_id=progress.id, requester_id=progress.user_id, body_weight=BodyWeight(80.0)
+        )
     )
 
     assert uow.committed is True
@@ -94,7 +100,9 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     handler = UpdateBodyCompositionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     handler.handle(
-        UpdateBodyCompositionCommand(progress_id=progress.id, body_weight=BodyWeight(80.0))
+        UpdateBodyCompositionCommand(
+            progress_id=progress.id, requester_id=progress.user_id, body_weight=BodyWeight(80.0)
+        )
     )
 
     assert call_order == ["commit", "dispatch"]
@@ -109,7 +117,9 @@ def test_surfaces_consistency_warning_since_only_one_entry_exists() -> None:
     )
 
     result = handler.handle(
-        UpdateBodyCompositionCommand(progress_id=progress.id, body_weight=BodyWeight(80.0))
+        UpdateBodyCompositionCommand(
+            progress_id=progress.id, requester_id=progress.user_id, body_weight=BodyWeight(80.0)
+        )
     )
 
     assert result.success is True
@@ -124,7 +134,9 @@ def test_a_missing_progress_record_is_reported_as_a_failed_result_and_rolls_back
     missing_id = ProgressId.generate()
 
     result = handler.handle(
-        UpdateBodyCompositionCommand(progress_id=missing_id, body_weight=BodyWeight(80.0))
+        UpdateBodyCompositionCommand(
+            progress_id=missing_id, requester_id=UserId.generate(), body_weight=BodyWeight(80.0)
+        )
     )
 
     assert result.success is False
@@ -141,7 +153,9 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
 
     result = handler.handle(
         UpdateBodyCompositionCommand(
-            progress_id=ProgressId.generate(), body_weight=BodyWeight(80.0)
+            progress_id=ProgressId.generate(),
+            requester_id=UserId.generate(),
+            body_weight=BodyWeight(80.0),
         )
     )
 
@@ -159,9 +173,31 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     handler = UpdateBodyCompositionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateBodyCompositionCommand(progress_id=progress.id, body_weight=BodyWeight(80.0))
+        UpdateBodyCompositionCommand(
+            progress_id=progress.id, requester_id=progress.user_id, body_weight=BodyWeight(80.0)
+        )
     )
 
     assert result.success is False
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    progress = a_recorded_progress()
+    uow = FakeUnitOfWork(records=FakeProgressRepository({progress.id: progress}))
+    dispatcher = RecordingDispatcher()
+    handler = UpdateBodyCompositionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(
+        UpdateBodyCompositionCommand(
+            progress_id=progress.id, requester_id=UserId.generate(), body_weight=BodyWeight(80.0)
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []

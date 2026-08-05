@@ -18,15 +18,23 @@ from dataclasses import dataclass
 
 from app.application.shared.command import Command
 from app.domain.exercise.identifiers import ExerciseId
+from app.domain.user.identifiers import UserId
 from app.domain.workout_session.exercise_set import SetNumber, SetReps, SetRPE, SetWeight
 from app.domain.workout_session.identifiers import WorkoutSessionId
 
 
 @dataclass(frozen=True, kw_only=True)
 class LogExerciseSetCommand(Command):
-    """Log one set of one exercise within an active WorkoutSession."""
+    """Log one set of one exercise within an active WorkoutSession.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.workout.queries.get_workout_session.
+    GetWorkoutSessionQuery`'s own module docstring for the full
+    ownership-check reasoning, which applies identically here.
+    """
 
     session_id: WorkoutSessionId
+    requester_id: UserId
     exercise_id: ExerciseId
     set_number: SetNumber
     weight: SetWeight

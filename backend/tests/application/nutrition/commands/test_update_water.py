@@ -8,10 +8,15 @@ from app.application.nutrition.commands.update_water import UpdateWaterCommand
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import WaterIntake
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateWaterCommand:
-    return UpdateWaterCommand(nutrition_id=NutritionId.generate(), water_intake=WaterIntake(500.0))
+    return UpdateWaterCommand(
+        nutrition_id=NutritionId.generate(),
+        requester_id=UserId.generate(),
+        water_intake=WaterIntake(500.0),
+    )
 
 
 @pytest.mark.unit

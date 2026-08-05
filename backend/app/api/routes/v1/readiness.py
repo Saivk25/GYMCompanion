@@ -68,10 +68,12 @@ def record_readiness(
 @router.get("/{readiness_id}", response_model=ReadinessResponse)
 def get_readiness(
     readiness_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: GetReadinessHandler = Depends(_get_get_handler),
 ) -> ReadinessResponse:
-    result = handler.handle(GetReadinessQuery(readiness_id=ReadinessId.parse(readiness_id)))
+    result = handler.handle(
+        GetReadinessQuery(readiness_id=ReadinessId.parse(readiness_id), requester_id=user_id)
+    )
     return ReadinessResponse.from_dto(unwrap_or_404(result))
 
 
@@ -88,10 +90,10 @@ def list_readiness(
 def update_sleep(
     readiness_id: str,
     body: UpdateSleepRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateSleepHandler = Depends(_get_update_sleep_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
+    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -100,10 +102,10 @@ def update_sleep(
 def update_recovery_metrics(
     readiness_id: str,
     body: UpdateRecoveryMetricsRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateRecoveryMetricsHandler = Depends(_get_update_recovery_metrics_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
+    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -112,10 +114,10 @@ def update_recovery_metrics(
 def update_readiness_notes(
     readiness_id: str,
     body: UpdateReadinessNotesRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNotesHandler = Depends(_get_update_notes_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id)))
+    result = handler.handle(body.to_command(ReadinessId.parse(readiness_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -123,9 +125,11 @@ def update_readiness_notes(
 @router.delete("/{readiness_id}", response_model=IdResponse)
 def delete_readiness(
     readiness_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: DeleteReadinessHandler = Depends(_get_delete_handler),
 ) -> IdResponse:
-    result = handler.handle(DeleteReadinessCommand(readiness_id=ReadinessId.parse(readiness_id)))
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=ReadinessId.parse(readiness_id), requester_id=user_id)
+    )
     deleted_id = unwrap_or_400(result)
     return IdResponse(id=str(deleted_id), warnings=result.warnings)

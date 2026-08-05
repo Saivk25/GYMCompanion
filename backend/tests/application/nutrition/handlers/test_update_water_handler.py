@@ -6,6 +6,7 @@ from app.application.nutrition.commands.update_water import UpdateWaterCommand
 from app.application.nutrition.handlers.update_water_handler import UpdateWaterHandler
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import WaterIntake
+from app.domain.user.identifiers import UserId
 from tests.application.nutrition.factories import (
     FakeNutritionRepository,
     FakeUnitOfWork,
@@ -24,7 +25,11 @@ def test_replaces_water_intake_and_returns_the_nutrition_id() -> None:
     handler = UpdateWaterHandler(uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(2000.0))
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(2000.0),
+        )
     )
 
     assert result.success is True
@@ -39,7 +44,13 @@ def test_commits_and_dispatches_water_updated_after_commit() -> None:
     dispatcher = RecordingDispatcher()
     handler = UpdateWaterHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(2000.0)))
+    handler.handle(
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(2000.0),
+        )
+    )
 
     assert uow.committed is True
     kinds = {type(event).__name__ for event in dispatcher.dispatched}
@@ -56,7 +67,13 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     dispatcher = OrderTrackingDispatcher(call_order)
     handler = UpdateWaterHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(2000.0)))
+    handler.handle(
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(2000.0),
+        )
+    )
 
     assert call_order == ["commit", "dispatch"]
 
@@ -68,7 +85,11 @@ def test_surfaces_hydration_warning_for_low_water_intake() -> None:
     handler = UpdateWaterHandler(uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(500.0))
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(500.0),
+        )
     )
 
     assert result.success is True
@@ -82,7 +103,11 @@ def test_reports_no_warnings_for_water_intake_within_range() -> None:
     handler = UpdateWaterHandler(uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(2500.0))
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(2500.0),
+        )
     )
 
     assert result.success is True
@@ -97,11 +122,37 @@ def test_a_missing_nutrition_entry_is_reported_as_a_failed_result_and_rolls_back
     missing_id = NutritionId.generate()
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=missing_id, water_intake=WaterIntake(2000.0))
+        UpdateWaterCommand(
+            nutrition_id=missing_id,
+            requester_id=UserId.generate(),
+            water_intake=WaterIntake(2000.0),
+        )
     )
 
     assert result.success is False
     assert str(missing_id) in result.errors[0]
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_requester_who_does_not_own_the_entry_is_forbidden_and_rolls_back() -> None:
+    nutrition = a_recorded_nutrition()
+    uow = FakeUnitOfWork(entries=FakeNutritionRepository({nutrition.id: nutrition}))
+    dispatcher = RecordingDispatcher()
+    handler = UpdateWaterHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=UserId.generate(),
+            water_intake=WaterIntake(2000.0),
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []
 
@@ -113,7 +164,11 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
     handler = UpdateWaterHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=NutritionId.generate(), water_intake=WaterIntake(2000.0))
+        UpdateWaterCommand(
+            nutrition_id=NutritionId.generate(),
+            requester_id=UserId.generate(),
+            water_intake=WaterIntake(2000.0),
+        )
     )
 
     assert result.success is False
@@ -130,7 +185,11 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     handler = UpdateWaterHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateWaterCommand(nutrition_id=nutrition.id, water_intake=WaterIntake(2000.0))
+        UpdateWaterCommand(
+            nutrition_id=nutrition.id,
+            requester_id=nutrition.user_id,
+            water_intake=WaterIntake(2000.0),
+        )
     )
 
     assert result.success is False

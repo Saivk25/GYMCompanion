@@ -28,13 +28,20 @@ from app.domain.goal.value_objects import (
     TargetStrength,
     TargetWeight,
 )
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateGoalCommand(Command):
-    """Replace whichever fields are given on an existing, Active Goal."""
+    """Replace whichever fields are given on an existing, Active Goal.
+
+    `requester_id` is the authenticated caller — see `GetGoalQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     goal_id: GoalId
+    requester_id: UserId
     name: GoalName | None = None
     description: GoalDescription | None = None
     target_date: TargetDate | None = None

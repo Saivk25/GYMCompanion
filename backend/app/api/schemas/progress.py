@@ -92,9 +92,12 @@ class UpdateBodyCompositionRequest(BaseModel):
     lean_body_mass: float | None = None
     muscle_mass: float | None = None
 
-    def to_command(self, progress_id: ProgressId) -> UpdateBodyCompositionCommand:
+    def to_command(
+        self, progress_id: ProgressId, requester_id: UserId
+    ) -> UpdateBodyCompositionCommand:
         return UpdateBodyCompositionCommand(
             progress_id=progress_id,
+            requester_id=requester_id,
             body_weight=BodyWeight(self.body_weight) if self.body_weight is not None else None,
             body_fat_percentage=(
                 BodyFatPercentage(self.body_fat_percentage)
@@ -117,9 +120,12 @@ class UpdateMeasurementsRequest(BaseModel):
     calf: float | None = None
     neck: float | None = None
 
-    def to_command(self, progress_id: ProgressId) -> UpdateMeasurementsCommand:
+    def to_command(
+        self, progress_id: ProgressId, requester_id: UserId
+    ) -> UpdateMeasurementsCommand:
         return UpdateMeasurementsCommand(
             progress_id=progress_id,
+            requester_id=requester_id,
             waist=WaistMeasurement(self.waist) if self.waist is not None else None,
             chest=ChestMeasurement(self.chest) if self.chest is not None else None,
             hip=HipMeasurement(self.hip) if self.hip is not None else None,
@@ -133,8 +139,10 @@ class UpdateMeasurementsRequest(BaseModel):
 class UpdateProgressNotesRequest(BaseModel):
     notes: str
 
-    def to_command(self, progress_id: ProgressId) -> UpdateNotesCommand:
-        return UpdateNotesCommand(progress_id=progress_id, notes=ProgressNotes(self.notes))
+    def to_command(self, progress_id: ProgressId, requester_id: UserId) -> UpdateNotesCommand:
+        return UpdateNotesCommand(
+            progress_id=progress_id, requester_id=requester_id, notes=ProgressNotes(self.notes)
+        )
 
 
 class ProgressResponse(BaseModel):

@@ -22,6 +22,7 @@ from app.application.goal.commands.cancel_goal import CancelGoalCommand
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.goal.identifiers import GoalId
 from app.domain.goal.repository import GoalRepository
@@ -54,6 +55,11 @@ class CancelGoalHandler(CommandHandler[CancelGoalCommand, GoalId]):
                 if goal is None:
                     uow.rollback()
                     return ApplicationResult.fail([f"goal {request.goal_id} not found"])
+
+                denial = ensure_owner(owner_id=goal.user_id, requester_id=request.requester_id)
+                if denial is not None:
+                    uow.rollback()
+                    return ApplicationResult.forbid([denial])
 
                 goal.cancel(clock=self._clock)
                 uow.commit()

@@ -8,11 +8,13 @@ from app.application.nutrition.commands.update_nutrition import UpdateNutritionC
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import Calories, Carbohydrates, Fat, Fiber, Protein, Sugar
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateNutritionCommand:
     return UpdateNutritionCommand(
         nutrition_id=NutritionId.generate(),
+        requester_id=UserId.generate(),
         calories=Calories(600.0),
         protein=Protein(40.0),
         carbohydrates=Carbohydrates(50.0),
@@ -40,7 +42,9 @@ def test_update_nutrition_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_nutrition_command_fields_default_to_none_meaning_unchanged() -> None:
-    command = UpdateNutritionCommand(nutrition_id=NutritionId.generate())
+    command = UpdateNutritionCommand(
+        nutrition_id=NutritionId.generate(), requester_id=UserId.generate()
+    )
     assert command.calories is None
     assert command.protein is None
     assert command.carbohydrates is None

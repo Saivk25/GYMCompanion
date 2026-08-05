@@ -23,14 +23,22 @@ from app.domain.progress.value_objects import (
     LeanBodyMass,
     MuscleMass,
 )
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateBodyCompositionCommand(Command):
     """Replace whichever body-composition fields are given on an
-    existing Progress record; fields left as `None` are left unchanged."""
+    existing Progress record; fields left as `None` are left unchanged.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.progress.queries.get_progress.GetProgressQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     progress_id: ProgressId
+    requester_id: UserId
     body_weight: BodyWeight | None = None
     body_fat_percentage: BodyFatPercentage | None = None
     lean_body_mass: LeanBodyMass | None = None

@@ -9,11 +9,13 @@ from app.application.goal.commands.update_goal import UpdateGoalCommand
 from app.application.shared.command import Command
 from app.domain.goal.identifiers import GoalId
 from app.domain.goal.value_objects import GoalName, Priority, TargetDate
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateGoalCommand:
     return UpdateGoalCommand(
         goal_id=GoalId.generate(),
+        requester_id=UserId.generate(),
         name=GoalName("New Name"),
         target_date=TargetDate(date(2026, 7, 1)),
         priority=Priority(2),
@@ -35,7 +37,7 @@ def test_update_goal_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_goal_command_optional_fields_default_to_none() -> None:
-    command = UpdateGoalCommand(goal_id=GoalId.generate())
+    command = UpdateGoalCommand(goal_id=GoalId.generate(), requester_id=UserId.generate())
     assert command.name is None
     assert command.description is None
     assert command.target_date is None

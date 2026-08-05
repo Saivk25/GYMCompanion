@@ -23,6 +23,7 @@ from app.application.progress.commands.update_notes import UpdateNotesCommand
 from app.application.shared.application_result import ApplicationResult
 from app.application.shared.command_handler import CommandHandler
 from app.application.shared.domain_event_dispatcher import DomainEventDispatcher
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.progress.identifiers import ProgressId
 from app.domain.progress.repository import ProgressRepository
@@ -59,6 +60,11 @@ class UpdateNotesHandler(CommandHandler[UpdateNotesCommand, ProgressId]):
                     return ApplicationResult.fail(
                         [f"progress record {request.progress_id} not found"]
                     )
+
+                denial = ensure_owner(owner_id=progress.user_id, requester_id=request.requester_id)
+                if denial is not None:
+                    uow.rollback()
+                    return ApplicationResult.forbid([denial])
 
                 progress.update_notes(request.notes, clock=self._clock)
                 uow.commit()

@@ -9,6 +9,7 @@ from app.application.shared.command import Command
 from app.application.workout.commands.complete_workout_session import (
     CompleteWorkoutSessionCommand,
 )
+from app.domain.user.identifiers import UserId
 from app.domain.workout_session.identifiers import WorkoutSessionId
 from app.domain.workout_session.value_objects import (
     CompletionPercentage,
@@ -20,6 +21,7 @@ from app.domain.workout_session.value_objects import (
 def _a_command() -> CompleteWorkoutSessionCommand:
     return CompleteWorkoutSessionCommand(
         session_id=WorkoutSessionId.generate(),
+        requester_id=UserId.generate(),
         duration=SessionDuration(timedelta(minutes=45)),
         completion_percentage=CompletionPercentage(100.0),
         rating=SessionRating(8),
@@ -40,9 +42,22 @@ def test_complete_workout_session_command_exposes_its_fields() -> None:
 
 
 @pytest.mark.unit
+def test_complete_workout_session_command_exposes_its_requester_id() -> None:
+    requester_id = UserId.generate()
+    command = CompleteWorkoutSessionCommand(
+        session_id=WorkoutSessionId.generate(),
+        requester_id=requester_id,
+        duration=SessionDuration(timedelta(minutes=45)),
+        completion_percentage=CompletionPercentage(100.0),
+    )
+    assert command.requester_id == requester_id
+
+
+@pytest.mark.unit
 def test_complete_workout_session_command_rating_defaults_to_none() -> None:
     command = CompleteWorkoutSessionCommand(
         session_id=WorkoutSessionId.generate(),
+        requester_id=UserId.generate(),
         duration=SessionDuration(timedelta(minutes=45)),
         completion_percentage=CompletionPercentage(100.0),
     )

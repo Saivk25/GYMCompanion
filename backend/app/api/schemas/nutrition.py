@@ -87,9 +87,10 @@ class UpdateNutritionRequest(BaseModel):
     fiber: float | None = None
     sugar: float | None = None
 
-    def to_command(self, nutrition_id: NutritionId) -> UpdateNutritionCommand:
+    def to_command(self, nutrition_id: NutritionId, requester_id: UserId) -> UpdateNutritionCommand:
         return UpdateNutritionCommand(
             nutrition_id=nutrition_id,
+            requester_id=requester_id,
             calories=Calories(self.calories) if self.calories is not None else None,
             protein=Protein(self.protein) if self.protein is not None else None,
             carbohydrates=(
@@ -104,17 +105,23 @@ class UpdateNutritionRequest(BaseModel):
 class UpdateWaterRequest(BaseModel):
     water_intake: float
 
-    def to_command(self, nutrition_id: NutritionId) -> UpdateWaterCommand:
+    def to_command(self, nutrition_id: NutritionId, requester_id: UserId) -> UpdateWaterCommand:
         return UpdateWaterCommand(
-            nutrition_id=nutrition_id, water_intake=WaterIntake(self.water_intake)
+            nutrition_id=nutrition_id,
+            requester_id=requester_id,
+            water_intake=WaterIntake(self.water_intake),
         )
 
 
 class UpdateNutritionNotesRequest(BaseModel):
     notes: str
 
-    def to_command(self, nutrition_id: NutritionId) -> UpdateNutritionNotesCommand:
-        return UpdateNutritionNotesCommand(nutrition_id=nutrition_id, notes=MealNotes(self.notes))
+    def to_command(
+        self, nutrition_id: NutritionId, requester_id: UserId
+    ) -> UpdateNutritionNotesCommand:
+        return UpdateNutritionNotesCommand(
+            nutrition_id=nutrition_id, requester_id=requester_id, notes=MealNotes(self.notes)
+        )
 
 
 class NutritionResponse(BaseModel):

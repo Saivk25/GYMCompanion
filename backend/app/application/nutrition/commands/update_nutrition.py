@@ -21,15 +21,23 @@ from dataclasses import dataclass
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import Calories, Carbohydrates, Fat, Fiber, Protein, Sugar
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateNutritionCommand(Command):
     """Replace whichever macro/calorie fields are given on an existing
     Nutrition entry; a field left `None` keeps its current stored
-    value."""
+    value.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.nutrition.queries.get_nutrition.GetNutritionQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     nutrition_id: NutritionId
+    requester_id: UserId
     calories: Calories | None = None
     protein: Protein | None = None
     carbohydrates: Carbohydrates | None = None

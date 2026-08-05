@@ -16,11 +16,19 @@ from dataclasses import dataclass
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import WaterIntake
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateWaterCommand(Command):
-    """Replace an existing Nutrition entry's water intake wholesale."""
+    """Replace an existing Nutrition entry's water intake wholesale.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.nutrition.queries.get_nutrition.GetNutritionQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     nutrition_id: NutritionId
+    requester_id: UserId
     water_intake: WaterIntake

@@ -11,6 +11,7 @@ from __future__ import annotations
 from app.application.readiness.dto.readiness_dto import ReadinessDTO
 from app.application.readiness.queries.get_readiness import GetReadinessQuery
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.readiness.readiness import Readiness
@@ -45,5 +46,9 @@ class GetReadinessHandler(QueryHandler[GetReadinessQuery, ReadinessDTO]):
 
         if readiness is None:
             return ApplicationResult.fail([f"readiness check-in {request.readiness_id} not found"])
+
+        denial = ensure_owner(owner_id=readiness.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(ReadinessDTO.from_readiness(readiness))

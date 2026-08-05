@@ -26,11 +26,19 @@ from dataclasses import dataclass
 from app.application.shared.command import Command
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.value_objects import RecoveryNotes
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateNotesCommand(Command):
-    """Replace an existing Readiness check-in's notes wholesale."""
+    """Replace an existing Readiness check-in's notes wholesale.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.readiness.queries.get_readiness.GetReadinessQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     readiness_id: ReadinessId
+    requester_id: UserId
     notes: RecoveryNotes

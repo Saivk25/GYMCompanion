@@ -25,15 +25,23 @@ from app.domain.readiness.value_objects import (
     SorenessLevel,
     StressLevel,
 )
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateRecoveryMetricsCommand(Command):
     """Replace whichever recovery-metric fields are given on an existing
     Readiness check-in; a field left `None` keeps its current stored
-    value."""
+    value.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.readiness.queries.get_readiness.GetReadinessQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     readiness_id: ReadinessId
+    requester_id: UserId
     energy_level: EnergyLevel | None = None
     stress_level: StressLevel | None = None
     soreness_level: SorenessLevel | None = None

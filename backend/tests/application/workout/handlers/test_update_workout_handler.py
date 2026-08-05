@@ -7,6 +7,7 @@ import pytest
 from app.application.workout.commands.update_workout import UpdateWorkoutCommand
 from app.application.workout.handlers.update_workout_handler import UpdateWorkoutHandler
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
+from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
 from app.domain.workout.value_objects import WorkoutDuration, WorkoutGoal, WorkoutNotes
 from tests.application.workout.factories import (
@@ -29,6 +30,7 @@ def test_replaces_goal_and_notes_and_returns_the_workout_id() -> None:
     result = handler.handle(
         UpdateWorkoutCommand(
             workout_id=workout.id,
+            requester_id=workout.user_id,
             goal=WorkoutGoal("hypertrophy"),
             notes=WorkoutNotes("felt good"),
         )
@@ -47,7 +49,11 @@ def test_can_clear_goal_and_notes_with_none() -> None:
     uow = FakeUnitOfWork(workouts=FakeWorkoutRepository({workout.id: workout}))
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=RecordingDispatcher())
 
-    handler.handle(UpdateWorkoutCommand(workout_id=workout.id, goal=None, notes=None))
+    handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=workout.id, requester_id=workout.user_id, goal=None, notes=None
+        )
+    )
 
     assert workout.goal is None
     assert workout.notes is None
@@ -60,7 +66,11 @@ def test_commits_and_dispatches_no_events_since_none_are_raised() -> None:
     dispatcher = RecordingDispatcher()
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
 
-    handler.handle(UpdateWorkoutCommand(workout_id=workout.id, goal=None, notes=None))
+    handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=workout.id, requester_id=workout.user_id, goal=None, notes=None
+        )
+    )
 
     assert uow.committed is True
     assert dispatcher.dispatched == []
@@ -76,7 +86,11 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     dispatcher = OrderTrackingDispatcher(call_order)
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
 
-    handler.handle(UpdateWorkoutCommand(workout_id=workout.id, goal=None, notes=None))
+    handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=workout.id, requester_id=workout.user_id, goal=None, notes=None
+        )
+    )
 
     assert call_order == ["commit", "dispatch"]
 
@@ -88,10 +102,34 @@ def test_a_missing_workout_is_reported_as_a_failed_result_and_rolls_back() -> No
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
     missing_id = WorkoutId.generate()
 
-    result = handler.handle(UpdateWorkoutCommand(workout_id=missing_id, goal=None, notes=None))
+    result = handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=missing_id, requester_id=UserId.generate(), goal=None, notes=None
+        )
+    )
 
     assert result.success is False
     assert str(missing_id) in result.errors[0]
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    workout = a_planned_workout()
+    uow = FakeUnitOfWork(workouts=FakeWorkoutRepository({workout.id: workout}))
+    dispatcher = RecordingDispatcher()
+    handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
+
+    result = handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=workout.id, requester_id=UserId.generate(), goal=None, notes=None
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []
 
@@ -103,7 +141,12 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
 
     result = handler.handle(
-        UpdateWorkoutCommand(workout_id=WorkoutId.generate(), goal=None, notes=None)
+        UpdateWorkoutCommand(
+            workout_id=WorkoutId.generate(),
+            requester_id=UserId.generate(),
+            goal=None,
+            notes=None,
+        )
     )
 
     assert result.success is False
@@ -117,7 +160,11 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     dispatcher = RecordingDispatcher()
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
 
-    result = handler.handle(UpdateWorkoutCommand(workout_id=workout.id, goal=None, notes=None))
+    result = handler.handle(
+        UpdateWorkoutCommand(
+            workout_id=workout.id, requester_id=workout.user_id, goal=None, notes=None
+        )
+    )
 
     assert result.success is False
     assert uow.rolled_back is True
@@ -134,6 +181,10 @@ def test_updating_a_completed_workout_raises_and_still_rolls_back() -> None:
     handler = UpdateWorkoutHandler(uow=uow, dispatcher=dispatcher)
 
     with pytest.raises(DomainInvariantViolationError, match="cannot modify"):
-        handler.handle(UpdateWorkoutCommand(workout_id=workout.id, goal=None, notes=None))
+        handler.handle(
+            UpdateWorkoutCommand(
+                workout_id=workout.id, requester_id=workout.user_id, goal=None, notes=None
+            )
+        )
 
     assert dispatcher.dispatched == []

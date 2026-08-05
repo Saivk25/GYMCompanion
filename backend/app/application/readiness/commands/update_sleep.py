@@ -16,13 +16,21 @@ from dataclasses import dataclass
 from app.application.shared.command import Command
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.value_objects import SleepDuration, SleepQuality
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateSleepCommand(Command):
     """Replace whichever sleep fields are given on an existing Readiness
-    check-in; a field left `None` keeps its current stored value."""
+    check-in; a field left `None` keeps its current stored value.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.readiness.queries.get_readiness.GetReadinessQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     readiness_id: ReadinessId
+    requester_id: UserId
     sleep_duration: SleepDuration | None = None
     sleep_quality: SleepQuality | None = None

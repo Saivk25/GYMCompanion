@@ -21,14 +21,14 @@ stated rules.
 **Every route requires authentication** (`Depends(get_current_user_id)`,
 `app/api/deps.py`) — added in the Authentication & Authorization phase.
 `create_goal` and `list_goals` use the returned `UserId` to build their
-Command/Query (replacing what used to be a client-supplied `user_id`
-field/query-param — a caller can no longer create or list goals on
-another user's behalf). The four routes addressing a specific
-`goal_id` (`get_goal`, `update_goal`, `complete_goal`, `cancel_goal`)
-depend on it only to require *a* valid caller, binding the result to
-`_user_id` — this phase does not yet verify the caller actually *owns*
-that `goal_id`; see `docs/adr/0032-authentication-and-authorization.md`
-for that gap, named there as a deliberate, scoped technical debt item.
+Command/Query (a caller can no longer create or list goals on another
+user's behalf). The four routes addressing a specific `goal_id`
+(`get_goal`, `update_goal`, `complete_goal`, `cancel_goal`) thread the
+same `UserId` through as `requester_id` on the Command/Query they build
+— the corresponding handler compares it against the loaded Goal's own
+`user_id` (`app.application.shared.ownership.ensure_owner`) and fails
+with a 403 on a mismatch, closing the gap named in `docs/TECH_DEBT.md`'s
+TD-0002. See `docs/adr/0033-resource-ownership-authorization.md`.
 """
 
 from __future__ import annotations
@@ -76,10 +76,10 @@ def create_goal(
 @router.get("/{goal_id}", response_model=GoalResponse)
 def get_goal(
     goal_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: GetGoalHandler = Depends(_get_get_handler),
 ) -> GoalResponse:
-    result = handler.handle(GetGoalQuery(goal_id=GoalId.parse(goal_id)))
+    result = handler.handle(GetGoalQuery(goal_id=GoalId.parse(goal_id), requester_id=user_id))
     return GoalResponse.from_dto(unwrap_or_404(result))
 
 
@@ -96,10 +96,10 @@ def list_goals(
 def update_goal(
     goal_id: str,
     body: UpdateGoalRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateGoalHandler = Depends(_get_update_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(GoalId.parse(goal_id)))
+    result = handler.handle(body.to_command(GoalId.parse(goal_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -107,10 +107,12 @@ def update_goal(
 @router.post("/{goal_id}/complete", response_model=IdResponse)
 def complete_goal(
     goal_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: CompleteGoalHandler = Depends(_get_complete_handler),
 ) -> IdResponse:
-    result = handler.handle(CompleteGoalCommand(goal_id=GoalId.parse(goal_id)))
+    result = handler.handle(
+        CompleteGoalCommand(goal_id=GoalId.parse(goal_id), requester_id=user_id)
+    )
     completed_id = unwrap_or_400(result)
     return IdResponse(id=str(completed_id), warnings=result.warnings)
 
@@ -118,9 +120,9 @@ def complete_goal(
 @router.post("/{goal_id}/cancel", response_model=IdResponse)
 def cancel_goal(
     goal_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: CancelGoalHandler = Depends(_get_cancel_handler),
 ) -> IdResponse:
-    result = handler.handle(CancelGoalCommand(goal_id=GoalId.parse(goal_id)))
+    result = handler.handle(CancelGoalCommand(goal_id=GoalId.parse(goal_id), requester_id=user_id))
     cancelled_id = unwrap_or_400(result)
     return IdResponse(id=str(cancelled_id), warnings=result.warnings)

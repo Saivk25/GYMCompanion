@@ -54,6 +54,19 @@ expected) also maps to 422** — re-wrapped into the same `ErrorResponse`
 envelope FastAPI's own default handler does not use, so a client sees
 one consistent shape regardless of which validation layer rejected the
 request.
+
+**`ApplicationResult.forbidden` maps to 403, overriding whatever status
+the calling `unwrap_or_*` helper would otherwise apply.** This is the
+one exception to the "status is keyed on which kind of handler produced
+the failure" policy above: an ownership denial (`ApplicationResult.
+forbid(...)`, `app.application.shared.ownership.ensure_owner`) can
+happen inside a GET-by-id handler, an update handler, or a delete
+handler alike, and in every case it means the same thing — the caller
+is authenticated but does not own the addressed resource — so it always
+maps to 403, regardless of whether that handler's *other* failures map
+to 404 or 400. Checked once, in `_unwrap_or` below, so no individual
+`unwrap_or_*` helper or route needs its own forbidden-handling branch.
+See `docs/adr/0033-resource-ownership-authorization.md`.
 """
 
 from __future__ import annotations
@@ -90,7 +103,8 @@ def _error_detail(errors: Sequence[str]) -> str | list[str]:
 
 def _unwrap_or(result: ApplicationResult[T], *, failure_status: int) -> T:
     if not result.success:
-        raise HTTPException(status_code=failure_status, detail=_error_detail(result.errors))
+        status_code = status.HTTP_403_FORBIDDEN if result.forbidden else failure_status
+        raise HTTPException(status_code=status_code, detail=_error_detail(result.errors))
     if result.value is None:
         # Defensive: every GET-by-id/command/list handler in this codebase
         # returns a real value on success (confirmed by reading each one —

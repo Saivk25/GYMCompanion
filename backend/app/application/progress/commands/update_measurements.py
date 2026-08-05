@@ -21,14 +21,22 @@ from app.domain.progress.value_objects import (
     ThighMeasurement,
     WaistMeasurement,
 )
+from app.domain.user.identifiers import UserId
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateMeasurementsCommand(Command):
     """Replace whichever tape measurements are given on an existing
-    Progress record; fields left as `None` are left unchanged."""
+    Progress record; fields left as `None` are left unchanged.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.progress.queries.get_progress.GetProgressQuery`'s
+    own module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     progress_id: ProgressId
+    requester_id: UserId
     waist: WaistMeasurement | None = None
     chest: ChestMeasurement | None = None
     hip: HipMeasurement | None = None

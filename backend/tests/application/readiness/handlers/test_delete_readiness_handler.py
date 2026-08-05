@@ -6,6 +6,7 @@ import pytest
 from app.application.readiness.commands.delete_readiness import DeleteReadinessCommand
 from app.application.readiness.handlers.delete_readiness_handler import DeleteReadinessHandler
 from app.domain.readiness.identifiers import ReadinessId
+from app.domain.user.identifiers import UserId
 from tests.application.readiness.factories import (
     FakeReadinessRepository,
     FakeUnitOfWork,
@@ -21,7 +22,9 @@ def test_removes_the_check_in_and_returns_its_id() -> None:
     uow = FakeUnitOfWork(entries=entries)
     handler = DeleteReadinessHandler(uow=uow, dispatcher=RecordingDispatcher())
 
-    result = handler.handle(DeleteReadinessCommand(readiness_id=readiness.id))
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=readiness.id, requester_id=readiness.user_id)
+    )
 
     assert result.success is True
     assert result.value == readiness.id
@@ -35,7 +38,9 @@ def test_commits_the_unit_of_work() -> None:
     uow = FakeUnitOfWork(entries=FakeReadinessRepository({readiness.id: readiness}))
     handler = DeleteReadinessHandler(uow=uow, dispatcher=RecordingDispatcher())
 
-    handler.handle(DeleteReadinessCommand(readiness_id=readiness.id))
+    handler.handle(
+        DeleteReadinessCommand(readiness_id=readiness.id, requester_id=readiness.user_id)
+    )
 
     assert uow.committed is True
     assert uow.rolled_back is False
@@ -48,7 +53,9 @@ def test_dispatches_no_events_on_success() -> None:
     dispatcher = RecordingDispatcher()
     handler = DeleteReadinessHandler(uow=uow, dispatcher=dispatcher)
 
-    handler.handle(DeleteReadinessCommand(readiness_id=readiness.id))
+    handler.handle(
+        DeleteReadinessCommand(readiness_id=readiness.id, requester_id=readiness.user_id)
+    )
 
     assert dispatcher.dispatched == []
 
@@ -60,7 +67,9 @@ def test_a_missing_readiness_check_in_is_reported_as_a_failed_result_and_rolls_b
     handler = DeleteReadinessHandler(uow=uow, dispatcher=dispatcher)
     missing_id = ReadinessId.generate()
 
-    result = handler.handle(DeleteReadinessCommand(readiness_id=missing_id))
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=missing_id, requester_id=UserId.generate())
+    )
 
     assert result.success is False
     assert str(missing_id) in result.errors[0]
@@ -74,7 +83,9 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
     dispatcher = RecordingDispatcher()
     handler = DeleteReadinessHandler(uow=uow, dispatcher=dispatcher)
 
-    result = handler.handle(DeleteReadinessCommand(readiness_id=ReadinessId.generate()))
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=ReadinessId.generate(), requester_id=UserId.generate())
+    )
 
     assert result.success is False
     assert uow.rolled_back is True
@@ -89,8 +100,31 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     dispatcher = RecordingDispatcher()
     handler = DeleteReadinessHandler(uow=uow, dispatcher=dispatcher)
 
-    result = handler.handle(DeleteReadinessCommand(readiness_id=readiness.id))
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=readiness.id, requester_id=readiness.user_id)
+    )
 
     assert result.success is False
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    readiness = a_recorded_readiness()
+    entries = FakeReadinessRepository({readiness.id: readiness})
+    uow = FakeUnitOfWork(entries=entries)
+    dispatcher = RecordingDispatcher()
+    handler = DeleteReadinessHandler(uow=uow, dispatcher=dispatcher)
+
+    result = handler.handle(
+        DeleteReadinessCommand(readiness_id=readiness.id, requester_id=UserId.generate())
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+    assert entries.get(readiness.id) is readiness
+    assert readiness not in entries.removed

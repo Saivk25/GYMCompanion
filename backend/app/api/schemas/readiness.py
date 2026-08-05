@@ -91,9 +91,10 @@ class UpdateSleepRequest(BaseModel):
     sleep_duration_seconds: float | None = None
     sleep_quality: int | None = None
 
-    def to_command(self, readiness_id: ReadinessId) -> UpdateSleepCommand:
+    def to_command(self, readiness_id: ReadinessId, requester_id: UserId) -> UpdateSleepCommand:
         return UpdateSleepCommand(
             readiness_id=readiness_id,
+            requester_id=requester_id,
             sleep_duration=(
                 SleepDuration(seconds_to_duration(self.sleep_duration_seconds))
                 if self.sleep_duration_seconds is not None
@@ -112,9 +113,12 @@ class UpdateRecoveryMetricsRequest(BaseModel):
     resting_heart_rate: float | None = None
     heart_rate_variability: float | None = None
 
-    def to_command(self, readiness_id: ReadinessId) -> UpdateRecoveryMetricsCommand:
+    def to_command(
+        self, readiness_id: ReadinessId, requester_id: UserId
+    ) -> UpdateRecoveryMetricsCommand:
         return UpdateRecoveryMetricsCommand(
             readiness_id=readiness_id,
+            requester_id=requester_id,
             energy_level=EnergyLevel(self.energy_level) if self.energy_level is not None else None,
             stress_level=StressLevel(self.stress_level) if self.stress_level is not None else None,
             soreness_level=(
@@ -136,8 +140,10 @@ class UpdateRecoveryMetricsRequest(BaseModel):
 class UpdateReadinessNotesRequest(BaseModel):
     notes: str
 
-    def to_command(self, readiness_id: ReadinessId) -> UpdateNotesCommand:
-        return UpdateNotesCommand(readiness_id=readiness_id, notes=RecoveryNotes(self.notes))
+    def to_command(self, readiness_id: ReadinessId, requester_id: UserId) -> UpdateNotesCommand:
+        return UpdateNotesCommand(
+            readiness_id=readiness_id, requester_id=requester_id, notes=RecoveryNotes(self.notes)
+        )
 
 
 class ReadinessResponse(BaseModel):

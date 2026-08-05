@@ -7,18 +7,21 @@ future use case implements), `ApplicationResult` (what every handler
 returns), `Repository` (re-exported from the Domain Layer, not
 redefined), `UnitOfWork` (the transactional boundary a handler runs
 inside), `DomainEventDispatcher` (how a handler publishes what an
-aggregate recorded), this layer's own exception hierarchy, and
+aggregate recorded), this layer's own exception hierarchy,
 `advisory_warnings()` (formats a Domain Layer `RuleResult`'s
 recommendations for a handler to surface as
 `ApplicationResult.warnings` — see that function's own module
-docstring for why it lives here rather than in `app.domain.rules`). No
-concrete command, query, handler, repository implementation, or
-dispatcher exists yet — see `docs/adr/0022-application-layer-
-foundation.md` for the full architecture, including why orchestration
-belongs in this layer rather than the Domain Layer or a future
-infrastructure layer, and why several of these interfaces reuse rather
-than duplicate a Domain Layer type that already covers the same
-concept.
+docstring for why it lives here rather than in `app.domain.rules`), and
+`ensure_owner()` (the single "does the caller own this resource"
+comparison every ownership-checked handler calls — see that function's
+own module docstring for why it lives here rather than the API or
+Domain Layer). No concrete command, query, handler, repository
+implementation, or dispatcher exists yet — see `docs/adr/0022-
+application-layer-foundation.md` for the full architecture, including
+why orchestration belongs in this layer rather than the Domain Layer or
+a future infrastructure layer, and why several of these interfaces
+reuse rather than duplicate a Domain Layer type that already covers the
+same concept.
 
 Re-exported here so a future use-case module can write one import
 instead of many:
@@ -47,6 +50,7 @@ from app.application.shared.exceptions import (
     UnitOfWorkError,
 )
 from app.application.shared.interfaces import Handler
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query import Query
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.repository import Repository
@@ -67,4 +71,5 @@ __all__ = [
     "UnitOfWork",
     "UnitOfWorkError",
     "advisory_warnings",
+    "ensure_owner",
 ]

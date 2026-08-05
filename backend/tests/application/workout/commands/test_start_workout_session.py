@@ -7,13 +7,16 @@ import pytest
 
 from app.application.shared.command import Command
 from app.application.workout.commands.start_workout_session import StartWorkoutSessionCommand
+from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
 from app.domain.workout_session.value_objects import SessionDate
 
 
 def _a_command() -> StartWorkoutSessionCommand:
     return StartWorkoutSessionCommand(
-        workout_id=WorkoutId.generate(), session_date=SessionDate(date(2026, 1, 1))
+        workout_id=WorkoutId.generate(),
+        requester_id=UserId.generate(),
+        session_date=SessionDate(date(2026, 1, 1)),
     )
 
 
@@ -26,6 +29,17 @@ def test_start_workout_session_command_is_a_command() -> None:
 def test_start_workout_session_command_exposes_its_fields() -> None:
     command = _a_command()
     assert command.session_date == SessionDate(date(2026, 1, 1))
+
+
+@pytest.mark.unit
+def test_start_workout_session_command_exposes_its_requester_id() -> None:
+    requester_id = UserId.generate()
+    command = StartWorkoutSessionCommand(
+        workout_id=WorkoutId.generate(),
+        requester_id=requester_id,
+        session_date=SessionDate(date(2026, 1, 1)),
+    )
+    assert command.requester_id == requester_id
 
 
 @pytest.mark.unit

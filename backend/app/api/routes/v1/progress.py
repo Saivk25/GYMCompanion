@@ -70,10 +70,12 @@ def record_progress(
 @router.get("/{progress_id}", response_model=ProgressResponse)
 def get_progress(
     progress_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: GetProgressHandler = Depends(_get_get_handler),
 ) -> ProgressResponse:
-    result = handler.handle(GetProgressQuery(progress_id=ProgressId.parse(progress_id)))
+    result = handler.handle(
+        GetProgressQuery(progress_id=ProgressId.parse(progress_id), requester_id=user_id)
+    )
     return ProgressResponse.from_dto(unwrap_or_404(result))
 
 
@@ -90,10 +92,10 @@ def list_progress(
 def update_body_composition(
     progress_id: str,
     body: UpdateBodyCompositionRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateBodyCompositionHandler = Depends(_get_update_body_composition_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
+    result = handler.handle(body.to_command(ProgressId.parse(progress_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -102,10 +104,10 @@ def update_body_composition(
 def update_measurements(
     progress_id: str,
     body: UpdateMeasurementsRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateMeasurementsHandler = Depends(_get_update_measurements_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
+    result = handler.handle(body.to_command(ProgressId.parse(progress_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -114,10 +116,10 @@ def update_measurements(
 def update_progress_notes(
     progress_id: str,
     body: UpdateProgressNotesRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNotesHandler = Depends(_get_update_notes_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(ProgressId.parse(progress_id)))
+    result = handler.handle(body.to_command(ProgressId.parse(progress_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -125,9 +127,11 @@ def update_progress_notes(
 @router.delete("/{progress_id}", response_model=IdResponse)
 def delete_progress(
     progress_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: DeleteProgressHandler = Depends(_get_delete_handler),
 ) -> IdResponse:
-    result = handler.handle(DeleteProgressCommand(progress_id=ProgressId.parse(progress_id)))
+    result = handler.handle(
+        DeleteProgressCommand(progress_id=ProgressId.parse(progress_id), requester_id=user_id)
+    )
     deleted_id = unwrap_or_400(result)
     return IdResponse(id=str(deleted_id), warnings=result.warnings)

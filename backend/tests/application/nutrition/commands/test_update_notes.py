@@ -8,11 +8,14 @@ from app.application.nutrition.commands.update_notes import UpdateNutritionNotes
 from app.application.shared.command import Command
 from app.domain.nutrition.identifiers import NutritionId
 from app.domain.nutrition.value_objects import MealNotes
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateNutritionNotesCommand:
     return UpdateNutritionNotesCommand(
-        nutrition_id=NutritionId.generate(), notes=MealNotes("post-workout meal")
+        nutrition_id=NutritionId.generate(),
+        requester_id=UserId.generate(),
+        notes=MealNotes("post-workout meal"),
     )
 
 

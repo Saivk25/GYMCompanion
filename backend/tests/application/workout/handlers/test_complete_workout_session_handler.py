@@ -12,6 +12,7 @@ from app.application.workout.handlers.complete_workout_session_handler import (
     CompleteWorkoutSessionHandler,
 )
 from app.domain.shared_kernel.errors import DomainInvariantViolationError
+from app.domain.user.identifiers import UserId
 from app.domain.workout.enums import WorkoutStatus
 from app.domain.workout.workout import Workout
 from app.domain.workout_session.enums import SessionStatus
@@ -41,9 +42,12 @@ def _an_in_progress_workout_with_an_active_session() -> tuple[Workout, WorkoutSe
     return workout, session
 
 
-def _a_command_for(session_id: WorkoutSessionId) -> CompleteWorkoutSessionCommand:
+def _a_command_for(
+    session_id: WorkoutSessionId, *, requester_id: UserId
+) -> CompleteWorkoutSessionCommand:
     return CompleteWorkoutSessionCommand(
         session_id=session_id,
+        requester_id=requester_id,
         duration=SessionDuration(timedelta(minutes=45)),
         completion_percentage=CompletionPercentage(100.0),
     )
@@ -60,7 +64,7 @@ def test_completes_the_session_and_returns_its_id() -> None:
         uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock()
     )
 
-    result = handler.handle(_a_command_for(session.id))
+    result = handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert result.success is True
     assert result.value == session.id
@@ -78,7 +82,7 @@ def test_completes_the_in_progress_parent_workout() -> None:
         uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock()
     )
 
-    handler.handle(_a_command_for(session.id))
+    handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert workout.status == WorkoutStatus.COMPLETED
 
@@ -101,10 +105,10 @@ def test_does_not_re_complete_an_already_completed_workout() -> None:
     handler = CompleteWorkoutSessionHandler(
         uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock()
     )
-    handler.handle(_a_command_for(first_session.id))
+    handler.handle(_a_command_for(first_session.id, requester_id=first_session.user_id))
     assert workout.status == WorkoutStatus.COMPLETED
 
-    result = handler.handle(_a_command_for(second_session.id))
+    result = handler.handle(_a_command_for(second_session.id, requester_id=second_session.user_id))
 
     assert result.success is True
     assert second_session.status == SessionStatus.COMPLETED
@@ -121,7 +125,7 @@ def test_commits_and_dispatches_both_aggregates_events_after_commit() -> None:
     dispatcher = RecordingDispatcher()
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(_a_command_for(session.id))
+    handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert uow.committed is True
     kinds = {type(event).__name__ for event in dispatcher.dispatched}
@@ -141,7 +145,7 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     dispatcher = OrderTrackingDispatcher(call_order)
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(_a_command_for(session.id))
+    handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert call_order == ["commit", "dispatch"]
 
@@ -157,7 +161,7 @@ def test_surfaces_progressive_overload_and_training_load_warnings_as_a_tuple() -
         uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock()
     )
 
-    result = handler.handle(_a_command_for(session.id))
+    result = handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert result.success is True
     assert isinstance(result.warnings, tuple)
@@ -169,10 +173,31 @@ def test_a_missing_session_is_reported_as_a_failed_result_and_rolls_back() -> No
     dispatcher = RecordingDispatcher()
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    result = handler.handle(_a_command_for(WorkoutSessionId.generate()))
+    result = handler.handle(
+        _a_command_for(WorkoutSessionId.generate(), requester_id=UserId.generate())
+    )
 
     assert result.success is False
     assert "not found" in result.errors[0]
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    workout, session = _an_in_progress_workout_with_an_active_session()
+    uow = FakeUnitOfWork(
+        workouts=FakeWorkoutRepository({workout.id: workout}),
+        sessions=FakeWorkoutSessionRepository({session.id: session}),
+    )
+    dispatcher = RecordingDispatcher()
+    handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(_a_command_for(session.id, requester_id=UserId.generate()))
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []
 
@@ -186,7 +211,7 @@ def test_a_missing_parent_workout_is_reported_as_a_failed_result_and_rolls_back(
     dispatcher = RecordingDispatcher()
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    result = handler.handle(_a_command_for(session.id))
+    result = handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert result.success is False
     assert "not found" in result.errors[0]
@@ -205,7 +230,7 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     dispatcher = RecordingDispatcher()
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    result = handler.handle(_a_command_for(session.id))
+    result = handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert result.success is False
     assert uow.rolled_back is True
@@ -223,7 +248,7 @@ def test_completing_a_still_planned_session_raises_and_is_not_swallowed() -> Non
     handler = CompleteWorkoutSessionHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     with pytest.raises(DomainInvariantViolationError, match="cannot transition"):
-        handler.handle(_a_command_for(session.id))
+        handler.handle(_a_command_for(session.id, requester_id=session.user_id))
 
     assert dispatcher.dispatched == []
 
@@ -243,6 +268,6 @@ def test_reuses_total_volume_as_the_training_load_scalar_for_completed_history()
         uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock()
     )
 
-    result = handler.handle(_a_command_for(first_session.id))
+    result = handler.handle(_a_command_for(first_session.id, requester_id=first_session.user_id))
 
     assert result.success is True

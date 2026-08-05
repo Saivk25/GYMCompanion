@@ -10,6 +10,7 @@ get_user_handler.GetUserHandler` — no `Clock`, no
 from __future__ import annotations
 
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.application.workout.dto.workout_dto import WorkoutDTO
@@ -46,5 +47,9 @@ class GetWorkoutHandler(QueryHandler[GetWorkoutQuery, WorkoutDTO]):
 
         if workout is None:
             return ApplicationResult.fail([f"workout {request.workout_id} not found"])
+
+        denial = ensure_owner(owner_id=workout.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(WorkoutDTO.from_workout(workout))

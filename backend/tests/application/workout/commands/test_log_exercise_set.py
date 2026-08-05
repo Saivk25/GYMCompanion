@@ -7,6 +7,7 @@ import pytest
 from app.application.shared.command import Command
 from app.application.workout.commands.log_exercise_set import LogExerciseSetCommand
 from app.domain.exercise.identifiers import ExerciseId
+from app.domain.user.identifiers import UserId
 from app.domain.workout_session.exercise_set import SetNumber, SetReps, SetRPE, SetWeight
 from app.domain.workout_session.identifiers import WorkoutSessionId
 
@@ -14,6 +15,7 @@ from app.domain.workout_session.identifiers import WorkoutSessionId
 def _a_command() -> LogExerciseSetCommand:
     return LogExerciseSetCommand(
         session_id=WorkoutSessionId.generate(),
+        requester_id=UserId.generate(),
         exercise_id=ExerciseId.generate(),
         set_number=SetNumber(1),
         weight=SetWeight(100.0),
@@ -34,6 +36,21 @@ def test_log_exercise_set_command_exposes_its_fields() -> None:
     assert command.weight == SetWeight(100.0)
     assert command.reps == SetReps(5)
     assert command.rpe == SetRPE(7)
+
+
+@pytest.mark.unit
+def test_log_exercise_set_command_exposes_its_requester_id() -> None:
+    requester_id = UserId.generate()
+    command = LogExerciseSetCommand(
+        session_id=WorkoutSessionId.generate(),
+        requester_id=requester_id,
+        exercise_id=ExerciseId.generate(),
+        set_number=SetNumber(1),
+        weight=SetWeight(100.0),
+        reps=SetReps(5),
+        rpe=SetRPE(7),
+    )
+    assert command.requester_id == requester_id
 
 
 @pytest.mark.unit

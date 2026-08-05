@@ -8,6 +8,7 @@ from app.application.readiness.commands.update_sleep import UpdateSleepCommand
 from app.application.readiness.handlers.update_sleep_handler import UpdateSleepHandler
 from app.domain.readiness.identifiers import ReadinessId
 from app.domain.readiness.value_objects import SleepDuration, SleepQuality
+from app.domain.user.identifiers import UserId
 from tests.application.readiness.factories import (
     FakeReadinessRepository,
     FakeUnitOfWork,
@@ -28,6 +29,7 @@ def test_replaces_given_fields_and_returns_the_readiness_id() -> None:
     result = handler.handle(
         UpdateSleepCommand(
             readiness_id=readiness.id,
+            requester_id=readiness.user_id,
             sleep_duration=SleepDuration(timedelta(hours=8)),
             sleep_quality=SleepQuality(9),
         )
@@ -51,7 +53,11 @@ def test_leaves_fields_unset_in_the_command_unchanged() -> None:
     uow = FakeUnitOfWork(entries=FakeReadinessRepository({readiness.id: readiness}))
     handler = UpdateSleepHandler(uow=uow, dispatcher=RecordingDispatcher(), clock=a_fixed_clock())
 
-    handler.handle(UpdateSleepCommand(readiness_id=readiness.id, sleep_quality=SleepQuality(6)))
+    handler.handle(
+        UpdateSleepCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, sleep_quality=SleepQuality(6)
+        )
+    )
 
     assert readiness.sleep_duration == SleepDuration(timedelta(hours=8))
     assert readiness.sleep_quality == SleepQuality(6)
@@ -64,7 +70,11 @@ def test_commits_and_dispatches_sleep_updated_after_commit() -> None:
     dispatcher = RecordingDispatcher()
     handler = UpdateSleepHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(UpdateSleepCommand(readiness_id=readiness.id, sleep_quality=SleepQuality(7)))
+    handler.handle(
+        UpdateSleepCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, sleep_quality=SleepQuality(7)
+        )
+    )
 
     assert uow.committed is True
     kinds = {type(event).__name__ for event in dispatcher.dispatched}
@@ -81,7 +91,11 @@ def test_dispatch_happens_strictly_after_commit() -> None:
     dispatcher = OrderTrackingDispatcher(call_order)
     handler = UpdateSleepHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
-    handler.handle(UpdateSleepCommand(readiness_id=readiness.id, sleep_quality=SleepQuality(7)))
+    handler.handle(
+        UpdateSleepCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, sleep_quality=SleepQuality(7)
+        )
+    )
 
     assert call_order == ["commit", "dispatch"]
 
@@ -94,7 +108,9 @@ def test_surfaces_a_sleep_warning_for_short_sleep_duration() -> None:
 
     result = handler.handle(
         UpdateSleepCommand(
-            readiness_id=readiness.id, sleep_duration=SleepDuration(timedelta(hours=3))
+            readiness_id=readiness.id,
+            requester_id=readiness.user_id,
+            sleep_duration=SleepDuration(timedelta(hours=3)),
         )
     )
 
@@ -110,7 +126,9 @@ def test_a_missing_readiness_check_in_is_reported_as_a_failed_result_and_rolls_b
     missing_id = ReadinessId.generate()
 
     result = handler.handle(
-        UpdateSleepCommand(readiness_id=missing_id, sleep_quality=SleepQuality(7))
+        UpdateSleepCommand(
+            readiness_id=missing_id, requester_id=UserId.generate(), sleep_quality=SleepQuality(7)
+        )
     )
 
     assert result.success is False
@@ -126,7 +144,11 @@ def test_a_repository_get_failure_is_reported_as_a_failed_result_and_rolls_back(
     handler = UpdateSleepHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateSleepCommand(readiness_id=ReadinessId.generate(), sleep_quality=SleepQuality(7))
+        UpdateSleepCommand(
+            readiness_id=ReadinessId.generate(),
+            requester_id=UserId.generate(),
+            sleep_quality=SleepQuality(7),
+        )
     )
 
     assert result.success is False
@@ -143,9 +165,31 @@ def test_a_commit_failure_is_reported_as_a_failed_result_and_rolls_back() -> Non
     handler = UpdateSleepHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
 
     result = handler.handle(
-        UpdateSleepCommand(readiness_id=readiness.id, sleep_quality=SleepQuality(7))
+        UpdateSleepCommand(
+            readiness_id=readiness.id, requester_id=readiness.user_id, sleep_quality=SleepQuality(7)
+        )
     )
 
     assert result.success is False
+    assert uow.rolled_back is True
+    assert dispatcher.dispatched == []
+
+
+@pytest.mark.unit
+def test_a_non_owner_requester_is_denied_and_rolls_back() -> None:
+    readiness = a_recorded_readiness()
+    uow = FakeUnitOfWork(entries=FakeReadinessRepository({readiness.id: readiness}))
+    dispatcher = RecordingDispatcher()
+    handler = UpdateSleepHandler(uow=uow, dispatcher=dispatcher, clock=a_fixed_clock())
+
+    result = handler.handle(
+        UpdateSleepCommand(
+            readiness_id=readiness.id, requester_id=UserId.generate(), sleep_quality=SleepQuality(7)
+        )
+    )
+
+    assert result.success is False
+    assert result.forbidden is True
+    assert result.value is None
     assert uow.rolled_back is True
     assert dispatcher.dispatched == []

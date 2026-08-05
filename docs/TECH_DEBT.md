@@ -183,9 +183,16 @@ Use Cases.
 
 ## TD-0002: No per-resource ownership authorization on 27 `v1` routes
 
-- Status: **Open.**
+- Status: **Resolved 2026-08-05.** Every one of the 27 routes now
+  verifies `resource.user_id == requester_id` before completing a
+  GET/UPDATE/DELETE/ACTION request; a non-owner request now receives
+  403 Forbidden instead of succeeding. See "Resolution" below and
+  `docs/adr/0033-resource-ownership-authorization.md`.
 - Identified: 2026-08-05, during the Authentication & Authorization
   phase (`docs/adr/0032-authentication-and-authorization.md`).
+- Resolved: 2026-08-05, in the standalone Resource Ownership
+  Authorization phase — exactly trigger condition 1 below, fired by
+  the next unit of work that substantively touched all five modules.
 
 ### What's missing
 
@@ -245,3 +252,49 @@ multi-handler signature change through without its own design pass.
 3. **If a concrete incident or test demonstrates cross-tenant data
    access in practice** — fires immediately, supersedes normal
    phase-scoping.
+
+### Resolution (2026-08-05)
+
+Closed as a standalone phase, scoped explicitly to this item, between
+Authentication & Authorization and the start of Flutter work.
+
+- New shared function: `app.application.shared.ownership.ensure_owner(
+  *, owner_id: UserId, requester_id: UserId) -> str | None` — the
+  single comparison every handler calls, extracted from the first call
+  site rather than repeated 27 times (the mistake TD-0001 named and
+  this phase deliberately avoided repeating).
+- New `forbidden: bool` field and `ApplicationResult.forbid(...)`
+  factory (`app/application/shared/application_result.py`) — the one
+  bit `app.api.errors._unwrap_or` reads to map any ownership denial to
+  403 Forbidden, regardless of which `unwrap_or_*` helper the route
+  would otherwise use.
+- `requester_id: UserId` added to all 27 addressed-by-id Commands/
+  Queries across Goal (4), Workout (3), WorkoutSession (5), Nutrition
+  (5), Progress (5), and Readiness (5); every route's previously-unused
+  `_user_id` binding is now `user_id`, threaded through as
+  `requester_id`. `StartWorkoutSessionHandler` is the one exception —
+  it checks the parent `Workout`'s `user_id`, since no `WorkoutSession`
+  exists yet at the point the check runs.
+- No new layer, base class, decorator, or middleware — authorization
+  is an ordinary equality check inside each handler's existing control
+  flow. No route function gained any logic; `tests/api/
+  test_import_boundaries.py` continues to pass with no new imports in
+  `app/api/routes/`.
+- New/extended tests: `tests/application/shared/test_ownership.py` (2),
+  `tests/application/shared/test_application_result.py` (+5 for
+  `forbid()`/the `forbidden`-and-`success` invariant), one
+  non-owner-denial test per touched handler (27, including a dedicated
+  `StartWorkoutSessionHandler` assertion that no session was added on
+  denial), and one API-level end-to-end test
+  (`tests/api/routes/test_goal_routes.py`) proving the `forbidden` -> 403
+  mapping through a real route, not only at the `ApplicationResult`
+  boundary.
+- Full verification gate passed: Ruff (check + format), Mypy (`app` +
+  `tests`, 0 errors, 761 files), full test suite by directory (Domain
+  1,407; Application 626; Infra 23 passed + 51 skipped — no reachable
+  Postgres in this sandbox; API 117 passed + 12 skipped; Composition/
+  Core 95 — all green), import boundary tests (64 passed), and 100%
+  coverage on both new shared modules with no coverage regression on
+  any of the 27 touched handlers.
+- See `docs/adr/0033-resource-ownership-authorization.md` for the full
+  decision record.

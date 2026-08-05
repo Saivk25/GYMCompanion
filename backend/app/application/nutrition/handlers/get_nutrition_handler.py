@@ -11,6 +11,7 @@ from __future__ import annotations
 from app.application.nutrition.dto.nutrition_dto import NutritionDTO
 from app.application.nutrition.queries.get_nutrition import GetNutritionQuery
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.nutrition.nutrition import Nutrition
@@ -45,5 +46,9 @@ class GetNutritionHandler(QueryHandler[GetNutritionQuery, NutritionDTO]):
 
         if nutrition is None:
             return ApplicationResult.fail([f"nutrition entry {request.nutrition_id} not found"])
+
+        denial = ensure_owner(owner_id=nutrition.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(NutritionDTO.from_nutrition(nutrition))

@@ -90,9 +90,10 @@ class UpdateWorkoutRequest(BaseModel):
     goal: str | None = None
     notes: str | None = None
 
-    def to_command(self, workout_id: WorkoutId) -> UpdateWorkoutCommand:
+    def to_command(self, workout_id: WorkoutId, requester_id: UserId) -> UpdateWorkoutCommand:
         return UpdateWorkoutCommand(
             workout_id=workout_id,
+            requester_id=requester_id,
             goal=WorkoutGoal(self.goal) if self.goal is not None else None,
             notes=WorkoutNotes(self.notes) if self.notes is not None else None,
         )
@@ -146,9 +147,11 @@ class WorkoutResponse(BaseModel):
 class StartWorkoutSessionRequest(BaseModel):
     session_date: date
 
-    def to_command(self, workout_id: WorkoutId) -> StartWorkoutSessionCommand:
+    def to_command(self, workout_id: WorkoutId, requester_id: UserId) -> StartWorkoutSessionCommand:
         return StartWorkoutSessionCommand(
-            workout_id=workout_id, session_date=SessionDate(self.session_date)
+            workout_id=workout_id,
+            requester_id=requester_id,
+            session_date=SessionDate(self.session_date),
         )
 
 
@@ -157,9 +160,12 @@ class CompleteWorkoutSessionRequest(BaseModel):
     completion_percentage: float
     rating: int | None = None
 
-    def to_command(self, session_id: WorkoutSessionId) -> CompleteWorkoutSessionCommand:
+    def to_command(
+        self, session_id: WorkoutSessionId, requester_id: UserId
+    ) -> CompleteWorkoutSessionCommand:
         return CompleteWorkoutSessionCommand(
             session_id=session_id,
+            requester_id=requester_id,
             duration=SessionDuration(seconds_to_duration(self.duration_seconds)),
             completion_percentage=CompletionPercentage(self.completion_percentage),
             rating=SessionRating(self.rating) if self.rating is not None else None,
@@ -173,9 +179,12 @@ class LogExerciseSetRequest(BaseModel):
     reps: int
     rpe: int
 
-    def to_command(self, session_id: WorkoutSessionId) -> LogExerciseSetCommand:
+    def to_command(
+        self, session_id: WorkoutSessionId, requester_id: UserId
+    ) -> LogExerciseSetCommand:
         return LogExerciseSetCommand(
             session_id=session_id,
+            requester_id=requester_id,
             exercise_id=ExerciseId.parse(self.exercise_id),
             set_number=SetNumber(self.set_number),
             weight=SetWeight(self.weight),
@@ -188,9 +197,12 @@ class CompleteExerciseSetRequest(BaseModel):
     performance_id: str
     set_number: int
 
-    def to_command(self, session_id: WorkoutSessionId) -> CompleteExerciseSetCommand:
+    def to_command(
+        self, session_id: WorkoutSessionId, requester_id: UserId
+    ) -> CompleteExerciseSetCommand:
         return CompleteExerciseSetCommand(
             session_id=session_id,
+            requester_id=requester_id,
             performance_id=ExercisePerformanceId.parse(self.performance_id),
             set_number=self.set_number,
         )

@@ -16,14 +16,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.application.shared.command import Command
+from app.domain.user.identifiers import UserId
 from app.domain.workout.identifiers import WorkoutId
 from app.domain.workout.value_objects import WorkoutGoal, WorkoutNotes
 
 
 @dataclass(frozen=True, kw_only=True)
 class UpdateWorkoutCommand(Command):
-    """Replace an existing Workout's goal and notes."""
+    """Replace an existing Workout's goal and notes.
+
+    `requester_id` is the authenticated caller — see
+    `app.application.workout.queries.get_workout.GetWorkoutQuery`'s own
+    module docstring for the full ownership-check reasoning, which
+    applies identically here.
+    """
 
     workout_id: WorkoutId
+    requester_id: UserId
     goal: WorkoutGoal | None
     notes: WorkoutNotes | None

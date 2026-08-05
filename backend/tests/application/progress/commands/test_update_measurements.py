@@ -8,11 +8,13 @@ from app.application.progress.commands.update_measurements import UpdateMeasurem
 from app.application.shared.command import Command
 from app.domain.progress.identifiers import ProgressId
 from app.domain.progress.value_objects import ChestMeasurement, WaistMeasurement
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateMeasurementsCommand:
     return UpdateMeasurementsCommand(
         progress_id=ProgressId.generate(),
+        requester_id=UserId.generate(),
         waist=WaistMeasurement(85.0),
         chest=ChestMeasurement(100.0),
     )
@@ -32,7 +34,9 @@ def test_update_measurements_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_measurements_command_fields_default_to_none_meaning_unchanged() -> None:
-    command = UpdateMeasurementsCommand(progress_id=ProgressId.generate())
+    command = UpdateMeasurementsCommand(
+        progress_id=ProgressId.generate(), requester_id=UserId.generate()
+    )
     assert command.waist is None
     assert command.chest is None
     assert command.hip is None

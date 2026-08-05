@@ -8,6 +8,7 @@ Same read-side shape as `GetWorkoutHandler`. See
 from __future__ import annotations
 
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.application.workout.dto.workout_session_dto import WorkoutSessionDTO
@@ -44,5 +45,9 @@ class GetWorkoutSessionHandler(QueryHandler[GetWorkoutSessionQuery, WorkoutSessi
 
         if session is None:
             return ApplicationResult.fail([f"workout session {request.session_id} not found"])
+
+        denial = ensure_owner(owner_id=session.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(WorkoutSessionDTO.from_workout_session(session))

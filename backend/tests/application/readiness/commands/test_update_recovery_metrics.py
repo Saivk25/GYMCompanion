@@ -17,11 +17,13 @@ from app.domain.readiness.value_objects import (
     SorenessLevel,
     StressLevel,
 )
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateRecoveryMetricsCommand:
     return UpdateRecoveryMetricsCommand(
         readiness_id=ReadinessId.generate(),
+        requester_id=UserId.generate(),
         energy_level=EnergyLevel(6),
         stress_level=StressLevel(4),
         soreness_level=SorenessLevel(3),
@@ -47,7 +49,9 @@ def test_update_recovery_metrics_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_recovery_metrics_command_fields_default_to_none_meaning_unchanged() -> None:
-    command = UpdateRecoveryMetricsCommand(readiness_id=ReadinessId.generate())
+    command = UpdateRecoveryMetricsCommand(
+        readiness_id=ReadinessId.generate(), requester_id=UserId.generate()
+    )
     assert command.energy_level is None
     assert command.stress_level is None
     assert command.soreness_level is None

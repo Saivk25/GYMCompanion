@@ -980,8 +980,18 @@ ruff, mypy --strict, the destructive-migration check, 100% Domain Core
 coverage, and the full test suite (2,225 passed, 63 skipped — the
 pre-existing "no reachable Postgres in this sandbox" skip convention
 every integration test in this repository already carries, expected to
-run in CI). Per-resource ownership authorization (a caller can act on
-any resource id, not only their own) and access-token revocation on
-logout are named, disclosed, deferred gaps — see ADR 0032's
-Consequences. No AI integration, no Flutter client wiring to any of
-this, exists yet.
+run in CI). Access-token revocation on logout remains a named,
+disclosed, deferred gap — see ADR 0032's Consequences.
+
+Resource Ownership Authorization is done (`docs/adr/0033`; TD-0002
+resolved). All 27 `GET`/`PATCH`/`PUT`/`DELETE`/action routes across
+Goal, Workout, WorkoutSession, Nutrition, Progress, and Readiness now
+verify `resource.user_id == requester_id` before completing the
+request — a shared `app.application.shared.ownership.ensure_owner()`
+comparison inside each handler, and a new `forbidden` bit on
+`ApplicationResult` that `app.api.errors._unwrap_or` maps to 403
+Forbidden. A caller can no longer read, update, or delete another
+user's data by guessing or reusing an id. Full verification is green:
+ruff, mypy --strict, the full test suite by directory, import boundary
+tests, and 100% coverage on both new shared modules. No AI
+integration, no Flutter client wiring to any of this, exists yet.

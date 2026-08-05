@@ -11,6 +11,7 @@ from __future__ import annotations
 from app.application.progress.dto.progress_dto import ProgressDTO
 from app.application.progress.queries.get_progress import GetProgressQuery
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.progress.progress import Progress
@@ -45,5 +46,9 @@ class GetProgressHandler(QueryHandler[GetProgressQuery, ProgressDTO]):
 
         if progress is None:
             return ApplicationResult.fail([f"progress record {request.progress_id} not found"])
+
+        denial = ensure_owner(owner_id=progress.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(ProgressDTO.from_progress(progress))

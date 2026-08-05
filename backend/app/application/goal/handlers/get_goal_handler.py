@@ -10,6 +10,7 @@ from __future__ import annotations
 from app.application.goal.dto.goal_dto import GoalDTO
 from app.application.goal.queries.get_goal import GetGoalQuery
 from app.application.shared.application_result import ApplicationResult
+from app.application.shared.ownership import ensure_owner
 from app.application.shared.query_handler import QueryHandler
 from app.application.shared.unit_of_work import UnitOfWork
 from app.domain.goal.goal import Goal
@@ -42,5 +43,9 @@ class GetGoalHandler(QueryHandler[GetGoalQuery, GoalDTO]):
 
         if goal is None:
             return ApplicationResult.fail([f"goal {request.goal_id} not found"])
+
+        denial = ensure_owner(owner_id=goal.user_id, requester_id=request.requester_id)
+        if denial is not None:
+            return ApplicationResult.forbid([denial])
 
         return ApplicationResult.ok(GoalDTO.from_goal(goal))

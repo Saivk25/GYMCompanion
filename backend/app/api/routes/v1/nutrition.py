@@ -66,10 +66,12 @@ def record_nutrition(
 @router.get("/{nutrition_id}", response_model=NutritionResponse)
 def get_nutrition(
     nutrition_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: GetNutritionHandler = Depends(_get_get_handler),
 ) -> NutritionResponse:
-    result = handler.handle(GetNutritionQuery(nutrition_id=NutritionId.parse(nutrition_id)))
+    result = handler.handle(
+        GetNutritionQuery(nutrition_id=NutritionId.parse(nutrition_id), requester_id=user_id)
+    )
     return NutritionResponse.from_dto(unwrap_or_404(result))
 
 
@@ -86,10 +88,10 @@ def list_nutrition(
 def update_nutrition(
     nutrition_id: str,
     body: UpdateNutritionRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNutritionHandler = Depends(_get_update_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id)))
+    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -98,10 +100,10 @@ def update_nutrition(
 def update_water(
     nutrition_id: str,
     body: UpdateWaterRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateWaterHandler = Depends(_get_update_water_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id)))
+    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -110,10 +112,10 @@ def update_water(
 def update_nutrition_notes(
     nutrition_id: str,
     body: UpdateNutritionNotesRequest,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: UpdateNutritionNotesHandler = Depends(_get_update_notes_handler),
 ) -> IdResponse:
-    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id)))
+    result = handler.handle(body.to_command(NutritionId.parse(nutrition_id), user_id))
     updated_id = unwrap_or_400(result)
     return IdResponse(id=str(updated_id), warnings=result.warnings)
 
@@ -121,9 +123,11 @@ def update_nutrition_notes(
 @router.delete("/{nutrition_id}", response_model=IdResponse)
 def delete_nutrition(
     nutrition_id: str,
-    _user_id: UserId = Depends(get_current_user_id),
+    user_id: UserId = Depends(get_current_user_id),
     handler: DeleteNutritionHandler = Depends(_get_delete_handler),
 ) -> IdResponse:
-    result = handler.handle(DeleteNutritionCommand(nutrition_id=NutritionId.parse(nutrition_id)))
+    result = handler.handle(
+        DeleteNutritionCommand(nutrition_id=NutritionId.parse(nutrition_id), requester_id=user_id)
+    )
     deleted_id = unwrap_or_400(result)
     return IdResponse(id=str(deleted_id), warnings=result.warnings)

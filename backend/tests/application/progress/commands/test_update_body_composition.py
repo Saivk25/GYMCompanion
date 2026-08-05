@@ -10,11 +10,13 @@ from app.application.progress.commands.update_body_composition import (
 from app.application.shared.command import Command
 from app.domain.progress.identifiers import ProgressId
 from app.domain.progress.value_objects import BodyFatPercentage, BodyWeight
+from app.domain.user.identifiers import UserId
 
 
 def _a_command() -> UpdateBodyCompositionCommand:
     return UpdateBodyCompositionCommand(
         progress_id=ProgressId.generate(),
+        requester_id=UserId.generate(),
         body_weight=BodyWeight(80.0),
         body_fat_percentage=BodyFatPercentage(20.0),
     )
@@ -34,7 +36,9 @@ def test_update_body_composition_command_exposes_its_fields() -> None:
 
 @pytest.mark.unit
 def test_update_body_composition_command_fields_default_to_none_meaning_unchanged() -> None:
-    command = UpdateBodyCompositionCommand(progress_id=ProgressId.generate())
+    command = UpdateBodyCompositionCommand(
+        progress_id=ProgressId.generate(), requester_id=UserId.generate()
+    )
     assert command.body_weight is None
     assert command.body_fat_percentage is None
     assert command.lean_body_mass is None
