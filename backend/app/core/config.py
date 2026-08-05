@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "postgresql+psycopg://gymcompanion:gymcompanion@localhost:5432/gymcompanion"
     secret_key: str = _PLACEHOLDER_SECRET_KEY
+    # Consumed by app/composition/logging_config.py's configure_logging() —
+    # the one place this value is read (see that module's own docstring for
+    # why logging configuration is a Composition Root concern, not a
+    # per-module `logging.getLogger(__name__).setLevel(...)` scattered
+    # through the codebase). A plain str, not Python's own `int` level
+    # constants, because it comes from an environment variable
+    # (GYM_LOG_LEVEL) and gains nothing from a bespoke enum over the
+    # standard level names logging.getLevelName() already understands.
+    log_level: str = "INFO"
 
     @property
     def is_local(self) -> bool:
