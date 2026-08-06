@@ -232,5 +232,61 @@ void main() {
         expect(find.byType(AppSkeletonBox), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'AppSegmentedControl renders every segment and announces the selected one',
+      (WidgetTester tester) async {
+        // Train's own regression coverage for this phase's design-system
+        // extension (see that file's doc comment for why it had to be
+        // built rather than bypassed).
+        final SemanticsHandle handle = tester.ensureSemantics();
+        String selected = 'a';
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) => AppSegmentedControl<String>(
+                  segments: const <(String, String)>[
+                    ('a', 'This Week'),
+                    ('b', 'History'),
+                    ('c', 'Library'),
+                  ],
+                  selected: selected,
+                  onChanged: (String v) => setState(() => selected = v),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('This Week'), findsOneWidget);
+        expect(find.text('History'), findsOneWidget);
+        expect(find.text('Library'), findsOneWidget);
+
+        await tester.tap(find.text('History'));
+        await tester.pump();
+        expect(selected, 'b');
+        handle.dispose();
+      },
+    );
+
+    testWidgets('AppTextField renders its label and reports typed input', (
+      WidgetTester tester,
+    ) async {
+      final TextEditingController controller = TextEditingController();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Scaffold(
+            body: AppTextField(label: 'Weight', controller: controller),
+          ),
+        ),
+      );
+
+      expect(find.text('Weight'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '60');
+      expect(controller.text, '60');
+    });
   });
 }

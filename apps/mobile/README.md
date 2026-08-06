@@ -18,16 +18,27 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md` for why the FAB
   lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
-- `lib/features/<tab>/presentation/` — one screen per tab. `today/` is real (see below);
-  the rest are still placeholders — see each file's doc comment for which sprint
-  populates it for real.
+- `lib/features/<tab>/presentation/` — one screen per tab. `today/` and `train/` are
+  real (see below); Fuel, Progress, and Coach are still placeholders — see each
+  file's doc comment for which phase populates it for real.
 - `lib/features/today/` — the first real feature screen, and the pattern every later
   screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
   interface + a thin Riverpod `AsyncNotifier`), `infrastructure/` (a disclosed mock
   repository — no real API client yet), `presentation/` (the screen + its widgets).
   See `docs/adr/0036-today-screen.md` for the full reasoning.
+- `lib/features/train/` — the same pattern applied to Train: Train Home (This
+  Week/History/Library in-page tabs), Pre-session (tier choice), Active Workout
+  (set logging + rest timer + session progress, bundled per the UX/UI Design
+  Bible's own single-screen spec), Session Summary (shared between a fresh
+  completion and viewing a past session), and two honest "not connected yet"
+  placeholders (Exercise Detail, Personal Records) where no backend endpoint
+  exists at all yet. See `docs/adr/0037-train-module.md`.
+- `lib/shared/domain/` — pure Dart value types genuinely shared across more than
+  one feature (currently just `SessionTier`, used by both Today and Train) —
+  not a dumping ground; a type only moves here once a second feature actually
+  needs it, per `docs/adr/0037-train-module.md`'s Decision 5.
 - `test/` — mirrors `lib/`, including `test/design/` for the design system and
-  `test/features/today/` for the Today screen.
+  `test/features/today/`, `test/features/train/` for those two modules.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -120,5 +131,19 @@ outranks the session card per the UX/UI Design Bible, an understated streak line
 an open-task card, offline indicator, pull-to-refresh, and the Today-only quick-add
 FAB. Built against a disclosed mock repository (`MockTodayRepository`) behind a
 `TodayRepository` interface — no real API client, cache, or offline sync yet; those
-are later, separately-scoped stages. Train, Fuel, Progress, and Coach remain
-placeholders. No authentication flow exists yet.
+are later, separately-scoped stages. "Start session" now navigates for real into
+Train's Pre-session screen.
+
+Train (`docs/adr/0037`) is the second real feature screen, covering every screen
+named in its own build directive: Train Home (This Week/History/Library in-page
+tabs — the first use of the new `AppSegmentedControl` design-system component),
+Pre-session (explicit tier choice, never silently defaulted), Active Workout (set
+logging — the first use of the new `AppTextField` component — plus a persistent
+rest-timer bar and a session-progress meter, bundled into one screen per the UX/UI
+Design Bible's own spec for it), Session Summary (shared between a fresh
+completion and viewing a past session from History), and two honest "not
+connected yet" placeholder screens (Exercise Detail, Personal Records) where no
+backend endpoint exists yet at all — not merely unwired. Built against
+`MockTrainRepository`, a stateful mock (unlike Today's) that keeps an in-memory
+session so logging a set is actually visible on screen. Fuel, Progress, and Coach
+remain placeholders. No authentication flow exists yet.

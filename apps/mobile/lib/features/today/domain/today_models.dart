@@ -9,6 +9,10 @@
 /// field-for-field translation, not a re-interpretation.
 library;
 
+import '../../../shared/domain/session_tier.dart';
+
+export '../../../shared/domain/session_tier.dart' show SessionTier;
+
 /// The rolling recovery band a `RecoveryState` computation resolves to
 /// (Domain Model Bible Section 7.3: `Normal -> Light -> Recovery ->
 /// Escalate`). Today shows this as a band, never the raw underlying score
@@ -33,25 +37,6 @@ enum ReadinessBand {
   /// itself is a separate screen (UX/UI Design Bible Section 5, Safety
   /// Escalation), out of this screen's scope.
   escalate,
-}
-
-/// The three session-intensity defaults `RecoveryState` + time-available
-/// resolve to (Domain Model Bible: "selects tier defaults (min/standard/
-/// stretch)"). The user may always choose lower than the resolved
-/// default, never higher without rule permission — Today only displays
-/// the resolved default; it does not offer a tier picker.
-enum SessionTier {
-  min,
-  standard,
-  stretch;
-
-  /// Bible-facing label — never inferred from the enum name at a call
-  /// site, so a rename here cannot silently change what users read.
-  String get label => switch (this) {
-        SessionTier.min => 'Minimum',
-        SessionTier.standard => 'Standard',
-        SessionTier.stretch => 'Stretch',
-      };
 }
 
 /// Today's session-card sub-state — independent of the page-level fetch

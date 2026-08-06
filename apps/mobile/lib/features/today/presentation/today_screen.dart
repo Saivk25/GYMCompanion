@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
 import '../application/today_controller.dart';
@@ -139,7 +140,17 @@ class _TodayContent extends StatelessWidget {
       SessionCard(
         status: state.sessionStatus,
         session: state.session,
-        onStartSession: () => _notBuiltYet(context, 'Active session'),
+        // Real navigation into the now-built Train module — the natural-
+        // continuation goal this project's Train directive named
+        // explicitly. 'workout-today' is `MockTrainRepository`'s own
+        // fixed id for today's workout; `TodaySessionSummary` (`today_
+        // models.dart`) has no `workoutId` field yet (it was built before
+        // Train existed to link to), so this is a disclosed, temporary
+        // coupling — the same posture every mock-repository seam in this
+        // project already takes — not a silent hack. A real repository
+        // pass will add a real `workoutId` to `TodaySessionSummary` and
+        // this literal goes away.
+        onStartSession: () => context.push('/train/pre-session/workout-today'),
         onTwoMinuteWin: () => _notBuiltYet(context, 'Two-minute win'),
         onGetStarted: () => _notBuiltYet(context, 'Plan setup'),
         onBrowseLibrary: () => _notBuiltYet(context, 'Exercise library'),
