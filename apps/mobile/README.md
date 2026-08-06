@@ -5,15 +5,27 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
 
 ## Layout
 
+- `lib/design/` — the design system: `tokens/` (color, typography, spacing, radius,
+  elevation, motion, breakpoints, icons — pure values, no widgets), `theme/`
+  (assembles tokens into real `ColorScheme`/`TextTheme`/`ThemeData`), `components/`
+  (reusable widget primitives — buttons, cards, badges, list tiles, empty/loading/
+  error states, bottom sheet and dialog helpers). Import `design/design.dart` from
+  any screen rather than individual token/theme/component files. See
+  `docs/adr/0034-flutter-design-system.md` (repository root) for the full reasoning
+  behind every token and component choice.
 - `lib/shell/` — `app_router.dart` (the `go_router` route table, one `StatefulShellRoute`
   branch per tab) and `app_shell.dart` (the persistent top bar + bottom navigation).
+  Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically through
+  `ThemeData`'s component themes — this file itself was not touched by ADR 0034.
 - `lib/features/<tab>/presentation/` — one screen per tab. Currently placeholders; see
   each file's doc comment for which sprint populates it for real.
-- `test/` — mirrors `lib/`.
+- `test/` — mirrors `lib/`, including `test/design/` for the design system.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
-`docs/adr/0003-flutter-state-management.md` for two decisions made during this
-scaffolding step that weren't already pinned down by the six planning documents.
+`docs/adr/0003-flutter-state-management.md` for two decisions made during the
+scaffolding step that weren't already pinned down by the six planning documents,
+and `docs/adr/0034-flutter-design-system.md` for the design system built on top
+of that scaffold.
 
 ## First-time setup
 
@@ -76,5 +88,13 @@ the default width genuinely proves cramped in practice — not before.
 ## Status
 
 Sprint 1, Steps 3 and 5: a five-tab shell that boots and navigates, with one widget
-test, no real feature data yet. Domain-driven screens land starting Sprint 2 of the
-Engineering Master Plan.
+test, no real feature data yet.
+
+The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
+(light + dark), and a closed set of reusable component primitives
+(`AppButton`, `AppCard`, `AppBadge`, `AppListTile`, `AppSectionHeader`,
+`AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
+helpers) — no `ColorScheme.fromSeed`, no bundled font, no new dependency. `lib/app.dart`
+now runs on `AppTheme.light`/`AppTheme.dark` instead of the Step 3 placeholder theme.
+No feature screens, navigation changes, or authentication flow exist yet — per the
+brief's own implementation order, this phase stops at the design system.
