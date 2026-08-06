@@ -14,12 +14,20 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   `docs/adr/0034-flutter-design-system.md` (repository root) for the full reasoning
   behind every token and component choice.
 - `lib/shell/` — `app_router.dart` (the `go_router` route table, one `StatefulShellRoute`
-  branch per tab) and `app_shell.dart` (the persistent top bar + bottom navigation).
-  Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically through
-  `ThemeData`'s component themes — this file itself was not touched by ADR 0034.
-- `lib/features/<tab>/presentation/` — one screen per tab. Currently placeholders; see
-  each file's doc comment for which sprint populates it for real.
-- `test/` — mirrors `lib/`, including `test/design/` for the design system.
+  branch per tab) and `app_shell.dart` (the persistent top bar + bottom navigation, plus
+  the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md` for why the FAB
+  lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
+  through `ThemeData`'s component themes.
+- `lib/features/<tab>/presentation/` — one screen per tab. `today/` is real (see below);
+  the rest are still placeholders — see each file's doc comment for which sprint
+  populates it for real.
+- `lib/features/today/` — the first real feature screen, and the pattern every later
+  screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
+  interface + a thin Riverpod `AsyncNotifier`), `infrastructure/` (a disclosed mock
+  repository — no real API client yet), `presentation/` (the screen + its widgets).
+  See `docs/adr/0036-today-screen.md` for the full reasoning.
+- `test/` — mirrors `lib/`, including `test/design/` for the design system and
+  `test/features/today/` for the Today screen.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -106,5 +114,11 @@ accessible, WCAG contrast was computed (not asserted) with two real failures fou
 and fixed, and typography was audited under large accessibility text sizes across
 every named component.
 
-No feature screens, navigation changes, or authentication flow exist yet — per the
-brief's own implementation order, this phase stops at the design system.
+Today (`docs/adr/0036`) is the first real feature screen: readiness band, session
+card (loading/ready/completed/empty/error), an outstanding-check-in prompt that
+outranks the session card per the UX/UI Design Bible, an understated streak line,
+an open-task card, offline indicator, pull-to-refresh, and the Today-only quick-add
+FAB. Built against a disclosed mock repository (`MockTodayRepository`) behind a
+`TodayRepository` interface — no real API client, cache, or offline sync yet; those
+are later, separately-scoped stages. Train, Fuel, Progress, and Coach remain
+placeholders. No authentication flow exists yet.
