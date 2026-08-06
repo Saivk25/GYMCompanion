@@ -59,7 +59,8 @@ class AppCard extends StatelessWidget {
     final Color fill = AppColorScheme.surfaceAt(colorScheme, elevation);
     final List<BoxShadow> shadows = AppElevation.shadowsFor(
       elevation,
-      colorScheme.brightness,
+      brightness: colorScheme.brightness,
+      shadowColor: colorScheme.shadow,
     );
 
     final Widget paddedChild = Padding(padding: padding, child: child);
@@ -70,7 +71,11 @@ class AppCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: onTap == null
           ? paddedChild
-          : InkWell(onTap: onTap, child: paddedChild),
+          : InkWell(
+              onTap: onTap,
+              overlayColor: AppOpacity.overlayFor(colorScheme.onSurface),
+              child: paddedChild,
+            ),
     );
 
     return DecoratedBox(

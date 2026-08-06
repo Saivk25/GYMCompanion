@@ -36,22 +36,32 @@ import 'app_text_theme.dart';
 /// calmer and closer to how the products this system studies (Things 3,
 /// Craft, Apple Health) actually respond to touch.
 abstract final class AppTheme {
-  static ThemeData get light => _build(
-        colorScheme: AppColorScheme.light,
-        semanticColors: AppSemanticColors.light,
-      );
+  /// `static final`, not a getter — [_build] constructs roughly a dozen
+  /// component sub-themes (button styles, input decoration, snack bar,
+  /// dialog, bottom sheet, navigation bar...) every time it runs. A
+  /// getter re-evaluates its body on *every* access, so anything that
+  /// reads `AppTheme.light` more than once — hot reload, a widget
+  /// rebuilding above `MaterialApp`, a test constructing it repeatedly —
+  /// would silently reallocate the entire theme tree each time, for a
+  /// result that is always identical given the same color scheme.
+  /// `static final` computes [_build] exactly once, on first access, and
+  /// caches the result for the process's lifetime — the same fix, for the
+  /// same reason, applied to [AppSemanticColors.light]/`.dark`.
+  static final ThemeData light = _build(
+    colorScheme: AppColorScheme.light,
+    semanticColors: AppSemanticColors.light,
+  );
 
-  static ThemeData get dark => _build(
-        colorScheme: AppColorScheme.dark,
-        semanticColors: AppSemanticColors.dark,
-      );
+  static final ThemeData dark = _build(
+    colorScheme: AppColorScheme.dark,
+    semanticColors: AppSemanticColors.dark,
+  );
 
   static ThemeData _build({
     required ColorScheme colorScheme,
     required AppSemanticColors semanticColors,
   }) {
     final TextTheme textTheme = AppTextTheme.build(colorScheme);
-    final bool isDark = colorScheme.brightness == Brightness.dark;
 
     return ThemeData(
       useMaterial3: true,
@@ -61,7 +71,6 @@ abstract final class AppTheme {
       textTheme: textTheme,
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
-      visualDensity: VisualDensity.standard,
       extensions: <ThemeExtension<dynamic>>[semanticColors],
 
       appBarTheme: AppBarTheme(
@@ -83,6 +92,7 @@ abstract final class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         elevation: AppElevation.materialElevationFor(AppElevationLevel.flat),
         height: 64,
+        overlayColor: AppOpacity.overlayFor(colorScheme.onSurface),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final bool selected = states.contains(WidgetState.selected);
           return textTheme.labelMedium?.copyWith(
@@ -164,14 +174,29 @@ abstract final class AppTheme {
 
       iconTheme: IconThemeData(color: colorScheme.onSurfaceVariant, size: 24),
 
+      // ## Disabled and interaction states — one source of truth
+      //
+      // The design system review found disabled styling computed
+      // ad hoc per button variant (a hand-rolled `onSurface.withOpacity`
+      // pair here, nothing at all on the other two variants) and no
+      // pressed/hovered/focused behavior beyond whatever Flutter's
+      // `ButtonStyleButton` defaults to internally. All three button
+      // themes below now read disabled colors from
+      // [AppSemanticColors.disabledContent]/`disabledContainer` — the
+      // single named home for "what disabled looks like" — and every
+      // variant's `overlayColor` comes from [AppOpacity.overlayFor],
+      // this system's own token-driven pressed/hovered/focused state,
+      // rather than an unreviewed Material default. Primary
+      // (`ElevatedButton`), Secondary (`OutlinedButton`), and Tertiary
+      // (`TextButton`) therefore share one disabled/interaction model,
+      // varied only by which color each variant's overlay tints toward
+      // (its own foreground color), never by whether the states exist.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          // ignore: deprecated_member_use
-          disabledBackgroundColor: colorScheme.onSurface.withOpacity(0.12),
-          // ignore: deprecated_member_use
-          disabledForegroundColor: colorScheme.onSurface.withOpacity(0.38),
+          disabledBackgroundColor: semanticColors.disabledContainer,
+          disabledForegroundColor: semanticColors.disabledContent,
           elevation: 0,
           minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -180,12 +205,15 @@ abstract final class AppTheme {
           ),
           textStyle: textTheme.labelLarge,
           animationDuration: AppMotion.fast,
+        ).copyWith(
+          overlayColor: AppOpacity.overlayFor(colorScheme.onPrimary),
         ),
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.onSurface,
+          disabledForegroundColor: semanticColors.disabledContent,
           side: BorderSide(color: colorScheme.outline),
           minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -194,12 +222,21 @@ abstract final class AppTheme {
           ),
           textStyle: textTheme.labelLarge,
           animationDuration: AppMotion.fast,
+        ).copyWith(
+          overlayColor: AppOpacity.overlayFor(colorScheme.onSurface),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return BorderSide(color: semanticColors.disabledContent);
+            }
+            return BorderSide(color: colorScheme.outline);
+          }),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
+          disabledForegroundColor: semanticColors.disabledContent,
           minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           shape: const RoundedRectangleBorder(
@@ -207,6 +244,8 @@ abstract final class AppTheme {
           ),
           textStyle: textTheme.labelLarge,
           animationDuration: AppMotion.fast,
+        ).copyWith(
+          overlayColor: AppOpacity.overlayFor(colorScheme.primary),
         ),
       ),
 
@@ -244,12 +283,23 @@ abstract final class AppTheme {
         ),
       ),
 
+      // `inverseSurface`/`onInverseSurface`/`inversePrimary` are
+      // `ColorScheme`'s own purpose-built fields for "a surface that
+      // deliberately inverts light/dark mode" — exactly what a snack bar
+      // is (a dark chip in light mode, a light chip in dark mode). The
+      // design system review found an earlier version of this theme
+      // hand-picking `AppColors.neutral100`/`neutral900` and re-deriving
+      // that same light/dark inversion `AppColorScheme` had already
+      // decided — a second, disconnected copy of one decision. Reading
+      // `colorScheme.inverseSurface` directly removes the duplication
+      // (and the local `isDark` branching it required) in favor of one
+      // source of truth.
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isDark ? AppColors.neutral100 : AppColors.neutral900,
+        backgroundColor: colorScheme.inverseSurface,
         contentTextStyle: textTheme.bodyMedium?.copyWith(
-          color: isDark ? AppColors.neutral900 : AppColors.neutral50,
+          color: colorScheme.onInverseSurface,
         ),
-        actionTextColor: isDark ? AppColors.signal600 : AppColors.signal300,
+        actionTextColor: colorScheme.inversePrimary,
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(
           borderRadius: AppRadius.radiusSm,

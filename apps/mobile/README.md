@@ -96,5 +96,15 @@ The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
 `AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
 helpers) — no `ColorScheme.fromSeed`, no bundled font, no new dependency. `lib/app.dart`
 now runs on `AppTheme.light`/`AppTheme.dark` instead of the Step 3 placeholder theme.
+
+An architecture review of that design system was performed and accepted; every
+Critical and Important finding it raised has since been resolved (`docs/adr/0035`) —
+`AppTheme`/`AppSemanticColors` are memoized, disabled/focus/selection are real named
+tokens with a token-driven pressed/hovered/focused interaction system
+(`AppOpacity`), touch targets meet 48dp, loading buttons remain screen-reader
+accessible, WCAG contrast was computed (not asserted) with two real failures found
+and fixed, and typography was audited under large accessibility text sizes across
+every named component.
+
 No feature screens, navigation changes, or authentication flow exist yet — per the
 brief's own implementation order, this phase stops at the design system.

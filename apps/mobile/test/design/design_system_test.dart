@@ -40,6 +40,44 @@ void main() {
         isNotNull,
       );
     });
+
+    test('light and dark are memoized, not rebuilt on every access', () {
+      // Regression test for Critical Finding 1: `AppTheme.light`/`.dark`
+      // were previously `get` accessors that rebuilt the entire ThemeData
+      // tree on every read. `static final` means two reads return the
+      // *same instance*, not just an equal one.
+      expect(identical(AppTheme.light, AppTheme.light), isTrue);
+      expect(identical(AppTheme.dark, AppTheme.dark), isTrue);
+    });
+  });
+
+  group('AppSemanticColors', () {
+    test('light and dark define the disabled/focus/selection tokens', () {
+      // Regression test for Important Finding 7: these were previously
+      // absent, relying on implicit Material defaults.
+      for (final AppSemanticColors semantic in <AppSemanticColors>[
+        AppSemanticColors.light,
+        AppSemanticColors.dark,
+      ]) {
+        expect(semantic.disabledContent, isNotNull);
+        expect(semantic.disabledContainer, isNotNull);
+        expect(semantic.focusRing, isNotNull);
+        expect(semantic.selected, isNotNull);
+        expect(semantic.onSelected, isNotNull);
+        expect(semantic.selectedContainer, isNotNull);
+      }
+    });
+
+    test('light and dark are memoized, not rebuilt on every access', () {
+      expect(
+        identical(AppSemanticColors.light, AppSemanticColors.light),
+        isTrue,
+      );
+      expect(
+        identical(AppSemanticColors.dark, AppSemanticColors.dark),
+        isTrue,
+      );
+    });
   });
 
   group('AppSpacing', () {
@@ -126,5 +164,73 @@ void main() {
       expect(find.text('Could not load your session.'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
     });
+
+    testWidgets(
+      'AppButton announces its label to assistive tech while loading',
+      (WidgetTester tester) async {
+        // Regression test for Critical Finding 4: the loading branch
+        // previously dropped Text(label) entirely, leaving a screen
+        // reader with nothing meaningful to announce.
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: AppButton(
+                label: 'Save workout',
+                onPressed: () {},
+                isLoading: true,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.bySemanticsLabel('Save workout'), findsOneWidget);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'AppListTile with title only still meets the 48dp minimum touch target',
+      (WidgetTester tester) async {
+        // Regression test for Critical Finding 3.
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: AppListTile(title: 'Leg day'),
+            ),
+          ),
+        );
+
+        final Size size = tester.getSize(find.byType(AppListTile));
+        expect(size.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+      },
+    );
+
+    testWidgets(
+      'AppSkeletonBox allocates no ticker when reduced motion is enabled',
+      (WidgetTester tester) async {
+        // Regression test for Critical Finding 2: previously the
+        // AnimationController kept repeating in the background even
+        // with reduced motion on. A still-repeating controller keeps
+        // scheduling frames forever, so `pumpAndSettle` below would
+        // never converge and this test would fail with a timeout before
+        // the fix — completing at all is the actual regression guard,
+        // not just the assertion after it.
+        await tester.pumpWidget(
+          const MediaQuery(
+            data: MediaQueryData(disableAnimations: true),
+            child: MaterialApp(
+              home: Scaffold(
+                body: AppSkeletonBox(width: 120, height: 16),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.byType(AppSkeletonBox), findsOneWidget);
+      },
+    );
   });
 }

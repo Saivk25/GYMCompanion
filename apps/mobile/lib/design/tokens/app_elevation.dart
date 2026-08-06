@@ -1,7 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import 'app_colors.dart';
-
 /// The elevation system — exactly three tiers, per the UX/UI Design Bible
 /// (Section 10: "A simple three-tier system — flat, raised card, overlay —
 /// no arbitrary shadow variation").
@@ -37,10 +35,24 @@ import 'app_colors.dart';
 /// Material 3's own dark theme guidance uses) is **surface tint**: a
 /// raised surface in dark mode gets a slightly *lighter* fill than the
 /// canvas behind it, so elevation reads through brightness, not shadow.
-/// [shadowsFor] still returns a (very faint) shadow in dark mode for
-/// subtlety at sharp edges, but the primary elevation signal in dark mode
-/// comes from `AppColorScheme`'s surface-tint steps
-/// (`lib/design/theme/app_color_scheme.dart`), not from this file.
+/// [shadowsFor] still returns a shadow in dark mode for edge definition,
+/// but the primary elevation signal in dark mode comes from
+/// `AppColorScheme`'s surface-tint steps
+/// (`lib/design/theme/app_color_scheme.dart`), not from this file — the
+/// dark-mode shadow's *opacity* is actually higher than light mode's
+/// (see [shadowsFor]'s own doc comment for why that is correct, not a
+/// contradiction).
+///
+/// ## `shadowColor` — one source of truth, not two
+///
+/// [shadowsFor] takes its tint color as a parameter rather than deciding
+/// one internally. The design system review found an earlier version of
+/// this file hardcoding its own copy of "near-black" independently of
+/// `ColorScheme.shadow` (`AppColorScheme`'s own field for exactly this
+/// purpose) — two unlinked decisions about the same concept, kept in
+/// sync only by coincidence. Every call site now passes
+/// `colorScheme.shadow` in, so there is exactly one place "what color is
+/// a shadow" is decided.
 enum AppElevationLevel {
   /// Content resting directly on the canvas — most of the app, most of
   /// the time. No shadow, no surface tint.
@@ -72,15 +84,26 @@ abstract final class AppElevation {
   }
 
   /// Soft, low-opacity shadow lists for plain [Container]/[DecoratedBox]
-  /// components. [brightness] matters because a shadow tuned for a white
-  /// canvas reads as a visible gray smudge on a dark one — the dark-mode
-  /// shadows here are deliberately fainter, acting only as edge
-  /// definition while [brightness]-aware surface tint (see the theme
-  /// layer) carries the actual elevation signal.
+  /// components — [shadowColor] should always be the caller's
+  /// `ColorScheme.shadow` (see this class's own "one source of truth"
+  /// note above), never a locally chosen value.
+  ///
+  /// [brightness] governs *opacity*, not color — a shadow tuned for a
+  /// white canvas reads as a barely-there hint of depth; against a
+  /// near-black canvas that same low opacity is imperceptible, since the
+  /// shadow and the canvas are nearly the same color. Dark mode
+  /// therefore uses a *higher* opacity than light mode purely so the
+  /// shadow remains visible at all — this is intentionally the opposite
+  /// of "dark mode shadows are stronger than light mode's," which is not
+  /// what is happening here: dark mode's primary elevation signal is
+  /// still the surface-tint step (`AppColorScheme.surfaceAt`), and this
+  /// shadow's job in dark mode is only faint edge definition, not the
+  /// elevation cue itself.
   static List<BoxShadow> shadowsFor(
-    AppElevationLevel level,
-    Brightness brightness,
-  ) {
+    AppElevationLevel level, {
+    required Brightness brightness,
+    required Color shadowColor,
+  }) {
     final bool isDark = brightness == Brightness.dark;
     switch (level) {
       case AppElevationLevel.flat:
@@ -89,8 +112,7 @@ abstract final class AppElevation {
         return <BoxShadow>[
           BoxShadow(
             // ignore: deprecated_member_use
-            color: (isDark ? AppColors.neutral1000 : AppColors.neutral900)
-                .withOpacity(isDark ? 0.24 : 0.06),
+            color: shadowColor.withOpacity(isDark ? 0.24 : 0.06),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -99,8 +121,7 @@ abstract final class AppElevation {
         return <BoxShadow>[
           BoxShadow(
             // ignore: deprecated_member_use
-            color: (isDark ? AppColors.neutral1000 : AppColors.neutral900)
-                .withOpacity(isDark ? 0.4 : 0.12),
+            color: shadowColor.withOpacity(isDark ? 0.4 : 0.12),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),

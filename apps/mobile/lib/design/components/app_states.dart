@@ -66,7 +66,7 @@ class AppEmptyState extends StatelessWidget {
               label: actionLabel!,
               onPressed: onAction,
               variant: AppButtonVariant.secondary,
-              expand: false,
+              fullWidth: false,
             ),
           ],
         ],
@@ -115,7 +115,7 @@ class AppErrorState extends StatelessWidget {
             onPressed: onRetry,
             icon: AppIcons.retry,
             variant: AppButtonVariant.secondary,
-            expand: false,
+            fullWidth: false,
           ),
         ],
       ),
@@ -146,34 +146,54 @@ class AppSkeletonBox extends StatefulWidget {
   State<AppSkeletonBox> createState() => _AppSkeletonBoxState();
 }
 
+/// ## Reduced motion stops the ticker, not just the paint
+///
+/// The design system review found an earlier version of this state
+/// unconditionally creating and `repeat()`-ing an [AnimationController]
+/// in [initState], then only checking [AppMotion.resolve] in [build] to
+/// decide *whether to paint* the result — the ticker itself kept running
+/// every frame in the background even with OS reduced-motion enabled,
+/// which is precisely the animation work reduced-motion exists to avoid,
+/// not just its visible symptom. [_controller] is now nullable and only
+/// exists at all while reduced motion is off: [didChangeDependencies]
+/// (which reruns whenever the inherited [MediaQuery] this depends on
+/// changes, including the user toggling the OS setting mid-session)
+/// creates and starts it when motion is allowed, and disposes it back to
+/// `null` the moment it isn't — so a reduced-motion skeleton never
+/// allocates a ticker in the first place, rather than allocating one and
+/// declining to look at it.
 class _AppSkeletonBoxState extends State<AppSkeletonBox>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  AnimationController? _controller;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion) {
+      _controller?.dispose();
+      _controller = null;
+    } else if (_controller == null) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 900),
+      )..repeat(reverse: true);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final Duration duration = AppMotion.resolve(
-      context,
-      const Duration(milliseconds: 900),
-    );
+    final AnimationController? controller = _controller;
 
-    if (duration == Duration.zero) {
+    if (controller == null) {
       return DecoratedBox(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
@@ -184,9 +204,9 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     }
 
     return AnimatedBuilder(
-      animation: _controller,
+      animation: controller,
       builder: (BuildContext context, Widget? child) {
-        final double opacity = 0.6 + (_controller.value * 0.3);
+        final double opacity = 0.6 + (controller.value * 0.3);
         return Opacity(
           opacity: opacity,
           child: DecoratedBox(

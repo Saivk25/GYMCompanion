@@ -70,7 +70,7 @@ Future<bool?> showAppConfirmationDialog({
           AppButton(
             label: cancelLabel,
             variant: AppButtonVariant.tertiary,
-            expand: false,
+            fullWidth: false,
             onPressed: () => Navigator.of(dialogContext).pop(false),
           ),
           AppButton(
@@ -78,7 +78,7 @@ Future<bool?> showAppConfirmationDialog({
             variant: isDestructive
                 ? AppButtonVariant.destructive
                 : AppButtonVariant.primary,
-            expand: false,
+            fullWidth: false,
             onPressed: () => Navigator.of(dialogContext).pop(true),
           ),
         ],

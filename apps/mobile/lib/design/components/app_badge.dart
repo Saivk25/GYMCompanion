@@ -65,10 +65,28 @@ class AppBadge extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 14, color: colors.foreground),
             const SizedBox(width: AppSpacing.xs),
-            Text(
-              label,
-              style: AppTypography.labelMedium.copyWith(
-                color: colors.foreground,
+            // Flexible + ellipsis: a badge is `mainAxisSize.min` by
+            // design (it should never claim more room than its content
+            // needs), but the design system review's large-text audit
+            // found that leaves it with no defense at all when a caller
+            // places it somewhere width-constrained (a list tile's
+            // trailing slot, a crowded metadata row) — at accessibility
+            // text scales a long label could push the badge past its
+            // available space instead of yielding to it. Flexible lets
+            // the badge shrink to whatever room its parent actually
+            // gives it; `ellipsis` is the correct failure mode for a
+            // short status pill specifically (unlike a button's label,
+            // truncating "High confidence" to "High conf…" still reads
+            // as the same status, so wrapping to a second line — which
+            // would break the pill's single-line shape — is the wrong
+            // choice here).
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMedium.copyWith(
+                  color: colors.foreground,
+                ),
               ),
             ),
           ],

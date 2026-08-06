@@ -93,11 +93,21 @@ abstract final class AppColors {
 
   // --- Warning — reduced-capacity / caution states (a Light or Recovery
   // readiness band, a soft data-quality note). A muted ochre, deliberately
-  // far from a saturated "danger-adjacent" orange. ---
+  // far from a saturated "danger-adjacent" orange.
+  //
+  // `warning500` is `0xFFBF832C`, not the more saturated `0xFFC98A2E` an
+  // earlier version of this ramp used — the design system review's WCAG
+  // audit computed this tone's real contrast against a white surface
+  // (the context `AppSemanticColors.warning`'s own doc comment names:
+  // "a strong tone for icons/text-on-fill") at 2.93:1, under the 3:1
+  // WCAG 1.4.11 non-text/UI-component minimum. `0xFFBF832C` was verified
+  // at 3.23:1 — a ~5% luminance reduction along the same hue, not a
+  // different color, chosen with headroom above the 3:1 floor rather
+  // than the minimum value that technically clears it. ---
   static const Color warning50 = Color(0xFFFBF2E3);
   static const Color warning100 = Color(0xFFF5E1BD);
   static const Color warning300 = Color(0xFFE3B466);
-  static const Color warning500 = Color(0xFFC98A2E);
+  static const Color warning500 = Color(0xFFBF832C);
   static const Color warning700 = Color(0xFF95661F);
   static const Color warning900 = Color(0xFF5C3E12);
 
@@ -114,19 +124,22 @@ abstract final class AppColors {
   static const Color danger900 = Color(0xFF5C1F1D);
 
   // --- Chart series — a small, ordered, qualitative set for distinguishing
-  // simultaneous data series (e.g. push/pull/legs/core volume bars). Reuses
-  // the semantic hues above rather than inventing a separate "chart
-  // rainbow," plus two additional muted hues only charts need. The Bible
-  // (Section 12) is explicit that charts show "actionable information,"
-  // not decoration — a chart palette that borrowed neon colors to "look
-  // more like a dashboard" would violate that on sight. `chartReference`
-  // is for guideline/threshold lines (e.g. a training-load guardrail
-  // ceiling), which must read as structural, not as another data series —
-  // hence neutral, not a hue. ---
+  // simultaneous data series (e.g. push/pull/legs/core volume bars).
+  // Reuses the semantic hues above rather than inventing a separate
+  // "chart rainbow." The design system review flagged an earlier version
+  // of this set (five colors, two of them — a muted teal and plum —
+  // invented solely for charts, before a single chart component exists)
+  // as speculative token creation: exactly the "guess at a shape before a
+  // real need proves it" mistake this project's own TD-0001 history
+  // already named as costly. Cut back to the three colors already
+  // derived from the semantic palette; a real chart phase, with a real
+  // chart needing a fourth or fifth series, is what should justify
+  // inventing a new hue, not this phase guessing ahead of it.
+  // `chartReference` is for guideline/threshold lines (e.g. a
+  // training-load guardrail ceiling), which must read as structural, not
+  // as another data series — hence neutral, not a hue. ---
   static const Color chart1 = signal500;
   static const Color chart2 = success500;
   static const Color chart3 = warning500;
-  static const Color chart4 = Color(0xFF3E8E92); // muted teal
-  static const Color chart5 = Color(0xFF8B5FA8); // muted plum
   static const Color chartReference = neutral500;
 }

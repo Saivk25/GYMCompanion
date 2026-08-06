@@ -43,7 +43,7 @@ class AppListTile extends StatelessWidget {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    final Widget row = Padding(
+    final Widget content = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.md,
@@ -73,6 +73,22 @@ class AppListTile extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    // A title-only row (no subtitle) lays out to roughly 44px — under
+    // the 48dp minimum touch target WCAG 2.5.5 and Material both require.
+    // The design system review flagged this row as a real accessibility
+    // finding, not a cosmetic one: this is the app's most-tapped
+    // component (every history entry, meal, and notification). Wrapping
+    // in [ConstrainedBox] rather than adding more padding is the fix
+    // that preserves the visual design exactly — [Row]'s own layout
+    // algorithm centers its children within whatever height it is given,
+    // so a title-only row silently gains a couple of invisible pixels of
+    // top/bottom breathing room instead of visibly growing. [Row]'s
+    // content is unchanged; only its minimum hit-testable bounds are.
+    final Widget row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+      child: content,
     );
 
     if (onTap == null) {

@@ -30,6 +30,34 @@ import '../tokens/app_elevation.dart';
 /// text; dark: the reverse) — the same technique GitHub Primer and
 /// Linear use, and the reason switching themes in this app changes
 /// brightness without ever feeling like a different product.
+///
+/// ## `outline` is `neutral500`/`neutral600`, not `neutral300`/`neutral700`
+///
+/// The design system review's contrast audit (documented in full in
+/// `docs/adr/0035-design-system-refinement.md`) computed real WCAG
+/// contrast ratios for every pair in this file and found exactly one
+/// failure: `outline` — used for `OutlinedButton`'s border, text-field
+/// borders, and the bottom-sheet drag handle, all real interactive UI
+/// boundaries WCAG 1.4.11 requires 3:1 non-text contrast for — measured
+/// 1.54:1 in light mode and 2.59:1 in dark mode against its usual
+/// background. `neutral500`/`neutral600` were verified (3.54:1 / 3.68:1)
+/// and are used here instead. `outlineVariant` (dividers only — a
+/// decorative separator WCAG's own scope explicitly does not require
+/// this ratio for) was left unchanged; see the ADR for the full
+/// pair-by-pair results.
+///
+/// ## `tertiary` exists because `ColorScheme` requires it, not because
+/// this app has a third accent
+///
+/// No component in this design system reads `colorScheme.tertiary`
+/// today. It is set here — matching `signal`, this app's one accent,
+/// rather than a genuinely distinct third hue — purely because
+/// [ColorScheme]'s constructor has no optional/nullable path for it in
+/// the Flutter version this code was written against, and removing it
+/// could not be verified safe without a Flutter SDK in this sandbox (see
+/// ADR 0002). This is a disclosed, deliberate deferral, not an
+/// oversight: the field is inert scaffolding today, not a second design
+/// decision competing with `signal`.
 abstract final class AppColorScheme {
   static const ColorScheme light = ColorScheme(
     brightness: Brightness.light,
@@ -53,7 +81,7 @@ abstract final class AppColorScheme {
     onSurface: AppColors.neutral900,
     surfaceContainerHighest: AppColors.neutral100,
     onSurfaceVariant: AppColors.neutral600,
-    outline: AppColors.neutral300,
+    outline: AppColors.neutral500,
     outlineVariant: AppColors.neutral200,
     shadow: AppColors.neutral900,
     scrim: AppColors.neutral900,
@@ -84,7 +112,7 @@ abstract final class AppColorScheme {
     onSurface: AppColors.neutral50,
     surfaceContainerHighest: AppColors.neutral800,
     onSurfaceVariant: AppColors.neutral400,
-    outline: AppColors.neutral700,
+    outline: AppColors.neutral600,
     outlineVariant: AppColors.neutral800,
     shadow: AppColors.neutral1000,
     scrim: AppColors.neutral1000,

@@ -43,7 +43,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.icon,
     this.isLoading = false,
-    this.expand = true,
+    this.fullWidth = true,
     super.key,
   });
 
@@ -63,36 +63,74 @@ class AppButton extends StatelessWidget {
   /// Whether the button fills the width available to it. `true` by
   /// default: most buttons in this app are the single full-width action
   /// at the bottom of a card or sheet. Set `false` for an inline button
-  /// (e.g. a tertiary action next to a piece of text).
-  final bool expand;
+  /// (e.g. a tertiary action next to a piece of text). Named `fullWidth`,
+  /// not `expand` — `expand` reads as "grow to fill", which is also a
+  /// plausible (wrong) description of what a `Flexible`/`Expanded`
+  /// wrapper does inside a `Row`/`Column`; `fullWidth` names the actual,
+  /// unambiguous effect.
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final VoidCallback? effectiveOnPressed = isLoading ? null : onPressed;
 
-    final Widget content = isLoading
-        ? SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _foregroundColor(colorScheme),
+    // Loading swaps the label for a spinner, but a screen reader must
+    // still announce this control as "label, button" — not silently as
+    // an unlabeled spinner. The design system review found the loading
+    // branch dropping [Text] (and with it, the label an assistive
+    // technology reads) entirely. [Semantics] here supplies [label]
+    // explicitly and unconditionally — in both branches, not just the
+    // loading one, so the announced label never depends on which
+    // internal branch happened to render — and [excludeSemantics]
+    // suppresses the spinner's own (unhelpful, "progress indicator")
+    // semantics node from replacing it.
+    final Widget content = Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: isLoading
+          ? SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _foregroundColor(colorScheme),
+                ),
               ),
-            ),
-          )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (icon != null) ...<Widget>[
-                Icon(icon, size: 20),
-                const SizedBox(width: AppSpacing.sm),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (icon != null) ...<Widget>[
+                  Icon(icon, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                // Flexible, not a bare Text: the design system review's
+                // large-text audit found this Row would overflow (not
+                // wrap) at accessibility text scales once a label plus
+                // icon no longer fits the button's available width — a
+                // bare Text inside a Row has nothing forcing it to
+                // respect the Row's remaining space. Flexible lets the
+                // label wrap onto a second line inside the button
+                // instead, which grows the button (its height is a
+                // minimum, never a fixed cap) rather than clipping text
+                // or overflowing past the button's edge.
+                Flexible(
+                  child: Text(label, softWrap: true),
+                ),
               ],
-              Text(label),
-            ],
-          );
+            ),
+    );
 
+    // Two `switch (variant)` statements, not merged into one: this one
+    // picks a *widget type* and runs after [content] already exists;
+    // [_foregroundColor] resolves a *color* the spinner above needs
+    // before [content] is built. They run at two different points in
+    // this method for a real dependency-order reason, not by accident —
+    // the design system review's "simplify duplicated switches" note was
+    // evaluated and deliberately left as two, since merging them would
+    // relocate this same logic rather than reduce it.
     final Widget button = switch (variant) {
       AppButtonVariant.primary => ElevatedButton(
           onPressed: effectiveOnPressed,
@@ -116,7 +154,7 @@ class AppButton extends StatelessWidget {
         ),
     };
 
-    if (!expand) {
+    if (!fullWidth) {
       return button;
     }
     return SizedBox(width: double.infinity, child: button);
