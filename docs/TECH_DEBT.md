@@ -298,3 +298,136 @@ Authentication & Authorization and the start of Flutter work.
   any of the 27 touched handlers.
 - See `docs/adr/0033-resource-ownership-authorization.md` for the full
   decision record.
+
+---
+
+## TD-0003: `AppShell`'s global top bar bypasses the icon token file and has three dead controls
+
+- Status: **Open.**
+- Identified: 2026-08-08, during the Production Integration Phase 1
+  architecture audit (`docs/adr/0042-production-integration-plan.md`).
+
+### What's wrong
+
+`lib/shell/app_shell.dart` has two separate, related problems:
+
+1. Four of its five `NavigationDestination`s (Today/Train/Fuel/Progress —
+   Coach is the exception, fixed in `docs/adr/0041-coach-module.md`) use
+   bare `Icons.today_outlined`/`Icons.fitness_center_outlined`/etc.
+   literals instead of `AppIcons.today`/`AppIcons.train`/etc., even
+   though every one of those tokens already exists in
+   `lib/design/tokens/app_icons.dart` — this isn't a missing token, it's
+   an existing token going unused at its own intended call site. The top
+   bar's `search`/`notifications`/`settings`/`location` icons have the
+   identical problem: `AppIcons.search`, `.notifications`, `.settings`,
+   and `.location` all already exist and already map to the exact
+   glyphs (`Icons.search`, `.notifications_outlined`,
+   `.account_circle_outlined`, `.place_outlined`) the bare literals in
+   `app_shell.dart` use.
+2. Three of the top bar's `IconButton`s (`search`, `notifications`,
+   `settings`) have `onPressed: () {}`, and the leading location `Chip`
+   has `onDeleted: null` — four interactive-looking controls that do
+   nothing when activated. The file's own doc comment discloses this as
+   deliberate scaffolding, but every other module's own former
+   placeholders have since been converted to real `NotConnectedPlaceholder`
+   screens rather than left as no-op taps, and these four never went
+   through that pass.
+
+### Why this was not fixed in this audit
+
+The architecture audit phase was explicitly scoped to "review, do not
+modify." Fixing the icon-token bypass is a mechanical, low-risk
+four-line change; fixing the no-op controls requires a design decision
+this phase did not make — where should Search/Notifications/Settings
+actually go?
+
+### Trigger conditions for closing this item
+
+1. **The icon-token bypass** should be fixed the next time
+   `app_shell.dart` is touched for any reason — pure find-and-replace,
+   zero behavior change, no open design question.
+2. **The four no-op controls** should be resolved before this app is
+   release-candidate quality (Phase 7, Production Polish) — App Store/
+   Play Store review will surface a button that visibly does nothing as
+   a defect. Settings has an obvious real destination once any account/
+   profile screen exists (post-auth); Search and Notifications should at
+   minimum become `NotConnectedPlaceholder`s if no real backend concept
+   exists by then.
+
+---
+
+## TD-0004: Ad hoc date/duration formatting reimplemented independently in 7+ presentation files
+
+- Status: **Open.**
+- Identified: 2026-08-08, during the Production Integration Phase 1
+  architecture audit (`docs/adr/0042-production-integration-plan.md`).
+
+### What's duplicated
+
+A private `static String _formattedDate(DateTime date)` (or
+`_formattedDateTime`/`_formattedTime`/`_formattedDuration`/
+`_formattedElapsed`) is independently defined in at least seven
+presentation files: `today_screen.dart`, `train/session_summary_screen.dart`,
+`train/widgets/train_history_tile.dart`, `train/widgets/train_workout_card.dart`,
+`train/presentation/active_workout_screen.dart`, `readiness/
+readiness_entry_detail_screen.dart`, `readiness/widgets/
+readiness_entry_tile.dart`, `fuel/widgets/meal_entry_tile.dart`, and
+`coach/coach_signal_detail_screen.dart`. Each hardcodes its own literal
+month-name array and weekday-indexing logic. Three genuinely different
+output formats exist across these copies ("Monday, January 5",
+"Jan 5"/"Today"/"Tomorrow", and "January 5, 2026") — some divergence is
+a legitimate per-context choice, but seven-plus independent literal
+month-name arrays for the same handful of formatting needs is real
+duplication.
+
+### Why this was not fixed in this audit
+
+Same reason as TD-0003: audit-only phase. Consolidating into a shared
+`lib/shared/presentation/app_date_format.dart` with 3-4 named functions
+matching the real output shapes already in use is safe but touches nine
+files across five features — a cross-cutting change this project treats
+as its own scoped unit of work (see TD-0001's "batch with the next real
+caller" precedent), not a drive-by fix.
+
+### Trigger conditions for closing this item
+
+1. **The next feature that needs a tenth independent date-formatting
+   helper** — extract at that point rather than write an eighth copy.
+2. **Before Phase 6 (Testing) golden tests are written** — consolidate
+   first so golden assertions aren't written against output about to be
+   refactored.
+3. **If any two copies are ever found to disagree on the same output
+   shape** — fires immediately.
+
+---
+
+## TD-0005: `TodayScreen`'s quick-add sheet imports Fuel's presentation layer directly
+
+- Status: **Open — accepted, not a defect.**
+- Identified: 2026-08-08, during the Production Integration Phase 1
+  architecture audit (`docs/adr/0042-production-integration-plan.md`).
+
+### What's coupled
+
+`lib/features/today/presentation/widgets/quick_add_sheet.dart` imports
+`../../../fuel/presentation/widgets/water_log_sheet.dart` directly — the
+one cross-feature presentation-layer import in the entire Flutter
+codebase (confirmed by a full import-direction sweep). Every other
+cross-feature reference in the app goes through `lib/shared/`.
+
+### Why this is recorded but not scheduled for a fix
+
+Disclosed, deliberate, from `docs/adr/0037-train-module.md` ("'Log
+water' from Today's own quick-add now opens Fuel's real water-log sheet
+too") — not new. Recorded as a pattern to watch, not a current problem:
+`WaterLogSheet` has no Fuel-internal state dependency beyond
+`fuelRepositoryProvider`, already provided at the app root.
+
+### Trigger conditions for revisiting
+
+1. **A second Today -> other-feature presentation import** — two
+   independent instances is the signal to promote the shared widget into
+   `lib/shared/presentation/widgets/`, the same threshold used everywhere
+   else in this project.
+2. **If `WaterLogSheet` ever grows a dependency on Fuel-internal state**
+   beyond its own repository provider.
