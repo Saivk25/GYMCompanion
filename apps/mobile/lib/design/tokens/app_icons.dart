@@ -78,4 +78,18 @@ abstract final class AppIcons {
   static const IconData expand = Icons.expand_more;
   static const IconData collapse = Icons.expand_less;
   static const IconData retry = Icons.refresh;
+
+  // --- Progress module (single-stroke glyphs) ---
+  //
+  // [trendUp]/[trendDown]/[trendFlat] are always paired with plain text
+  // (e.g. "0.2 kg vs last check-in") and the neutral `onSurfaceVariant`
+  // color, never a success/danger tint — per the Bible's explicit
+  // rejection of red/green pass-fail framing on body metrics (Section
+  // 11), a rising or falling number is a fact, not good or bad news the
+  // icon should editorialize about.
+  static const IconData trendUp = Icons.arrow_upward;
+  static const IconData trendDown = Icons.arrow_downward;
+  static const IconData trendFlat = Icons.remove;
+  static const IconData camera = Icons.camera_alt_outlined;
+  static const IconData compare = Icons.compare_outlined;
 }

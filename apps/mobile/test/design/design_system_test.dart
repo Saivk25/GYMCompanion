@@ -305,5 +305,69 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(AppProgressBar), findsOneWidget);
     });
+
+    testWidgets(
+      'AppLineChart renders without error, including a gap value, and '
+      'exposes a text semantic label for assistive tech',
+      (WidgetTester tester) async {
+        // Progress's own regression coverage for this phase's chart
+        // extension — the tokens this component consumes
+        // (`AppSemanticColors.chartSeries`/`chartReference`) were
+        // reserved ahead of this phase specifically for a real chart to
+        // use; this is that chart.
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: AppLineChart(
+                labels: const <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                values: const <double?>[120, 130, null, 140, 128, 135, 145],
+                rawValues: const <double?>[118, 132, null, 138, 130, 133, 148],
+                referenceValue: 130,
+                referenceLabel: 'Target',
+                semanticLabel: 'Protein trend over the last 7 days.',
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(AppLineChart), findsOneWidget);
+        expect(find.bySemanticsLabel('Protein trend over the last 7 days.'), findsOneWidget);
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'AppWeekHeatmap renders one cell per day and never uses a red tone '
+      'for a missed day',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: Scaffold(
+              body: AppWeekHeatmap(
+                dayLabels: const <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                levels: const <AppWeekHeatmapLevel>[
+                  AppWeekHeatmapLevel.met,
+                  AppWeekHeatmapLevel.notMet,
+                  AppWeekHeatmapLevel.met,
+                  AppWeekHeatmapLevel.met,
+                  AppWeekHeatmapLevel.notMet,
+                  AppWeekHeatmapLevel.met,
+                  AppWeekHeatmapLevel.met,
+                ],
+                semanticLabel: '5 of the last 7 days met the target.',
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('M'), findsOneWidget);
+        expect(find.text('S'), findsNWidgets(2));
+      },
+    );
   });
 }

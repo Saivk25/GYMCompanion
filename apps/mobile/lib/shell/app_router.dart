@@ -6,7 +6,13 @@ import '../features/fuel/presentation/food_search_screen.dart';
 import '../features/fuel/presentation/fuel_home_screen.dart';
 import '../features/fuel/presentation/log_meal_screen.dart';
 import '../features/fuel/presentation/supplements_screen.dart';
-import '../features/progress/presentation/progress_screen.dart';
+import '../features/progress/domain/progress_models.dart';
+import '../features/progress/presentation/insights_screen.dart';
+import '../features/progress/presentation/log_measurement_screen.dart';
+import '../features/progress/presentation/measurement_trend_screen.dart';
+import '../features/progress/presentation/photo_checkin_screen.dart';
+import '../features/progress/presentation/photo_comparison_screen.dart';
+import '../features/progress/presentation/progress_home_screen.dart';
 import '../features/today/presentation/today_screen.dart';
 import '../features/train/presentation/active_workout_screen.dart';
 import '../features/train/presentation/exercise_detail_screen.dart';
@@ -64,7 +70,7 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/progress',
-              builder: (context, state) => const ProgressScreen(),
+              builder: (context, state) => const ProgressHomeScreen(),
             ),
           ],
         ),
@@ -159,6 +165,42 @@ final GoRouter appRouter = GoRouter(
       path: '/fuel/supplements',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SupplementsScreen(),
+    ),
+
+    // ## Progress's sub-screens: the same root-navigator pattern as
+    // Train's and Fuel's
+    //
+    // See the comment above Train's routes for the full reasoning
+    // (`docs/adr/0037-train-module.md`) — it applies unchanged here.
+    // `docs/adr/0039-progress-module.md` covers Progress's own decisions,
+    // including why Photo Check-in, Photo Comparison, and Correlations
+    // are real, reachable routes rather than omitted segments.
+    GoRoute(
+      path: '/progress/log-measurement',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const LogMeasurementScreen(),
+    ),
+    GoRoute(
+      path: '/progress/measurement/:metric',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => MeasurementTrendScreen(
+        metric: MeasurementMetric.values.byName(state.pathParameters['metric']!),
+      ),
+    ),
+    GoRoute(
+      path: '/progress/photo-checkin',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const PhotoCheckinScreen(),
+    ),
+    GoRoute(
+      path: '/progress/photo-comparison',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const PhotoComparisonScreen(),
+    ),
+    GoRoute(
+      path: '/progress/insights',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const InsightsScreen(),
     ),
   ],
 );

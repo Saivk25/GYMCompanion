@@ -18,9 +18,9 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md` for why the FAB
   lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
-- `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`, and
-  `fuel/` are real (see below); Progress and Coach are still placeholders — see
-  each file's doc comment for which phase populates it for real.
+- `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`,
+  `fuel/`, and `progress/` are real (see below); Coach is still a placeholder —
+  see that file's doc comment for which phase populates it for real.
 - `lib/features/today/` — the first real feature screen, and the pattern every later
   screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
   interface + a thin Riverpod `AsyncNotifier`), `infrastructure/` (a disclosed mock
@@ -40,6 +40,14 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   all), the water-log bottom sheet (shared with Today's own quick-add), and two
   more honest placeholders (Food Search, Supplements) where no backend concept
   exists yet. See `docs/adr/0038-fuel-module.md`.
+- `lib/features/progress/` — the same pattern applied to Progress: Progress
+  Home (five in-page-tab dashboards — Workout / Nutrition / Recovery /
+  Transformation / Reports — via `AppSegmentedControl`), Log measurements, and
+  a measurement's own full trend detail, all real; Photo Check-in, Photo
+  Comparison, and Correlations are honest "not connected yet" placeholders,
+  since no photo or correlation concept exists in the backend at all; Workout
+  and Reports are total placeholder segments, since no analytics or report
+  concept exists either. See `docs/adr/0039-progress-module.md`.
 - `lib/shared/domain/` — pure Dart value types genuinely shared across more than
   one feature (currently just `SessionTier`, used by both Today and Train) —
   not a dumping ground; a type only moves here once a second feature actually
@@ -49,8 +57,8 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   once Fuel needed the identical "not connected yet" convention a second time —
   `docs/adr/0038-fuel-module.md`'s Decision 5).
 - `test/` — mirrors `lib/`, including `test/design/` for the design system and
-  `test/features/today/`, `test/features/train/`, `test/features/fuel/` for
-  those three modules.
+  `test/features/today/`, `test/features/train/`, `test/features/fuel/`,
+  `test/features/progress/` for those four modules.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -118,8 +126,8 @@ the default width genuinely proves cramped in practice — not before.
 
 ## Status
 
-Three of five tabs are real (Today, Train, Fuel); Progress and Coach remain
-placeholders. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
+Four of five tabs are real (Today, Train, Fuel, Progress); Coach remains a
+placeholder. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
 (light + dark), and a closed set of reusable component primitives
 (`AppButton`, `AppCard`, `AppBadge`, `AppListTile`, `AppSectionHeader`,
 `AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
@@ -173,4 +181,24 @@ more honest placeholders. `AppProgressBar` (promoted from Train's local
 `SessionProgressBar`) and `NotConnectedPlaceholder` (promoted to
 `lib/shared/presentation/`) are both design-system/shared-widget extractions
 made the moment a second feature needed them, not guessed at ahead of time.
-Progress and Coach remain placeholders. No authentication flow exists yet.
+
+Progress (`docs/adr/0039`) is the fourth real feature screen, and the
+widest spread of gap severity of any phase so far: Nutrition (a real weekly
+protein trend line plus a real weekly consistency heatmap, computed
+client-side from real per-entry nutrition totals) and Transformation (real
+logged weight/measurements, a real rolling-average chart, a real metric
+list) are fully real dashboards; Recovery charts two real raw readiness
+inputs (sleep, HRV) alongside one disclosed gap — the composite readiness
+score `ReadinessRuleEngine` computes server-side but no endpoint returns;
+Workout and Reports are total, disclosed placeholders, since no analytics
+or report concept exists in the backend at all. Photo Check-in, Photo
+Comparison, and Correlations are real, reachable "not connected yet"
+screens rather than silently missing menu items — the same posture Fuel's
+Food Search/Supplements and Train's Personal Records/Exercise Library
+already established. `AppLineChart` and `AppWeekHeatmap`
+(`lib/design/components/`) are this phase's own new chart primitives,
+consuming the `chartSeries`/`chartReference` tokens the design system
+reserved for exactly this moment rather than guessing at chart needs
+ahead of time.
+
+Coach remains a placeholder. No authentication flow exists yet.
