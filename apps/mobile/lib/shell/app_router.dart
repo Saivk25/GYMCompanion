@@ -13,6 +13,11 @@ import '../features/progress/presentation/measurement_trend_screen.dart';
 import '../features/progress/presentation/photo_checkin_screen.dart';
 import '../features/progress/presentation/photo_comparison_screen.dart';
 import '../features/progress/presentation/progress_home_screen.dart';
+import '../features/readiness/presentation/readiness_checkin_screen.dart';
+import '../features/readiness/presentation/readiness_entry_detail_screen.dart';
+import '../features/readiness/presentation/readiness_formula_screen.dart';
+import '../features/readiness/presentation/readiness_home_screen.dart';
+import '../features/readiness/presentation/readiness_timeline_screen.dart';
 import '../features/today/presentation/today_screen.dart';
 import '../features/train/presentation/active_workout_screen.dart';
 import '../features/train/presentation/exercise_detail_screen.dart';
@@ -201,6 +206,45 @@ final GoRouter appRouter = GoRouter(
       path: '/progress/insights',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const InsightsScreen(),
+    ),
+
+    // ## Readiness: root-navigator routes, but with no tab of its own
+    //
+    // Readiness has never been one of the five bottom tabs (UX/UI Design
+    // Bible Section 3) — unlike Train/Fuel/Progress, `/readiness` itself
+    // is a root-navigator push, not a `StatefulShellBranch` route. It is
+    // reached from Today's check-in nudge
+    // (`ReadinessCheckInCard.onStart`) and from Progress's Recovery
+    // segment, the same full-screen-drill-in pattern Train's and Fuel's
+    // own sub-screens already established — see the comment above
+    // Train's routes for the full reasoning. `docs/adr/0040-readiness-
+    // module.md` covers Readiness's own decisions.
+    GoRoute(
+      path: '/readiness',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReadinessHomeScreen(),
+    ),
+    GoRoute(
+      path: '/readiness/check-in',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReadinessCheckInScreen(),
+    ),
+    GoRoute(
+      path: '/readiness/timeline',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReadinessTimelineScreen(),
+    ),
+    GoRoute(
+      path: '/readiness/entry/:readinessId',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => ReadinessEntryDetailScreen(
+        readinessId: state.pathParameters['readinessId']!,
+      ),
+    ),
+    GoRoute(
+      path: '/readiness/formula',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ReadinessFormulaScreen(),
     ),
   ],
 );

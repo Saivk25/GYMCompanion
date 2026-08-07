@@ -133,7 +133,18 @@ class _TodayContent extends StatelessWidget {
       // submitted."
       if (!state.checkInCompletedToday) ...<Widget>[
         ReadinessCheckInCard(
-          onStart: () => _notBuiltYet(context, 'Readiness check-in'),
+          // Real navigation into the now-built Readiness module
+          // (`docs/adr/0040-readiness-module.md`) — the same "wire the
+          // stub up the moment the real screen exists" pattern Train's
+          // session start and Fuel's water log already established for
+          // Today. Today's own `checkInCompletedToday`/`readinessBand`
+          // remain `MockTodayRepository`'s own disclosed, independently-
+          // mocked concepts — submitting a real check-in here does not
+          // retroactively flip this card, since no backend `RecoveryState`
+          // exists yet to derive a real band from either; see that ADR's
+          // Consequences section for why this is a disclosed limitation,
+          // not an oversight.
+          onStart: () => context.push('/readiness/check-in'),
         ),
         const SizedBox(height: AppSpacing.xl),
       ],

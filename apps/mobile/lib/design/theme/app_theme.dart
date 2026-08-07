@@ -305,6 +305,28 @@ abstract final class AppTheme {
           borderRadius: AppRadius.radiusSm,
         ),
       ),
+
+      // Readiness's own extension (`AppRatingSlider`) is this theme's
+      // first real caller — a bounded 1-10 subjective rating is exactly
+      // the "numeric stepper preferred over free text for structured
+      // logging" case the Bible names (Section 10) that nothing before
+      // this phase needed. Flat track, no glow beyond the same
+      // token-driven [AppOpacity.overlayFor] pressed/hovered state every
+      // other interactive component in this theme already uses — no
+      // Material default drop-shadow thumb or oversized value bubble.
+      sliderTheme: SliderThemeData(
+        activeTrackColor: colorScheme.primary,
+        inactiveTrackColor: colorScheme.surfaceContainerHighest,
+        trackHeight: 4,
+        thumbColor: colorScheme.primary,
+        overlayColor: AppOpacity.overlayFor(colorScheme.primary),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+        valueIndicatorColor: colorScheme.inverseSurface,
+        valueIndicatorTextStyle: textTheme.labelMedium?.copyWith(
+          color: colorScheme.onInverseSurface,
+        ),
+      ),
     );
   }
 }

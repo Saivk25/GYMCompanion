@@ -21,6 +21,7 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
 - `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`,
   `fuel/`, and `progress/` are real (see below); Coach is still a placeholder —
   see that file's doc comment for which phase populates it for real.
+  `readiness/` is also real, but is not a tab — see below.
 - `lib/features/today/` — the first real feature screen, and the pattern every later
   screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
   interface + a thin Riverpod `AsyncNotifier`), `infrastructure/` (a disclosed mock
@@ -48,6 +49,17 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   since no photo or correlation concept exists in the backend at all; Workout
   and Reports are total placeholder segments, since no analytics or report
   concept exists either. See `docs/adr/0039-progress-module.md`.
+- `lib/features/readiness/` — the same pattern applied to Readiness, the one
+  module with no bottom tab of its own: Readiness Home (today's check-in
+  status, a recent-check-ins preview), Check-in (one screen for sleep,
+  energy, stress, soreness, resting heart rate, and HRV — the Bible's own
+  single-screen spec), Timeline (every logged check-in, chronological), Entry
+  Detail (one check-in's full recorded values), and Formula (an honest "not
+  connected yet" placeholder, since no endpoint returns a computed score or
+  band). Reached from Today's check-in nudge and from Progress's own Recovery
+  segment, never from a bottom tab. Progress's Recovery segment keeps owning
+  the sleep/HRV trend *charts*; this module owns check-in records. See
+  `docs/adr/0040-readiness-module.md`.
 - `lib/shared/domain/` — pure Dart value types genuinely shared across more than
   one feature (currently just `SessionTier`, used by both Today and Train) —
   not a dumping ground; a type only moves here once a second feature actually
@@ -58,7 +70,8 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   `docs/adr/0038-fuel-module.md`'s Decision 5).
 - `test/` — mirrors `lib/`, including `test/design/` for the design system and
   `test/features/today/`, `test/features/train/`, `test/features/fuel/`,
-  `test/features/progress/` for those four modules.
+  `test/features/progress/`, `test/features/readiness/` for those five
+  modules.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -127,7 +140,8 @@ the default width genuinely proves cramped in practice — not before.
 ## Status
 
 Four of five tabs are real (Today, Train, Fuel, Progress); Coach remains a
-placeholder. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
+placeholder. Readiness is also real but is not a tab — it is reached from
+Today and Progress; see below. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
 (light + dark), and a closed set of reusable component primitives
 (`AppButton`, `AppCard`, `AppBadge`, `AppListTile`, `AppSectionHeader`,
 `AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
@@ -200,5 +214,21 @@ already established. `AppLineChart` and `AppWeekHeatmap`
 consuming the `chartSeries`/`chartReference` tokens the design system
 reserved for exactly this moment rather than guessing at chart needs
 ahead of time.
+
+Readiness (`docs/adr/0040`) is real but has no bottom tab of its own —
+reached from Today's check-in nudge and from Progress's own Recovery
+segment. Readiness Home, Check-in (one screen for sleep, energy, stress,
+soreness, resting heart rate, and HRV, pre-filled from the most recent
+entry), Timeline, and Entry Detail are fully real, built against a
+stateful `MockReadinessRepository` seeded with fourteen days of history.
+Real advisory warnings — genuinely derived server-side by
+`ReadinessRuleEngine`, never fabricated client-side — render on Readiness
+Home when a submission returns them. Formula/Score Explanation is a real,
+reachable "not connected yet" placeholder, since no endpoint returns a
+computed readiness score or band; Progress's Recovery segment keeps
+owning the sleep/HRV trend charts rather than this module duplicating
+them. `AppRatingSlider` (`lib/design/components/`) is this phase's own
+new design-system component, for the bounded 1-10 self-report scale no
+existing component modeled.
 
 Coach remains a placeholder. No authentication flow exists yet.

@@ -18,6 +18,17 @@ import '../../domain/progress_models.dart';
 /// silently drifting from the real one, and puts business logic in a
 /// widget either way), is the same "manual entry real, AI-shaped part
 /// disclosed" split Fuel's own `LogMealScreen` already established.
+/// (Energy/stress/soreness are bounded 1-10 self-report ratings, not
+/// 1-5 — confirmed directly from `backend/app/domain/readiness/
+/// value_objects.py` during the Readiness module's own research phase;
+/// see `docs/adr/0040-readiness-module.md`. This doc comment previously
+/// said 1-5, which was wrong.)
+///
+/// The "Readiness check-ins" row navigates to the real Readiness module
+/// (`docs/adr/0040-readiness-module.md`) — real check-in submission,
+/// timeline, and per-entry detail all live there now; this section
+/// keeps owning the *trend charts* only, the same records-vs-trends
+/// split that ADR documents, rather than duplicating check-in UI here.
 class ProgressRecoverySection extends StatelessWidget {
   const ProgressRecoverySection({required this.week, super.key});
 
@@ -76,6 +87,14 @@ class ProgressRecoverySection extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        AppListTile(
+          leadingIcon: AppIcons.progress,
+          title: 'Readiness check-ins',
+          subtitle: 'Today\'s check-in, recovery timeline, and detail',
+          trailing: Icon(AppIcons.chevronRight, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+          onTap: () => context.push('/readiness'),
         ),
         const SizedBox(height: AppSpacing.xl),
         const NotConnectedPlaceholder(
