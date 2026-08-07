@@ -18,9 +18,9 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md` for why the FAB
   lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
-- `lib/features/<tab>/presentation/` — one screen per tab. `today/` and `train/` are
-  real (see below); Fuel, Progress, and Coach are still placeholders — see each
-  file's doc comment for which phase populates it for real.
+- `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`, and
+  `fuel/` are real (see below); Progress and Coach are still placeholders — see
+  each file's doc comment for which phase populates it for real.
 - `lib/features/today/` — the first real feature screen, and the pattern every later
   screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
   interface + a thin Riverpod `AsyncNotifier`), `infrastructure/` (a disclosed mock
@@ -33,12 +33,24 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   completion and viewing a past session), and two honest "not connected yet"
   placeholders (Exercise Detail, Personal Records) where no backend endpoint
   exists at all yet. See `docs/adr/0037-train-module.md`.
+- `lib/features/fuel/` — the same pattern applied to Fuel: Fuel Home (today's
+  meals, non-alarming hydration progress, weekly-pattern link), Log a meal
+  (Photo/Text/Menu capture — Text is the one fully real path; Photo/Menu are
+  honest "not connected yet" placeholders, since no vision-AI backend exists at
+  all), the water-log bottom sheet (shared with Today's own quick-add), and two
+  more honest placeholders (Food Search, Supplements) where no backend concept
+  exists yet. See `docs/adr/0038-fuel-module.md`.
 - `lib/shared/domain/` — pure Dart value types genuinely shared across more than
   one feature (currently just `SessionTier`, used by both Today and Train) —
   not a dumping ground; a type only moves here once a second feature actually
   needs it, per `docs/adr/0037-train-module.md`'s Decision 5.
+- `lib/shared/presentation/widgets/` — cross-feature widgets that aren't design-
+  system primitives, currently `NotConnectedPlaceholder` (promoted from Train
+  once Fuel needed the identical "not connected yet" convention a second time —
+  `docs/adr/0038-fuel-module.md`'s Decision 5).
 - `test/` — mirrors `lib/`, including `test/design/` for the design system and
-  `test/features/today/`, `test/features/train/` for those two modules.
+  `test/features/today/`, `test/features/train/`, `test/features/fuel/` for
+  those three modules.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -106,10 +118,8 @@ the default width genuinely proves cramped in practice — not before.
 
 ## Status
 
-Sprint 1, Steps 3 and 5: a five-tab shell that boots and navigates, with one widget
-test, no real feature data yet.
-
-The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
+Three of five tabs are real (Today, Train, Fuel); Progress and Coach remain
+placeholders. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
 (light + dark), and a closed set of reusable component primitives
 (`AppButton`, `AppCard`, `AppBadge`, `AppListTile`, `AppSectionHeader`,
 `AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
@@ -145,5 +155,22 @@ completion and viewing a past session from History), and two honest "not
 connected yet" placeholder screens (Exercise Detail, Personal Records) where no
 backend endpoint exists yet at all — not merely unwired. Built against
 `MockTrainRepository`, a stateful mock (unlike Today's) that keeps an in-memory
-session so logging a set is actually visible on screen. Fuel, Progress, and Coach
-remain placeholders. No authentication flow exists yet.
+session so logging a set is actually visible on screen. "Log water" from Today's
+own quick-add now opens Fuel's real water-log sheet too.
+
+Fuel (`docs/adr/0038`) is the third real feature screen. Its central finding
+reshaped the module more than either of Train's backend gaps: the nutrition
+backend has no AI/vision capability anywhere in it (`NutritionSource` is
+`manual`/`barcode`/`import` only — no `photo` value at all), so the Bible's
+own "Meal Review/Confirm" screen (reviewing an AI reading before it counts)
+has no AI reading to review. Capture and Confirm collapse into one real
+screen — manual macro entry, the fully working path — with Photo and Menu
+capture shown as real, visible options that honestly disclose they aren't
+connected yet, using the exact fallback language the Bible itself already
+prescribes for a denied camera permission ("text entry remains fully
+available... not a degraded fallback"). Food Search and Supplements are two
+more honest placeholders. `AppProgressBar` (promoted from Train's local
+`SessionProgressBar`) and `NotConnectedPlaceholder` (promoted to
+`lib/shared/presentation/`) are both design-system/shared-widget extractions
+made the moment a second feature needed them, not guessed at ahead of time.
+Progress and Coach remain placeholders. No authentication flow exists yet.

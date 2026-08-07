@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
-import 'widgets/not_connected_placeholder.dart';
+import '../../../shared/presentation/widgets/not_connected_placeholder.dart';
 
 /// Personal Records — UX/UI Design Bible catalog: "All personal records.
 /// Open a PR's history." A real, reachable screen (Train Home links here

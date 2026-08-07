@@ -288,5 +288,22 @@ void main() {
       await tester.enterText(find.byType(TextField), '60');
       expect(controller.text, '60');
     });
+
+    testWidgets('AppProgressBar clamps its fraction rather than overflowing', (
+      WidgetTester tester,
+    ) async {
+      // Fuel's own regression coverage for this phase's design-system
+      // extension — promoted from Train's local `SessionProgressBar`
+      // once Fuel's hydration progress needed the identical shape.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: AppProgressBar(fraction: 1.5)),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AppProgressBar), findsOneWidget);
+    });
   });
 }

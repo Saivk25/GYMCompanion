@@ -10,7 +10,6 @@ import '../domain/train_models.dart';
 import 'widgets/exercise_nav.dart';
 import 'widgets/logged_set_row.dart';
 import 'widgets/rest_timer_bar.dart';
-import 'widgets/session_progress_bar.dart';
 import 'widgets/set_input_row.dart';
 
 /// Active Workout — UX/UI Design Bible Section 5.2, the module's single
@@ -213,7 +212,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                       ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                SessionProgressBar(
+                AppProgressBar(
                   fraction: performances.isEmpty ? 0 : completedExercises / performances.length,
                 ),
                 const SizedBox(height: AppSpacing.lg),

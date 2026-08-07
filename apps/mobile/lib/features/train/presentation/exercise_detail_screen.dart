@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../design/design.dart';
-import 'widgets/not_connected_placeholder.dart';
+import '../../../shared/presentation/widgets/not_connected_placeholder.dart';
 
 /// Exercise Detail — UX/UI Design Bible catalog: "Cues, video, personal
 /// history for one movement. Return to session or browse freely."

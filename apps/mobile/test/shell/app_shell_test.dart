@@ -2,25 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_companion_mobile/app.dart';
+import 'package:gym_companion_mobile/features/fuel/application/fuel_controller.dart';
+import 'package:gym_companion_mobile/features/fuel/infrastructure/mock_fuel_repository.dart';
 import 'package:gym_companion_mobile/features/today/application/today_controller.dart';
 import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_repository.dart';
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
 
-/// Every test in this file overrides [todayRepositoryProvider] and
-/// [trainRepositoryProvider] with their mock implementations — both
-/// providers deliberately have no default (see each one's own doc
-/// comment) and throw if read unoverridden, precisely so a missing
-/// override is caught immediately rather than silently rendering an
-/// error fallback in every test that boots the full app, which would
-/// pass without actually exercising either tab's real content. Train
-/// joined this requirement once `TrainHomeScreen` replaced the Train
-/// tab's placeholder — see `docs/adr/0037-train-module.md`.
+/// Every test in this file overrides [todayRepositoryProvider],
+/// [trainRepositoryProvider], and [fuelRepositoryProvider] with their
+/// mock implementations — all three deliberately have no default (see
+/// each one's own doc comment) and throw if read unoverridden,
+/// precisely so a missing override is caught immediately rather than
+/// silently rendering an error fallback in every test that boots the
+/// full app, which would pass without actually exercising that tab's
+/// real content. Fuel joined this requirement once `FuelHomeScreen`
+/// replaced the Fuel tab's placeholder — see `docs/adr/0038-fuel-module.md`.
 ProviderScope _appWithMocks() {
   return ProviderScope(
     overrides: <Override>[
       todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
       trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
+      fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
     ],
     child: const GymCompanionApp(),
   );

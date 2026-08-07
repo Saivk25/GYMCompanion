@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/coach/presentation/coach_screen.dart';
-import '../features/fuel/presentation/fuel_screen.dart';
+import '../features/fuel/presentation/food_search_screen.dart';
+import '../features/fuel/presentation/fuel_home_screen.dart';
+import '../features/fuel/presentation/log_meal_screen.dart';
+import '../features/fuel/presentation/supplements_screen.dart';
 import '../features/progress/presentation/progress_screen.dart';
 import '../features/today/presentation/today_screen.dart';
 import '../features/train/presentation/active_workout_screen.dart';
@@ -53,7 +56,7 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/fuel',
-              builder: (context, state) => const FuelScreen(),
+              builder: (context, state) => const FuelHomeScreen(),
             ),
           ],
         ),
@@ -135,6 +138,27 @@ final GoRouter appRouter = GoRouter(
       path: '/train/records',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const PersonalRecordsScreen(),
+    ),
+
+    // ## Fuel's sub-screens: the same root-navigator pattern as Train's
+    //
+    // See the comment above Train's routes for the full reasoning
+    // (`docs/adr/0037-train-module.md`) — it applies unchanged here.
+    // `docs/adr/0038-fuel-module.md` covers Fuel's own decisions.
+    GoRoute(
+      path: '/fuel/log-meal',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const LogMealScreen(),
+    ),
+    GoRoute(
+      path: '/fuel/search',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const FoodSearchScreen(),
+    ),
+    GoRoute(
+      path: '/fuel/supplements',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SupplementsScreen(),
     ),
   ],
 );

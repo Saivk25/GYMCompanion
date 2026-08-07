@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../design/design.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
-import 'widgets/session_progress_bar.dart';
 
 /// Session Summary — reused for both the immediate post-session recap
 /// (UX/UI Design Bible catalog: "Post-session recap... Return to Today")
@@ -113,7 +112,7 @@ class _SummaryContent extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
-            SessionProgressBar(fraction: completionFraction),
+            AppProgressBar(fraction: completionFraction),
             const SizedBox(height: AppSpacing.lg),
           ],
           Row(

@@ -10,6 +10,7 @@ export 'app_button.dart';
 export 'app_card.dart';
 export 'app_list_tile.dart';
 export 'app_overlays.dart';
+export 'app_progress_bar.dart';
 export 'app_section_header.dart';
 export 'app_segmented_control.dart';
 export 'app_text_field.dart';

@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
+import '../../../shared/presentation/widgets/not_connected_placeholder.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
-import 'widgets/not_connected_placeholder.dart';
 import 'widgets/train_history_tile.dart';
 import 'widgets/train_workout_card.dart';
 

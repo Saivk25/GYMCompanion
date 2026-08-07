@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../design/design.dart';
+import '../../../fuel/presentation/widgets/water_log_sheet.dart';
 
 /// The Today tab's single FAB opens exactly this sheet (UX/UI Design
 /// Bible Section 4: "One FAB, scoped to the Today tab only (Quick Add:
@@ -10,12 +11,15 @@ import '../../../../design/design.dart';
 /// `AppShell`'s doc comment for why the FAB itself lives in the shell
 /// rather than in `TodayScreen`.
 ///
-/// "Log a meal" is real navigation (Fuel already exists as a tab, even
-/// mid-build). Water and Note have no destination yet — dedicated
-/// quick-entry flows for either are not part of any screen built so far
-/// — so they surface the same honest "not built yet" signal
-/// `TodayScreen`'s own deferred actions use, rather than silently doing
-/// nothing.
+/// "Log a meal" is real navigation to Fuel Home (UX/UI Design Bible
+/// Section 5.10: "Entry points: Fuel tab; Today's quick-add" — both
+/// named as entry points into Fuel *Home*, not directly into meal
+/// capture, which is Fuel Home's own primary action). "Log water" opens
+/// the real [WaterLogSheet] built for Fuel — reused here rather than
+/// duplicated, a cross-feature import in the same spirit as `AppShell`'s
+/// own pre-existing one into Today. "Add a note" has no destination
+/// anywhere in this app yet, so it still surfaces the honest "not built
+/// yet" signal `TodayScreen`'s own deferred actions use.
 class QuickAddSheet extends StatelessWidget {
   const QuickAddSheet({super.key});
 
@@ -49,8 +53,9 @@ class QuickAddSheet extends StatelessWidget {
           title: 'Log water',
           onTap: () {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Water logging is not built yet.')),
+            showAppBottomSheet(
+              context: context,
+              builder: (BuildContext context) => const WaterLogSheet(),
             );
           },
         ),
