@@ -35,7 +35,21 @@ class AppShell extends StatelessWidget {
     NavigationDestination(icon: Icon(Icons.fitness_center_outlined), selectedIcon: Icon(Icons.fitness_center), label: 'Train'),
     NavigationDestination(icon: Icon(Icons.restaurant_outlined), selectedIcon: Icon(Icons.restaurant), label: 'Fuel'),
     NavigationDestination(icon: Icon(Icons.show_chart_outlined), selectedIcon: Icon(Icons.show_chart), label: 'Progress'),
-    NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Coach'),
+    // `AppIcons.coach`/`coachSelected`, not a bare `Icons.*` literal like
+    // the four destinations above — this pair changed as part of the
+    // Coach module's real build (`docs/adr/0041-coach-module.md`: the
+    // original chat-bubble glyph miscommunicated Coach as a chat
+    // interface, which its own build directive explicitly forbids), so
+    // it is the one destination in this list sourced from the token file
+    // rather than duplicating the literal here. The other four keeping
+    // their own bare `Icons.*` literals is a pre-existing inconsistency
+    // with this file's own token-file convention, predating this phase —
+    // noted, not fixed here, to keep this change scoped to Coach.
+    NavigationDestination(
+      icon: Icon(AppIcons.coach),
+      selectedIcon: Icon(AppIcons.coachSelected),
+      label: 'Coach',
+    ),
   ];
 
   @override

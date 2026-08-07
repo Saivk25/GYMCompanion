@@ -163,6 +163,7 @@ class TrainSession {
     this.startedAt,
     this.completedAt,
     this.abandonedAt,
+    this.lastMutationWarnings = const <String>[],
   });
 
   final String sessionId;
@@ -178,6 +179,21 @@ class TrainSession {
   final DateTime? startedAt;
   final DateTime? completedAt;
   final DateTime? abandonedAt;
+
+  /// The real advisory strings the *most recent* mutation on this
+  /// session returned — `POST .../complete` surfaces
+  /// `ProgressiveOverloadRuleEngine` + `TrainingLoadRuleEngine` advice
+  /// this way (`docs/adr/0041-coach-module.md`); `POST .../sets` surfaces
+  /// `ExerciseRecommendationRuleEngine` advice the same way, though that
+  /// engine's real handler only ever supplies it a minimal context
+  /// (see that ADR's research section), so it realistically produces
+  /// little. Transient like `ReadinessHomeViewState
+  /// .lastCheckInWarnings` — not persisted, not re-derivable from a
+  /// plain fetch, genuinely empty again after the next `fetchSession`.
+  /// Defaults to `()` so every other call site constructing a
+  /// [TrainSession] (seed data, `copyWith`-shaped rebuilds elsewhere in
+  /// the mock) is unaffected by this field's addition.
+  final List<String> lastMutationWarnings;
 }
 
 /// Train Home's sub-state for its own content region — independent of

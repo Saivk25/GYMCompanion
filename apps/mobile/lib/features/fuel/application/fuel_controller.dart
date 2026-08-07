@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/application/coach_signal_log.dart';
+import '../../../shared/domain/coach_signal.dart';
 import '../domain/fuel_models.dart';
 
 /// The seam between Fuel's presentation layer and wherever its data
@@ -18,10 +20,23 @@ import '../domain/fuel_models.dart';
 /// disclosed "not connected yet" state directly, the same posture
 /// `TrainRepository` already established for personal records and the
 /// exercise catalog. See `docs/adr/0038-fuel-module.md`.
+///
+/// [logMeal] returns [FuelLogResult], not a bare [FuelEntry] — the real
+/// `POST /api/v1/nutrition` genuinely returns advisory `warnings`
+/// alongside the created id (`NutritionRuleEngine`, surfaced via
+/// `advisory_warnings()`), and Coach's one real cross-module data source
+/// depends on this client actually capturing them
+/// (`docs/adr/0041-coach-module.md`). [logWater] deliberately keeps
+/// returning a bare [FuelEntry]: it maps to the same endpoint, so it
+/// technically could carry warnings too, but no rule in
+/// `NutritionRuleEngine` is meaningfully about a water-only entry, and
+/// widening every call site for a case that would realistically always
+/// be empty was judged not worth it — a deliberate scope line, not an
+/// oversight.
 abstract interface class FuelRepository {
   Future<FuelHomeViewState> fetchHome();
 
-  Future<FuelEntry> logMeal({
+  Future<FuelLogResult> logMeal({
     required DateTime date,
     MealType? mealType,
     double? calories,
@@ -82,7 +97,7 @@ class FuelHomeController extends AsyncNotifier<FuelHomeViewState> {
     double? sugar,
     String? notes,
   }) async {
-    await ref.read(fuelRepositoryProvider).logMeal(
+    final FuelLogResult result = await ref.read(fuelRepositoryProvider).logMeal(
           date: date,
           mealType: mealType,
           calories: calories,
@@ -93,6 +108,10 @@ class FuelHomeController extends AsyncNotifier<FuelHomeViewState> {
           sugar: sugar,
           notes: notes,
         );
+    // Coach's one real cross-module data source (`docs/adr/0041-coach-
+    // module.md`) — the same real strings `NutritionRuleEngine` produced,
+    // tagged `CoachModule.nutrition`, never recomputed here.
+    ref.read(coachSignalLogProvider.notifier).add(CoachModule.nutrition, result.warnings);
     state = await AsyncValue.guard(() => ref.read(fuelRepositoryProvider).fetchHome());
   }
 

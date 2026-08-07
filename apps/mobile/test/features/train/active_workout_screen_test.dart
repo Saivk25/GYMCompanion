@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_companion_mobile/app.dart';
+import 'package:gym_companion_mobile/features/coach/application/coach_controller.dart';
+import 'package:gym_companion_mobile/features/coach/infrastructure/mock_coach_repository.dart';
 import 'package:gym_companion_mobile/features/today/application/today_controller.dart';
 import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_repository.dart';
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
+import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
 
 /// End-to-end through the real router and [MockTrainRepository] — not a
 /// narrower unit test — because the value worth verifying here is the
@@ -33,6 +36,9 @@ Future<void> _pumpToActiveWorkout(WidgetTester tester) async {
       overrides: <Override>[
         todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
         trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
+        coachRepositoryProvider.overrideWith(
+          (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+        ),
       ],
       child: const GymCompanionApp(),
     ),

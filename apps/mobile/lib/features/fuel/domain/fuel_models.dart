@@ -88,6 +88,24 @@ class FuelEntry {
   bool get isWaterOnly => waterIntake != null && !isMeal;
 }
 
+/// The result of logging a meal: the entry itself, plus whichever real
+/// advisory strings `NutritionRuleEngine` produced for it —
+/// `POST /api/v1/nutrition`'s own real response shape (`IdResponse
+/// .warnings`, formatted by `advisory_warnings()` from the engine's
+/// `RuleResult.recommendations`, evaluated across `CaloriesRule`/
+/// `ProteinRule`/`CarbohydratesRule`/`FatRule`/`FiberRule`/
+/// `HydrationRule`). The same real-warnings shape
+/// `ReadinessCheckInResult` already established for Readiness
+/// (`features/readiness/domain/readiness_models.dart`) — see that type's
+/// own doc comment for the full reasoning, which applies unchanged here.
+/// [warnings] is `()` when every rule passed, which is not an error.
+class FuelLogResult {
+  const FuelLogResult({required this.entry, this.warnings = const <String>[]});
+
+  final FuelEntry entry;
+  final List<String> warnings;
+}
+
 /// The complete state Fuel Home renders from once its initial fetch has
 /// resolved — mirrors `TrainHomeViewState`'s shape (a single page-level
 /// `AsyncValue`, no nested per-card status enum: unlike Today's session

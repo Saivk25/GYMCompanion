@@ -19,8 +19,7 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
 - `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`,
-  `fuel/`, and `progress/` are real (see below); Coach is still a placeholder —
-  see that file's doc comment for which phase populates it for real.
+  `fuel/`, `progress/`, and `coach/` are all real (see below).
   `readiness/` is also real, but is not a tab — see below.
 - `lib/features/today/` — the first real feature screen, and the pattern every later
   screen follows: `domain/` (pure Dart view types), `application/` (a `TodayRepository`
@@ -60,18 +59,38 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   segment, never from a bottom tab. Progress's Recovery segment keeps owning
   the sleep/HRV trend *charts*; this module owns check-in records. See
   `docs/adr/0040-readiness-module.md`.
+- `lib/features/coach/` — the same pattern applied to Coach, the application's
+  intelligence layer, never a chatbot: Coach Home (a real, chronological feed
+  of real advisory signals captured from Readiness/Fuel/Train's own genuine
+  backend responses, filterable by Recovery/Nutrition/Training via
+  `AppSegmentedControl`), Recommendation Detail (one signal's full message,
+  severity, and a plain-language "where this came from" disclosure), and two
+  honest "not connected yet" placeholders (Weekly Review, Coaching History),
+  since no backend rollup or persisted-recommendation-history endpoint exists.
+  Reads from the shared `CoachSignalLog` rather than any network-shaped mock
+  of its own — there is no aggregation endpoint for a real client to call, so
+  unlike every other module's mock, Coach's is not "mock until the backend
+  arrives." See `docs/adr/0041-coach-module.md`.
 - `lib/shared/domain/` — pure Dart value types genuinely shared across more than
-  one feature (currently just `SessionTier`, used by both Today and Train) —
-  not a dumping ground; a type only moves here once a second feature actually
-  needs it, per `docs/adr/0037-train-module.md`'s Decision 5.
+  one feature (`SessionTier`, used by both Today and Train; `CoachSignal`/
+  `CoachModule`/`CoachSeverity`, produced by Readiness/Fuel/Train and consumed
+  by Coach) — not a dumping ground; a type only moves here once a second
+  feature actually needs it, per `docs/adr/0037-train-module.md`'s Decision 5.
+- `lib/shared/application/` — cross-feature application state, currently just
+  `CoachSignalLog`, a session-scoped, in-memory `Notifier` that Readiness/
+  Fuel/Train push real advisory warnings into and Coach reads from — the
+  first mutable shared state (and first write-direction cross-feature
+  dependency) in this codebase; see `docs/adr/0041-coach-module.md`'s
+  Decision 2.
 - `lib/shared/presentation/widgets/` — cross-feature widgets that aren't design-
   system primitives, currently `NotConnectedPlaceholder` (promoted from Train
   once Fuel needed the identical "not connected yet" convention a second time —
   `docs/adr/0038-fuel-module.md`'s Decision 5).
 - `test/` — mirrors `lib/`, including `test/design/` for the design system and
   `test/features/today/`, `test/features/train/`, `test/features/fuel/`,
-  `test/features/progress/`, `test/features/readiness/` for those five
-  modules.
+  `test/features/progress/`, `test/features/readiness/`,
+  `test/features/coach/`, and `test/shared/` for those six modules plus
+  shared state.
 
 See `docs/adr/0002-flutter-verification-constraint.md` and
 `docs/adr/0003-flutter-state-management.md` for two decisions made during the
@@ -139,9 +158,9 @@ the default width genuinely proves cramped in practice — not before.
 
 ## Status
 
-Four of five tabs are real (Today, Train, Fuel, Progress); Coach remains a
-placeholder. Readiness is also real but is not a tab — it is reached from
-Today and Progress; see below. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
+All five tabs are real (Today, Train, Fuel, Progress, Coach). Readiness is
+also real but is not a tab — it is reached from Today and Progress; see
+below. The Flutter Design System (`docs/adr/0034`) is done: tokens, theme architecture
 (light + dark), and a closed set of reusable component primitives
 (`AppButton`, `AppCard`, `AppBadge`, `AppListTile`, `AppSectionHeader`,
 `AppEmptyState`/`AppErrorState`/`AppSkeletonBox`, bottom sheet and confirmation-dialog
@@ -231,4 +250,23 @@ them. `AppRatingSlider` (`lib/design/components/`) is this phase's own
 new design-system component, for the bounded 1-10 self-report scale no
 existing component modeled.
 
-Coach remains a placeholder. No authentication flow exists yet.
+Coach (`docs/adr/0041`) is the fifth and final tab, and its own research
+finding was the widest gap of any phase: the backend has no `coach`
+concept at all, and no endpoint anywhere aggregates, persists, or
+returns advisory output outside the exact mutating call that produced
+it — every rule engine's recommendations are transient by design. Coach
+Home is therefore a real, chronological feed built on a new shared
+primitive, `CoachSignalLog`, that Readiness's check-in, Fuel's meal log,
+and Train's session completion each push their own real, already-
+received backend warnings into, filterable by Recovery/Nutrition/
+Training via `AppSegmentedControl`. Recommendation Detail shows one
+signal's full message, severity, and a plain-language sourcing
+disclosure — never a fabricated confidence score or rationale, since the
+real `Recommendation` type carries neither. Weekly Review and Coaching
+History are honest "not connected yet" placeholders, since no backend
+rollup or persisted-recommendation-history concept exists. `SafetyRule
+Engine` was found to be fully unwired (zero application-layer callers)
+and Goal has no Flutter surface at all, so neither contributes to
+Coach. The Coach tab icon changed from a chat bubble to `insights`,
+correcting a stale visual promise from before this module's real,
+non-chat scope existed. No authentication flow exists yet.

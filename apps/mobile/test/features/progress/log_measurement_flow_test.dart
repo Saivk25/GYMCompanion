@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_companion_mobile/app.dart';
+import 'package:gym_companion_mobile/features/coach/application/coach_controller.dart';
+import 'package:gym_companion_mobile/features/coach/infrastructure/mock_coach_repository.dart';
 import 'package:gym_companion_mobile/features/fuel/application/fuel_controller.dart';
 import 'package:gym_companion_mobile/features/fuel/infrastructure/mock_fuel_repository.dart';
 import 'package:gym_companion_mobile/features/progress/application/progress_controller.dart';
@@ -10,6 +12,7 @@ import 'package:gym_companion_mobile/features/today/application/today_controller
 import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_repository.dart';
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
+import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
 
 /// End-to-end through the real router and [MockProgressRepository] —
 /// the same reasoning `log_meal_flow_test.dart` gives for doing this
@@ -22,6 +25,9 @@ Future<void> _pumpToProgressTransformation(WidgetTester tester) async {
         trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
         fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
         progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
+        coachRepositoryProvider.overrideWith(
+          (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+        ),
       ],
       child: const GymCompanionApp(),
     ),
@@ -95,6 +101,9 @@ void main() {
           trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
           fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
           progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
+          coachRepositoryProvider.overrideWith(
+            (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+          ),
         ],
         child: const GymCompanionApp(),
       ),

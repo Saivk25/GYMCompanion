@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/application/coach_signal_log.dart';
+import '../../../shared/domain/coach_signal.dart';
 import '../domain/readiness_models.dart';
 
 /// The seam between Readiness's presentation layer and wherever its data
@@ -87,6 +89,12 @@ class ReadinessHomeController extends AsyncNotifier<ReadinessHomeViewState> {
           heartRateVariability: heartRateVariability,
           notes: notes,
         );
+    // Coach's one real cross-module data source (`docs/adr/0041-coach-
+    // module.md`): every real advisory string this screen already shows
+    // as `lastCheckInWarnings` is also pushed into the shared signal
+    // log, tagged `CoachModule.recovery`, so Coach Home can surface it
+    // too — the same real strings, never recomputed or duplicated.
+    ref.read(coachSignalLogProvider.notifier).add(CoachModule.recovery, result.warnings);
     final ReadinessHomeViewState refreshed =
         await ref.read(readinessRepositoryProvider).fetchHome();
     state = AsyncValue<ReadinessHomeViewState>.data(

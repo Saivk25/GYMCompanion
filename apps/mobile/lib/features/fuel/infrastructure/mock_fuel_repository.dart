@@ -14,6 +14,7 @@ class MockFuelRepository implements FuelRepository {
 
   final List<FuelEntry> _entries;
   int _nextId = 100;
+  bool _hasShownIllustrativeWarnings = false;
 
   static List<FuelEntry> _seedEntries() {
     final DateTime today = DateTime.now();
@@ -62,7 +63,7 @@ class MockFuelRepository implements FuelRepository {
   }
 
   @override
-  Future<FuelEntry> logMeal({
+  Future<FuelLogResult> logMeal({
     required DateTime date,
     MealType? mealType,
     double? calories,
@@ -89,7 +90,24 @@ class MockFuelRepository implements FuelRepository {
       notes: notes ?? '',
     );
     _entries.add(entry);
-    return entry;
+
+    // Two fixed, clearly-illustrative advisory strings on the first
+    // logged meal only, never a reimplementation of `NutritionRuleEngine`
+    // 's real calorie/protein/carb/fat/fiber/hydration thresholds — the
+    // same disclosed posture `MockReadinessRepository.submitCheckIn`
+    // already established; see that file's own doc comment for the full
+    // reasoning, which applies unchanged here.
+    List<String> warnings = const <String>[];
+    if (!_hasShownIllustrativeWarnings) {
+      _hasShownIllustrativeWarnings = true;
+      warnings = const <String>[
+        '[advisory] Example advisory — real recommendations come from the '
+            'backend nutrition rule engine once connected.',
+        '[warning] This illustrates where nutrition advice appears; it is '
+            'not computed from the values you just entered.',
+      ];
+    }
+    return FuelLogResult(entry: entry, warnings: warnings);
   }
 
   @override

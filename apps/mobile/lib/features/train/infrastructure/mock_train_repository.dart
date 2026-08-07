@@ -23,6 +23,7 @@ class MockTrainRepository implements TrainRepository {
   MockTrainRepository() : _sessions = <String, TrainSession>{};
 
   final Map<String, TrainSession> _sessions;
+  bool _hasShownIllustrativeWarnings = false;
 
   static const List<String> _standardLifts = <String>[
     'Back Squat',
@@ -287,6 +288,27 @@ class MockTrainRepository implements TrainRepository {
   }) async {
     await _delay();
     final TrainSession current = _sessions[sessionId] ?? await fetchSession(sessionId);
+
+    // Two fixed, clearly-illustrative advisory strings on the first
+    // completed session only, never a reimplementation of
+    // `ProgressiveOverloadRuleEngine`'s/`TrainingLoadRuleEngine`'s real
+    // volume/intensity/frequency/progression/deload/acute-load/chronic-
+    // load/load-ratio/monotony/strain thresholds — the same disclosed
+    // posture `MockReadinessRepository.submitCheckIn` already
+    // established; see that file's own doc comment for the full
+    // reasoning, which applies unchanged here.
+    List<String> warnings = const <String>[];
+    if (!_hasShownIllustrativeWarnings) {
+      _hasShownIllustrativeWarnings = true;
+      warnings = const <String>[
+        '[advisory] Example advisory — real recommendations come from the '
+            'backend progressive-overload and training-load rule engines '
+            'once connected.',
+        '[warning] This illustrates where training advice appears; it is '
+            'not computed from the session you just completed.',
+      ];
+    }
+
     final TrainSession next = TrainSession(
       sessionId: current.sessionId,
       workoutId: current.workoutId,
@@ -301,6 +323,7 @@ class MockTrainRepository implements TrainRepository {
       startedAt: current.startedAt,
       completedAt: DateTime.now(),
       abandonedAt: current.abandonedAt,
+      lastMutationWarnings: warnings,
     );
     _sessions[sessionId] = next;
     return next;

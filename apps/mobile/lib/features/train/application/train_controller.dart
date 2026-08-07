@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/application/coach_signal_log.dart';
+import '../../../shared/domain/coach_signal.dart';
 import '../../../shared/domain/session_tier.dart';
 import '../domain/train_models.dart';
 
@@ -200,6 +202,14 @@ class ActiveSessionController extends FamilyAsyncNotifier<TrainSession, String> 
           durationSeconds: durationSeconds,
           completionPercentage: completionPercentage,
           rating: rating,
+        );
+    // Coach's one real cross-module data source (`docs/adr/0041-coach-
+    // module.md`) — the same real strings `ProgressiveOverloadRuleEngine`/
+    // `TrainingLoadRuleEngine` produced, tagged `CoachModule.training`,
+    // never recomputed here.
+    ref.read(coachSignalLogProvider.notifier).add(
+          CoachModule.training,
+          updated.lastMutationWarnings,
         );
     state = AsyncValue<TrainSession>.data(updated);
   }

@@ -50,8 +50,19 @@ abstract final class AppIcons {
   static const IconData fuelSelected = Icons.restaurant;
   static const IconData progress = Icons.show_chart_outlined;
   static const IconData progressSelected = Icons.show_chart;
-  static const IconData coach = Icons.chat_bubble_outline;
-  static const IconData coachSelected = Icons.chat_bubble;
+  // `chat_bubble`/`chat_bubble_outline` were this pair's original glyphs,
+  // chosen when Coach was still scaffolded as a placeholder describing
+  // itself as "Coach conversation" (see the old `CoachScreen`'s own
+  // pre-Sprint-9 doc comment). The Coach module's real build directive
+  // is explicit that Coach is not a chatbot and must never read as one —
+  // "insights," not "conversation," is what `CoachHomeScreen` actually
+  // shows (a feed of real, rule-engine-derived advisory signals, filtered
+  // by Recovery/Nutrition/Training). A chat-bubble glyph on the tab bar
+  // would visually promise the one interaction model this module
+  // explicitly forbids, so this pair was changed alongside the module's
+  // real build — see `docs/adr/0041-coach-module.md`.
+  static const IconData coach = Icons.insights_outlined;
+  static const IconData coachSelected = Icons.insights;
 
   // --- Global chrome ---
   static const IconData search = Icons.search;

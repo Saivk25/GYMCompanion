@@ -5,11 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_companion_mobile/app.dart';
 import 'package:gym_companion_mobile/design/design.dart';
+import 'package:gym_companion_mobile/features/coach/application/coach_controller.dart';
+import 'package:gym_companion_mobile/features/coach/infrastructure/mock_coach_repository.dart';
 import 'package:gym_companion_mobile/features/today/application/today_controller.dart';
 import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_repository.dart';
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/domain/train_models.dart';
 import 'package:gym_companion_mobile/shared/domain/session_tier.dart';
+import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
 
 /// A controllable fake — mirrors `_FakeTodayRepository`'s own reasoning
 /// (`today_screen_test.dart`): [fetchHome] resolves only once [complete]
@@ -106,6 +109,9 @@ Future<void> _pumpTrain(WidgetTester tester, TrainHomeViewState state) async {
         todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
         trainRepositoryProvider
             .overrideWithValue(_FakeTrainRepository(state)..complete()),
+        coachRepositoryProvider.overrideWith(
+          (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+        ),
       ],
       child: const GymCompanionApp(),
     ),
@@ -127,6 +133,9 @@ void main() {
         overrides: <Override>[
           todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
           trainRepositoryProvider.overrideWithValue(repo),
+          coachRepositoryProvider.overrideWith(
+            (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+          ),
         ],
         child: const GymCompanionApp(),
       ),
@@ -211,6 +220,9 @@ void main() {
         overrides: <Override>[
           todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
           trainRepositoryProvider.overrideWithValue(repo),
+          coachRepositoryProvider.overrideWith(
+            (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
+          ),
         ],
         child: const GymCompanionApp(),
       ),

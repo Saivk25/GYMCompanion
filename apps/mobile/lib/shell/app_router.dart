@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/coach/presentation/coach_screen.dart';
+import '../features/coach/presentation/coach_history_screen.dart';
+import '../features/coach/presentation/coach_home_screen.dart';
+import '../features/coach/presentation/coach_signal_detail_screen.dart';
+import '../features/coach/presentation/coach_weekly_review_screen.dart';
 import '../features/fuel/presentation/food_search_screen.dart';
 import '../features/fuel/presentation/fuel_home_screen.dart';
 import '../features/fuel/presentation/log_meal_screen.dart';
@@ -83,7 +86,7 @@ final GoRouter appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/coach',
-              builder: (context, state) => const CoachScreen(),
+              builder: (context, state) => const CoachHomeScreen(),
             ),
           ],
         ),
@@ -245,6 +248,34 @@ final GoRouter appRouter = GoRouter(
       path: '/readiness/formula',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ReadinessFormulaScreen(),
+    ),
+
+    // ## Coach's sub-screens: the same root-navigator pattern as every
+    // other module's drill-ins
+    //
+    // Unlike Readiness, `/coach` itself *is* one of the five tabs (it
+    // always has been — see the `StatefulShellBranch` above) — only its
+    // own drill-ins (one signal's detail, Weekly Review, Coaching
+    // History) are root-navigator pushes, the same full-screen-drill-in
+    // pattern every other module's own sub-screens already established;
+    // see the comment above Train's routes for the full reasoning.
+    // `docs/adr/0041-coach-module.md` covers Coach's own decisions.
+    GoRoute(
+      path: '/coach/signal/:signalId',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => CoachSignalDetailScreen(
+        signalId: state.pathParameters['signalId']!,
+      ),
+    ),
+    GoRoute(
+      path: '/coach/weekly-review',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const CoachWeeklyReviewScreen(),
+    ),
+    GoRoute(
+      path: '/coach/history',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const CoachHistoryScreen(),
     ),
   ],
 );
