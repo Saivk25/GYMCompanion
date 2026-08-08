@@ -15,6 +15,7 @@ import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_re
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
 import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
+import '../support/auth_test_overrides.dart';
 
 /// Every test in this file overrides [todayRepositoryProvider],
 /// [trainRepositoryProvider], [fuelRepositoryProvider],
@@ -35,6 +36,7 @@ import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
 ProviderScope _appWithMocks() {
   return ProviderScope(
     overrides: <Override>[
+        ...authenticatedTestOverrides(),
       todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
       trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
       fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),

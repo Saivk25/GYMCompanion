@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../design/design.dart';
+import '../features/auth/application/auth_controller.dart';
 import '../features/today/presentation/widgets/quick_add_sheet.dart';
 
 /// The persistent global top bar and five-tab bottom navigation, per the
 /// UX/UI Design Bible Sections 3-4.
 ///
-/// The Context chip, search, and notification bell are placeholders in this
-/// scaffolding sprint — they render but carry no behavior yet, matching how
-/// the backend's `/health` endpoint proves the shell boots without yet
-/// implementing a feature. Settings is deliberately not a sixth tab (UX
-/// Bible Section 3): it is reached from the avatar action here, from any tab.
+/// The Context chip, search, and notification bell remain placeholders —
+/// they render but carry no behavior yet; see `docs/TECH_DEBT.md`'s
+/// TD-0003 for the trigger conditions under which each should get a
+/// real destination. Settings is the one exception: `docs/adr/0044-
+/// authentication-module.md` (Step 2 of `docs/adr/0042-production-
+/// integration-plan.md`) gives it the real, honest destination TD-0003
+/// itself already named as its own trigger condition — "Settings has an
+/// obvious real destination once any account/profile screen exists" —
+/// specifically, real sign-out, not yet a full account/profile screen
+/// (no such screen exists in this app; a real one is future scope, not
+/// fabricated here). Settings is deliberately not a sixth tab (UX Bible
+/// Section 3): it is reached from the avatar action here, from any tab.
+///
+/// All five tab icons now route through [AppIcons] rather than four of
+/// them using a bare `Icons.*` literal — the other half of TD-0003,
+/// closed here since this file is already being touched for the
+/// Settings/logout wiring above; a mechanical fix with no behavior
+/// change, exactly as TD-0003 itself anticipated.
 ///
 /// ## The FAB lives here, not in `TodayScreen`
 ///
@@ -25,26 +40,16 @@ import '../features/today/presentation/widgets/quick_add_sheet.dart';
 /// still Today-specific and lives under `features/today/`; this file
 /// only decides *when the FAB appears*, never what quick-add actually
 /// does.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   static const _destinations = <NavigationDestination>[
-    NavigationDestination(icon: Icon(Icons.today_outlined), selectedIcon: Icon(Icons.today), label: 'Today'),
-    NavigationDestination(icon: Icon(Icons.fitness_center_outlined), selectedIcon: Icon(Icons.fitness_center), label: 'Train'),
-    NavigationDestination(icon: Icon(Icons.restaurant_outlined), selectedIcon: Icon(Icons.restaurant), label: 'Fuel'),
-    NavigationDestination(icon: Icon(Icons.show_chart_outlined), selectedIcon: Icon(Icons.show_chart), label: 'Progress'),
-    // `AppIcons.coach`/`coachSelected`, not a bare `Icons.*` literal like
-    // the four destinations above — this pair changed as part of the
-    // Coach module's real build (`docs/adr/0041-coach-module.md`: the
-    // original chat-bubble glyph miscommunicated Coach as a chat
-    // interface, which its own build directive explicitly forbids), so
-    // it is the one destination in this list sourced from the token file
-    // rather than duplicating the literal here. The other four keeping
-    // their own bare `Icons.*` literals is a pre-existing inconsistency
-    // with this file's own token-file convention, predating this phase —
-    // noted, not fixed here, to keep this change scoped to Coach.
+    NavigationDestination(icon: Icon(AppIcons.today), selectedIcon: Icon(AppIcons.todaySelected), label: 'Today'),
+    NavigationDestination(icon: Icon(AppIcons.train), selectedIcon: Icon(AppIcons.trainSelected), label: 'Train'),
+    NavigationDestination(icon: Icon(AppIcons.fuel), selectedIcon: Icon(AppIcons.fuelSelected), label: 'Fuel'),
+    NavigationDestination(icon: Icon(AppIcons.progress), selectedIcon: Icon(AppIcons.progressSelected), label: 'Progress'),
     NavigationDestination(
       icon: Icon(AppIcons.coach),
       selectedIcon: Icon(AppIcons.coachSelected),
@@ -52,15 +57,32 @@ class AppShell extends StatelessWidget {
     ),
   ];
 
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final bool? confirmed = await showAppConfirmationDialog(
+      context: context,
+      title: 'Log out?',
+      message: "You'll need to sign in again to continue.",
+      confirmLabel: 'Log out',
+      isDestructive: false,
+    );
+    if (confirmed == true) {
+      await ref.read(authControllerProvider.notifier).logout();
+      // No explicit navigation here — logout moves authControllerProvider
+      // to AuthUnauthenticated, which the router's own reactive redirect
+      // (lib/shell/app_router.dart) already sends to /login on its own,
+      // the same pattern Login/Register's own onPressed handlers use.
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(AppSpacing.sm),
           child: Chip(
             label: const Text('Home'),
-            avatar: const Icon(Icons.place_outlined, size: 18),
+            avatar: const Icon(AppIcons.location, size: 18),
             onDeleted: null,
           ),
         ),
@@ -69,18 +91,18 @@ class AppShell extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Search',
-            icon: const Icon(Icons.search),
+            icon: const Icon(AppIcons.search),
             onPressed: () {},
           ),
           IconButton(
             tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(AppIcons.notifications),
             onPressed: () {},
           ),
           IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () {},
+            tooltip: 'Log out',
+            icon: const Icon(AppIcons.settings),
+            onPressed: () => _confirmLogout(context, ref),
           ),
         ],
       ),

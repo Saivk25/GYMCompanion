@@ -116,6 +116,17 @@ class ApiClient {
     return data as Map<String, dynamic>;
   }
 
+  /// For the small set of `POST` endpoints that return `204 No Content`
+  /// with `response_model=None` — today, exactly one:
+  /// `POST /logout` (`backend/app/api/routes/auth.py`). Every other
+  /// mutation in this API returns a real `IdResponse` body, which
+  /// [post] already handles; this exists so that one real exception
+  /// doesn't force every caller of [post] to defensively handle a
+  /// possibly-null body.
+  Future<void> postEmpty(String path, {Object? body}) async {
+    await _sendRaw(() => _dio.post<dynamic>(path, data: body));
+  }
+
   /// This backend has no endpoint that returns a body on delete/cancel-
   /// style actions with a `204`/action response — several return
   /// `IdResponse` instead (see `backend/app/api/schemas/common.py`) — so

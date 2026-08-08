@@ -29,10 +29,22 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   `docs/adr/0034-flutter-design-system.md` (repository root) for the full reasoning
   behind every token and component choice.
 - `lib/shell/` — `app_router.dart` (the `go_router` route table, one `StatefulShellRoute`
-  branch per tab) and `app_shell.dart` (the persistent top bar + bottom navigation, plus
-  the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md` for why the FAB
-  lives here). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
+  branch per tab, now a `Provider<GoRouter>` rather than a bare top-level constant so it
+  can bridge `authControllerProvider`'s state into `go_router`'s `redirect` — see
+  `docs/adr/0044-authentication-module.md`) and `app_shell.dart` (the persistent top bar +
+  bottom navigation, the Today-only quick-add FAB — see `docs/adr/0036-today-screen.md`
+  for why the FAB lives here — and, as of the same phase, real sign-out from the Settings
+  icon). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
+- `lib/features/auth/` — the real authentication module, the same four-layer
+  pattern as every other feature: `domain/` (`AuthState`/`AuthUser`/`AuthTokens`),
+  `application/` (`AuthRepository`/`TokenStorage` interfaces + `AuthController`, an
+  `AsyncNotifier` handling cold-start refresh, login/register, logout, and the
+  refresh/logout closures `ApiClient` calls), `infrastructure/` (`ApiAuthRepository`
+  against the real backend, `SecureTokenStorage`, and a test-only `MockAuthRepository`
+  never wired in `main.dart`), `presentation/` (Splash, Login, Register). Reached via
+  `/splash`/`/login`/`/register`; every other route is guarded by `app_router.dart`'s
+  reactive redirect. See `docs/adr/0044-authentication-module.md`.
 - `lib/features/<tab>/presentation/` — one screen per tab. `today/`, `train/`,
   `fuel/`, `progress/`, and `coach/` are all real (see below).
   `readiness/` is also real, but is not a tab — see below.
@@ -284,4 +296,17 @@ Engine` was found to be fully unwired (zero application-layer callers)
 and Goal has no Flutter surface at all, so neither contributes to
 Coach. The Coach tab icon changed from a chat bubble to `insights`,
 correcting a stale visual promise from before this module's real,
-non-chat scope existed. No authentication flow exists yet.
+non-chat scope existed.
+
+Production integration is underway (`docs/adr/0042-production-integration-plan.md`).
+Step 1 (`docs/adr/0043-core-networking-layer.md`) built the shared `lib/core/network/`
+HTTP layer — `dio`-based client, bearer-token injection, a GET-only/network-failure-only
+retry policy, and error mapping built from the real backend's own status-code taxonomy —
+with zero feature repositories touched. Step 2 (`docs/adr/0044-authentication-module.md`)
+built the real Auth module on top of it: `lib/features/auth/` (Splash/Login/Register),
+`AuthController` (cold-start refresh, login, register, logout, automatic refresh-on-401
+via `ApiClient`'s closures, logout-on-refresh-failure), `SecureTokenStorage` (refresh
+token only, Keychain/Keystore-backed), and a reactive `go_router` guard (`app_router.dart`
+is now a `Provider<GoRouter>`) that redirects unauthenticated sessions to `/login` and
+authenticated ones away from it. Every tab still runs on its existing mock repository —
+Step 3 (real per-feature repository integration, Today first) is the next phase.

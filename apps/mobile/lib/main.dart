@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/network/network.dart';
+import 'features/auth/application/auth_controller.dart';
+import 'features/auth/infrastructure/api_auth_repository.dart';
+import 'features/auth/infrastructure/secure_token_storage.dart';
 import 'features/coach/application/coach_controller.dart';
 import 'features/coach/infrastructure/mock_coach_repository.dart';
 import 'features/fuel/application/fuel_controller.dart';
@@ -15,6 +19,28 @@ import 'features/today/infrastructure/mock_today_repository.dart';
 import 'features/train/application/train_controller.dart';
 import 'features/train/infrastructure/mock_train_repository.dart';
 import 'shared/application/coach_signal_log.dart';
+
+/// The single shared [ApiClient] every real (`ApiX`-prefixed)
+/// repository will use — one `Dio` instance, one interceptor chain, for
+/// the whole app, rather than a client per feature. Defined here, not
+/// inside `lib/core/network/`, deliberately: `ApiClient` itself must
+/// stay agnostic to what "a token" or "a refresh" means (see its own
+/// doc comment — `lib/core/network/` has zero imports of
+/// `lib/features/`), so the three closures wiring it to
+/// [authControllerProvider] have to live at the one place that is
+/// already allowed to depend on both — the composition root.
+///
+/// [ApiAuthRepository] itself is also built on this same client — its
+/// own `login`/`register`/`refresh` calls pass `skipAuthHeader`/
+/// `skipAuthRetry` (see that file) rather than needing a second,
+/// auth-free client instance.
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
+  return ApiClient(
+    accessTokenProvider: () async => ref.read(authControllerProvider.notifier).currentAccessToken,
+    refreshToken: () => ref.read(authControllerProvider.notifier).attemptRefresh(),
+    onRefreshFailed: () => ref.read(authControllerProvider.notifier).forceLogoutFromRefreshFailure(),
+  );
+});
 
 /// The one place a provider's real implementation is chosen over its
 /// default. [todayRepositoryProvider]/[trainRepositoryProvider]/
@@ -37,6 +63,14 @@ import 'shared/application/coach_signal_log.dart';
 /// constant instance built before this `ProviderScope` even exists (see
 /// `MockCoachRepository`'s own doc comment for why it has no state of
 /// its own to construct with).
+///
+/// [authRepositoryProvider]/[tokenStorageProvider] are the one pair
+/// wired to their *real* implementations here, not a mock — see
+/// `ApiAuthRepository`'s own doc comment for why Auth has no "mock
+/// until the real backend arrives" era the other six providers went
+/// through. [authRepositoryProvider] uses `overrideWith`, like
+/// [coachRepositoryProvider], for the same reason: [ApiAuthRepository]
+/// needs a closure reading [apiClientProvider] at call time.
 void main() {
   runApp(
     ProviderScope(
@@ -49,6 +83,10 @@ void main() {
         coachRepositoryProvider.overrideWith(
           (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),
         ),
+        authRepositoryProvider.overrideWith(
+          (ref) => ApiAuthRepository(ref.read(apiClientProvider)),
+        ),
+        tokenStorageProvider.overrideWithValue(SecureTokenStorage()),
       ],
       child: const GymCompanionApp(),
     ),

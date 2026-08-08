@@ -303,7 +303,15 @@ Authentication & Authorization and the start of Flutter work.
 
 ## TD-0003: `AppShell`'s global top bar bypasses the icon token file and has three dead controls
 
-- Status: **Open.**
+- Status: **Partially resolved 2026-08-08** (Step 2 of production
+  integration — `docs/adr/0044-authentication-module.md`). The
+  icon-token bypass (item 1 below) is fully fixed: all five
+  `NavigationDestination`s and all four top-bar icons now route through
+  `AppIcons`. Of the four dead controls (item 2), Settings is fixed —
+  it now opens a real confirmation dialog and calls
+  `AuthController.logout()`, exactly the "obvious real destination"
+  this item's own trigger condition named. Search and Notifications
+  remain open — see the trigger condition below, unchanged.
 - Identified: 2026-08-08, during the Production Integration Phase 1
   architecture audit (`docs/adr/0042-production-integration-plan.md`).
 

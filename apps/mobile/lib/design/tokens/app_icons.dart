@@ -103,4 +103,9 @@ abstract final class AppIcons {
   static const IconData trendFlat = Icons.remove;
   static const IconData camera = Icons.camera_alt_outlined;
   static const IconData compare = Icons.compare_outlined;
+
+  // --- Auth (shape-based — outline forms; a real functional toggle,
+  // never decoration, per this file's own module doc comment) ---
+  static const IconData showPassword = Icons.visibility_outlined;
+  static const IconData hidePassword = Icons.visibility_off_outlined;
 }

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/application/auth_controller.dart';
+import '../features/auth/domain/auth_models.dart';
+import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/splash_screen.dart';
 import '../features/coach/presentation/coach_history_screen.dart';
 import '../features/coach/presentation/coach_home_screen.dart';
 import '../features/coach/presentation/coach_signal_detail_screen.dart';
@@ -38,13 +44,101 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
 
+/// Bridges [authControllerProvider]'s own state changes into
+/// `GoRouter`'s `refreshListenable` — the standard, documented pattern
+/// for a Riverpod-driven redirect (`GoRouter`'s own `redirect` callback
+/// is otherwise only re-evaluated on navigation, never on a provider
+/// changing underneath it). `ref.listen` — not `ref.watch` — because
+/// this class is a plain [ChangeNotifier] constructed once inside
+/// [routerProvider], not a widget with its own rebuild lifecycle;
+/// [notifyListeners] is the one thing `GoRouter` needs called whenever
+/// [authControllerProvider] resolves, so `redirect` gets re-evaluated
+/// the moment login/logout/a failed background refresh changes it.
+class _GoRouterRefreshNotifier extends ChangeNotifier {
+  _GoRouterRefreshNotifier(Ref ref) {
+    ref.listen<AsyncValue<AuthState>>(
+      authControllerProvider,
+      (AsyncValue<AuthState>? previous, AsyncValue<AuthState> next) => notifyListeners(),
+    );
+  }
+}
+
+/// The real auth guard. Every route in this app — every tab, every
+/// drill-in — requires a signed-in session except `/login`/`/register`
+/// themselves; `/splash` is the one route that exists purely to give
+/// [authControllerProvider]'s own cold-start resolution somewhere to
+/// render instead of flashing `/today`'s real content first (see
+/// `SplashScreen`'s own doc comment).
+///
+/// Read via `ref.read`, not `ref.watch` — `redirect` is a plain
+/// callback GoRouter invokes on its own schedule (on every navigation
+/// attempt, and whenever [_GoRouterRefreshNotifier] fires), not a
+/// widget `build` method Riverpod needs to schedule a rebuild for.
+String? _authRedirect(Ref ref, GoRouterState state) {
+  final AsyncValue<AuthState> authAsync = ref.read(authControllerProvider);
+  final String location = state.matchedLocation;
+  final bool isAuthRoute = location == '/login' || location == '/register';
+  final bool isSplash = location == '/splash';
+
+  if (authAsync.isLoading) {
+    return isSplash ? null : '/splash';
+  }
+
+  final AuthState? authState = authAsync.valueOrNull;
+  final bool isAuthenticated = authState is AuthAuthenticated;
+
+  if (!isAuthenticated) {
+    // A resolved-but-errored authControllerProvider (e.g. the stored
+    // refresh token's own validation call failed with something other
+    // than a clean 401 — a network error on cold start, say) is treated
+    // the same as "not authenticated": there is no session to trust
+    // either way, and re-showing Splash forever would strand the user
+    // with no path to Login.
+    return isAuthRoute ? null : '/login';
+  }
+
+  if (isAuthRoute || isSplash) {
+    return '/today';
+  }
+  return null;
+}
+
 /// Each branch gets its own navigation stack (StatefulShellRoute), so
 /// switching tabs never loses a tab's scroll/navigation position — this is
 /// what the UX/UI Design Bible's Section 4 "nested navigation" rule assumes.
-final GoRouter appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/today',
-  routes: [
+///
+/// A [Provider], not the bare top-level `final GoRouter` this file used
+/// before Step 2 of `docs/adr/0042-production-integration-plan.md` —
+/// the real auth guard above needs live access to
+/// [authControllerProvider] via `ref`, which a router built outside any
+/// provider has no way to obtain. This is a real, disclosed
+/// architecture change (not a speculative refactor): `docs/adr/0044-
+/// authentication-module.md` records it as the one genuine blocker this
+/// phase's own "do not redesign unless a real blocker is discovered"
+/// instruction licenses.
+final Provider<GoRouter> routerProvider = Provider<GoRouter>((ref) {
+  final _GoRouterRefreshNotifier refreshNotifier = _GoRouterRefreshNotifier(ref);
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/splash',
+    refreshListenable: refreshNotifier,
+    redirect: (context, state) => _authRedirect(ref, state),
+    routes: [
+      GoRoute(
+        path: '/splash',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const RegisterScreen(),
+      ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return AppShell(navigationShell: navigationShell);
@@ -277,5 +371,6 @@ final GoRouter appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const CoachHistoryScreen(),
     ),
-  ],
-);
+    ],
+  );
+});

@@ -9,6 +9,7 @@ import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_re
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
 import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
+import '../../support/auth_test_overrides.dart';
 
 /// Covers the remaining Train screens not already exercised by
 /// `train_home_screen_test.dart` (Train Home itself) or
@@ -20,6 +21,7 @@ import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
 Future<ProviderScope> _appPumped(WidgetTester tester) async {
   final ProviderScope app = ProviderScope(
     overrides: <Override>[
+        ...authenticatedTestOverrides(),
       todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
       trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
       coachRepositoryProvider.overrideWith(

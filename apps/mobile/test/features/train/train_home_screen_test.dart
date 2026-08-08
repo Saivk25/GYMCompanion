@@ -13,6 +13,7 @@ import 'package:gym_companion_mobile/features/train/application/train_controller
 import 'package:gym_companion_mobile/features/train/domain/train_models.dart';
 import 'package:gym_companion_mobile/shared/domain/session_tier.dart';
 import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
+import '../../support/auth_test_overrides.dart';
 
 /// A controllable fake — mirrors `_FakeTodayRepository`'s own reasoning
 /// (`today_screen_test.dart`): [fetchHome] resolves only once [complete]
@@ -106,6 +107,7 @@ Future<void> _pumpTrain(WidgetTester tester, TrainHomeViewState state) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        ...authenticatedTestOverrides(),
         todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
         trainRepositoryProvider
             .overrideWithValue(_FakeTrainRepository(state)..complete()),
@@ -131,6 +133,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+        ...authenticatedTestOverrides(),
           todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
           trainRepositoryProvider.overrideWithValue(repo),
           coachRepositoryProvider.overrideWith(
@@ -218,6 +221,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+        ...authenticatedTestOverrides(),
           todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
           trainRepositoryProvider.overrideWithValue(repo),
           coachRepositoryProvider.overrideWith(

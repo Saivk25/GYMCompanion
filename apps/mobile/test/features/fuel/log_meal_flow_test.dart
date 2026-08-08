@@ -11,6 +11,7 @@ import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_re
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
 import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
+import '../../support/auth_test_overrides.dart';
 
 /// End-to-end through the real router and [MockFuelRepository] — the
 /// same reasoning `active_workout_screen_test.dart` gives for doing this
@@ -21,6 +22,7 @@ Future<void> _pumpToFuelHome(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
+        ...authenticatedTestOverrides(),
         todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
         trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
         fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
