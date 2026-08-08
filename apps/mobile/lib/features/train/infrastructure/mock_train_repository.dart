@@ -2,14 +2,14 @@ import '../../../shared/domain/session_tier.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
 
-/// A placeholder [TrainRepository] — the same disclosed-limitation
-/// posture `MockTodayRepository` established (ADR 0036, Decision 2),
-/// applied here to Train. Every method below returns realistic, fixed
-/// (or session-mutated in-memory) data instead of a real network call;
-/// an authenticated HTTP client mapping onto
-/// `backend/app/api/routes/v1/workout.py`'s real endpoints is a later,
-/// separately-scoped stage, not something this module's build absorbs
-/// speculatively.
+/// No longer the production [TrainRepository] — `main.dart` now wires
+/// `ApiTrainRepository` (`../infrastructure/api_train_repository.dart`)
+/// for real use, per `docs/adr/0048-train-repository-integration.md`.
+/// Kept as `test/features/train/`'s fixture, mirroring
+/// `MockTodayRepository`'s and `MockReadinessRepository`'s own updated
+/// doc comments. Every method below returns realistic, fixed
+/// (or session-mutated in-memory) data — no network call, no persistence
+/// beyond the process lifetime.
 ///
 /// Unlike [MockTodayRepository] (pure read, never mutated),
 /// [logSet]/[completeSet]/[completeSession] genuinely mutate an in-memory
@@ -43,9 +43,6 @@ class MockTrainRepository implements TrainRepository {
           plannedDate: DateTime.now(),
           status: WorkoutStatus.planned,
           goal: 'Build pressing strength',
-          plannedExerciseNames: _standardLifts,
-          tier: SessionTier.standard,
-          estimatedMinutes: 45,
         ),
         TrainWorkout(
           workoutId: 'workout-thu',
@@ -53,9 +50,6 @@ class MockTrainRepository implements TrainRepository {
           plannedDate: DateTime.now().add(const Duration(days: 2)),
           status: WorkoutStatus.planned,
           goal: 'Leg drive and hinge strength',
-          plannedExerciseNames: const <String>['Deadlift', 'Front Squat', 'Walking Lunge'],
-          tier: SessionTier.standard,
-          estimatedMinutes: 50,
         ),
         TrainWorkout(
           workoutId: 'workout-sat',
@@ -63,9 +57,6 @@ class MockTrainRepository implements TrainRepository {
           plannedDate: DateTime.now().add(const Duration(days: 4)),
           status: WorkoutStatus.planned,
           goal: 'Work capacity',
-          plannedExerciseNames: const <String>['Kettlebell Swing', 'Push-Up', 'Row'],
-          tier: SessionTier.min,
-          estimatedMinutes: 25,
         ),
       ],
       history: <TrainSession>[
@@ -112,9 +103,6 @@ class MockTrainRepository implements TrainRepository {
       status: WorkoutStatus.planned,
       goal: 'Build pressing strength',
       notes: 'Focus on bar speed for the working sets.',
-      plannedExerciseNames: _standardLifts,
-      tier: SessionTier.standard,
-      estimatedMinutes: 45,
     );
   }
 

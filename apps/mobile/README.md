@@ -305,6 +305,28 @@ the real, unmodified `ReadinessRuleEngine` warnings that flow through
 unchanged, per this phase's own "never duplicate backend business
 logic" rule. `MockReadinessRepository` remains as a test fixture only.
 
+As of `docs/adr/0048-train-repository-integration.md` (Step 3 of
+production integration, below), `ApiTrainRepository` replaced
+`MockTrainRepository` — real workout/session data from `GET
+/api/v1/workouts`/`GET /api/v1/workout-sessions/{id}`, real session
+start/complete via `POST .../sessions`/`POST .../complete`, mutate →
+refetch throughout, and the real, unmodified progressive-overload/
+training-load warnings that flow into `CoachSignalLog` unchanged. Three
+disclosed gaps, each surfaced and explicitly resolved rather than
+defaulted (`docs/TECH_DEBT.md`'s TD-0007): no backend exercise catalog
+exists at all, so Active Workout's set logging is deferred —
+`logSet`/`completeSet` throw a dedicated exception synchronously,
+before any network call, and the screen shows accurate
+permanent-unavailability copy instead of misleading "try again" text;
+no session-history list endpoint exists, so History is always empty
+(the existing empty state already covers it, no UI change needed); and
+`tier` has no backend concept, so `TrainWorkout` dropped
+`tier`/`estimatedMinutes`/`plannedExerciseNames` entirely (mirroring
+Today's own `TodaySessionSummary` reduction), while Pre-session's
+`TierPicker` is deliberately kept as a real, inert, client-side-only
+control rather than removed. `MockTrainRepository` remains as a test
+fixture only.
+
 Coach (`docs/adr/0041`) is the fifth and final tab, and its own research
 finding was the widest gap of any phase: the backend has no `coach`
 concept at all, and no endpoint anywhere aggregates, persists, or

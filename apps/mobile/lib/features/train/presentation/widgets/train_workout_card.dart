@@ -30,14 +30,13 @@ class TrainWorkoutCard extends StatelessWidget {
                 Text(workout.name, style: textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '${_formattedDate(workout.plannedDate)} · '
-                  '${workout.tier.label} · ${workout.estimatedMinutes} min',
+                  _formattedDate(workout.plannedDate),
                   style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
-                if (workout.plannedExerciseNames.isNotEmpty) ...<Widget>[
+                if (workout.goal != null) ...<Widget>[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    workout.plannedExerciseNames.join(' · '),
+                    workout.goal!,
                     style: textTheme.bodySmall,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

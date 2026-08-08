@@ -502,3 +502,70 @@ as it exists today, not backend feature development.
    the one real, transient advisory-signal surface until then; it is not
    a substitute for a queryable Task list (see `docs/adr/0041`'s own
    Consequences section for why the two are deliberately not merged).
+
+---
+
+## TD-0007: Train's exercise catalog, session-history, and tier gaps
+
+- Status: **Open.**
+- Identified: 2026-08-08, during Step 3 (Train repository integration —
+  `docs/adr/0048-train-repository-integration.md`) of `docs/adr/0042-
+  production-integration-plan.md`.
+
+### What's missing
+
+`ApiTrainRepository` (`lib/features/train/infrastructure/
+api_train_repository.dart`) replaced `MockTrainRepository`, but three
+real, disclosed gaps remain — each surfaced explicitly and its handling
+approved before implementation, not defaulted silently:
+
+1. **No exercise catalog.** `grep -rli "exercise" backend/app/api` finds
+   no `exercise.py` route file at all — there is no endpoint anywhere
+   that lists, searches, or resolves an `exercise_id`. `LogExerciseSetHandler`
+   (`backend/app/application/workout/handlers/
+   log_exercise_set_handler.py`) validates any submitted `exercise_id`
+   against the real seeded `Exercise` table and 404s on an unrecognized
+   one, so there is no id this client could honestly send for a *new*
+   exercise. `ApiTrainRepository.logSet`/`.completeSet` therefore throw
+   `TrainLoggingUnavailableException` synchronously, before any network
+   call — Active Workout's set-logging UI is real but every attempt to
+   use it currently fails with an honest, permanent-unavailability
+   message (`active_workout_screen.dart`), not a misleading "try again."
+2. **No session-history list endpoint.** `backend/app/api/routes/v1/
+   workout.py` has ten endpoints; none of them is `GET
+   /workout-sessions` (list) — only `GET /workout-sessions/{id}` (single).
+   `TrainHomeViewState.history` is therefore always `[]`;
+   `TrainHomeScreen`'s existing `AppEmptyState` for an empty history list
+   already renders correctly, so no presentation change was needed.
+3. **`tier` has no backend concept.** `StartWorkoutSessionRequest`
+   (`backend/app/api/schemas/workout.py`) has exactly one field,
+   `session_date` — confirmed the same root cause `docs/adr/0046`
+   already found for Today's `tier`/`estimatedMinutes`/
+   `plannedExerciseNames`. Unlike those three (removed from `TrainWorkout`
+   entirely), the Pre-session screen's `TierPicker` is kept as a real,
+   selectable, client-side-only control — `ApiTrainRepository.startSession`
+   accepts a `tier` parameter (interface compatibility with
+   `TrainRepository`) but never transmits it.
+
+### Why this was not fixed in this phase
+
+Items 1 and 2 cannot be fixed from the Flutter side at all — there is no
+backend capability to integrate against for either. Item 3 is a
+deliberate choice, not an oversight: removing the tier picker outright
+was considered and rejected, since a future backend intensity concept is
+plausible and the control costs nothing to keep visible while inert;
+this phase's own scope is repository integration against the backend as
+it exists today, not a UI-simplification pass.
+
+### Trigger conditions for closing this item
+
+1. **A `GET /exercises`-shaped (or `GET /exercise-catalog`-shaped)
+   endpoint is added** — closes item 1: `ApiTrainRepository.logSet`/
+   `.completeSet` can then validate/resolve a real `exercise_id` and stop
+   throwing `TrainLoggingUnavailableException`.
+2. **A `GET /workout-sessions` (list) endpoint is added** — closes item
+   2: `ApiTrainRepository.fetchHome` can populate `history` for real.
+3. **A `tier`/intensity field is added to `Workout` or
+   `StartWorkoutSessionRequest` server-side** — closes item 3:
+   `ApiTrainRepository.startSession` can send the real selection instead
+   of discarding it.

@@ -4,35 +4,85 @@
 /// shapes field-for-field (`WorkoutResponse`, `WorkoutSessionResponse`,
 /// `ExercisePerformanceResponse`, `ExerciseSetResponse`) and the two
 /// backend status enums (`app/domain/workout/enums.py`'s `WorkoutStatus`,
-/// `app/domain/workout_session/enums.py`'s `SessionStatus`) so a future
-/// real `TrainRepository` mapping API responses onto these types is a
-/// direct translation, not a re-interpretation — the same discipline
-/// ADR 0036 established for Today.
+/// `app/domain/workout_session/enums.py`'s `SessionStatus`) so
+/// `ApiTrainRepository` (`../infrastructure/api_train_repository.dart`)
+/// mapping real API responses onto these types is a direct translation,
+/// not a re-interpretation — the same discipline ADR 0036/0046
+/// established for Today.
 ///
-/// ## One denormalized field, disclosed here rather than hidden
+/// ## Two denormalized/unmappable concerns, disclosed here rather than
+/// hidden
 ///
 /// `ExercisePerformanceResponse` carries only `exercise_id`, never a
 /// display name — there is no backend endpoint today that resolves an
 /// exercise id to a human-readable name (`backend/app/api/routes/v1/`
 /// has no `exercise.py` route file at all). [TrainExercisePerformance]
 /// still needs one to render anything, so `exerciseName` is a real field
-/// here — but it is documented at its declaration, not silently assumed,
-/// and a real repository inherits the same open question this comment
-/// names rather than the domain layer quietly hiding it.
+/// here — but it is documented at its declaration, not silently assumed;
+/// `ApiTrainRepository` falls back to the raw `exerciseId` itself where
+/// no real name is available, never a fabricated one. See
+/// `docs/adr/0048-train-repository-integration.md` for the fuller
+/// finding (no `GET /exercises`-shaped endpoint exists at all, so
+/// Active Workout's exercise *logging* — as opposed to viewing an
+/// already-logged session — is a disclosed, deferred gap, not merely a
+/// naming one).
+///
+/// `TrainWorkout` no longer carries a `tier`, `estimatedMinutes`, or
+/// `plannedExerciseNames` — an earlier, mock-backed version of this
+/// class had all three, mirroring `TodaySessionSummary`'s own pre-
+/// integration shape exactly. `docs/adr/0048` found the same root cause
+/// ADR 0046 already found for Today: `Workout` has no intensity-tier,
+/// duration-estimate, or exercise-list concept anywhere in the backend
+/// (`backend/app/domain/workout/workout.py`), so there is nothing real
+/// to map any of the three from. Removed, not defaulted — the same
+/// "never duplicate backend business logic" / "never fill a gap with a
+/// default" resolution the user confirmed for Today applies unchanged
+/// here.
 library;
-
-import '../../../shared/domain/session_tier.dart';
 
 /// The Workout aggregate's lifecycle (`app/domain/workout/enums.py`,
 /// verbatim values `planned`/`in_progress`/`completed`/`cancelled`).
-enum WorkoutStatus { planned, inProgress, completed, cancelled }
+enum WorkoutStatus {
+  planned,
+  inProgress,
+  completed,
+  cancelled;
+
+  /// The `fromWire` convention `docs/adr/0045-shared-api-mapping-
+  /// convention.md` established (`ReadinessSource.fromWire` first), reused
+  /// here rather than inventing a second enum-mapping style.
+  static WorkoutStatus fromWire(String value) {
+    return switch (value) {
+      'planned' => WorkoutStatus.planned,
+      'in_progress' => WorkoutStatus.inProgress,
+      'completed' => WorkoutStatus.completed,
+      'cancelled' => WorkoutStatus.cancelled,
+      _ => throw FormatException('Unknown WorkoutStatus wire value: $value'),
+    };
+  }
+}
 
 /// The WorkoutSession aggregate's lifecycle (`app/domain/workout_session/
 /// enums.py`, verbatim values `planned`/`active`/`completed`/`abandoned`)
 /// — deliberately a distinct type from [WorkoutStatus], not reused, for
 /// the same reason the backend keeps them distinct (see that file's own
 /// doc comment: a planned intention vs. its execution record).
-enum SessionStatus { planned, active, completed, abandoned }
+enum SessionStatus {
+  planned,
+  active,
+  completed,
+  abandoned;
+
+  static SessionStatus fromWire(String value) {
+    return switch (value) {
+      'planned' => SessionStatus.planned,
+      'active' => SessionStatus.active,
+      'completed' => SessionStatus.completed,
+      'abandoned' => SessionStatus.abandoned,
+      _ => throw FormatException('Unknown SessionStatus wire value: $value'),
+    };
+  }
+}
 
 /// A single logged set (`ExerciseSetResponse`: `set_number`, `weight`,
 /// `reps`, `rpe`, `completed`). Logging is genuinely two backend calls
@@ -105,14 +155,12 @@ class TrainExercisePerformance {
   bool get isComplete => sets.isNotEmpty && sets.every((s) => s.completed);
 }
 
-/// A planned workout (`WorkoutResponse`). `plannedExerciseNames` is a
-/// glance-length preview, not a real backend field — the Workout
-/// aggregate itself has no exercise list (`app/domain/workout/workout.py`
-/// confirms no such field); a workout's actual exercises only come into
-/// existence as [TrainExercisePerformance] entries once a session starts
-/// logging them. This mirrors exactly how Today's own `keyLifts` preview
-/// already works (`today_models.dart`) — a short mock preview inside the
-/// same disclosed mock repository, not a claim of real backend data.
+/// A planned workout (`WorkoutResponse`) — a direct, honest projection;
+/// see this file's own top comment for why there is no `tier`,
+/// `estimatedMinutes`, or `plannedExerciseNames` field here. A workout's
+/// actual exercises only come into existence as [TrainExercisePerformance]
+/// entries once a session starts logging them (and, per `docs/adr/0048`,
+/// logging itself is a disclosed, deferred gap today).
 class TrainWorkout {
   const TrainWorkout({
     required this.workoutId,
@@ -124,9 +172,6 @@ class TrainWorkout {
     this.durationSeconds,
     this.startedAt,
     this.completedAt,
-    this.plannedExerciseNames = const <String>[],
-    this.tier = SessionTier.standard,
-    this.estimatedMinutes = 45,
   });
 
   final String workoutId;
@@ -138,9 +183,6 @@ class TrainWorkout {
   final double? durationSeconds;
   final DateTime? startedAt;
   final DateTime? completedAt;
-  final List<String> plannedExerciseNames;
-  final SessionTier tier;
-  final int estimatedMinutes;
 }
 
 /// A workout session — the execution record (`WorkoutSessionResponse`).

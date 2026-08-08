@@ -17,7 +17,7 @@ import 'features/readiness/infrastructure/api_readiness_repository.dart';
 import 'features/today/application/today_controller.dart';
 import 'features/today/infrastructure/api_today_repository.dart';
 import 'features/train/application/train_controller.dart';
-import 'features/train/infrastructure/mock_train_repository.dart';
+import 'features/train/infrastructure/api_train_repository.dart';
 import 'shared/application/coach_signal_log.dart';
 
 /// The single shared [ApiClient] every real (`ApiX`-prefixed)
@@ -57,13 +57,16 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 /// `TrainHomeController`/`FuelHomeController`/`ProgressHomeController`/
 /// `ReadinessHomeController`/`CoachHomeController` need to know which.
 ///
-/// [todayRepositoryProvider] and [readinessRepositoryProvider] have
-/// already made that switch (`docs/adr/0046-today-repository-
-/// integration.md`, `docs/adr/0047-readiness-repository-integration.md`)
-/// — [ApiTodayRepository]/[ApiReadinessRepository] are wired here
-/// instead of `MockTodayRepository`/[MockReadinessRepository] (both
-/// still used by their own feature's widget tests, neither deleted).
-/// Both use `overrideWith`, for the same reason [authRepositoryProvider]
+/// [todayRepositoryProvider], [readinessRepositoryProvider], and
+/// [trainRepositoryProvider] have already made that switch
+/// (`docs/adr/0046-today-repository-integration.md`, `docs/adr/0047-
+/// readiness-repository-integration.md`, `docs/adr/0048-train-
+/// repository-integration.md`) — [ApiTodayRepository]/
+/// [ApiReadinessRepository]/[ApiTrainRepository] are wired here instead
+/// of `MockTodayRepository`/[MockReadinessRepository]/
+/// `MockTrainRepository` (all three still used by their own feature's
+/// widget tests, none deleted). All three use `overrideWith`, for the
+/// same reason [authRepositoryProvider]
 /// below does: each needs a closure reading [apiClientProvider] at call
 /// time, not a constant instance built before this `ProviderScope`
 /// exists.
@@ -86,7 +89,9 @@ void main() {
         todayRepositoryProvider.overrideWith(
           (ref) => ApiTodayRepository(ref.read(apiClientProvider)),
         ),
-        trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
+        trainRepositoryProvider.overrideWith(
+          (ref) => ApiTrainRepository(ref.read(apiClientProvider)),
+        ),
         fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
         progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
         readinessRepositoryProvider.overrideWith(

@@ -16,6 +16,17 @@ import 'widgets/tier_picker.dart';
 /// rendering under [AppShell]'s persistent chrome — see
 /// `docs/adr/0037-train-module.md` for why Train's sub-screens are
 /// top-level routes on the root navigator, not nested branch routes.
+///
+/// The "Choose your tier" [TierPicker] is kept even though `StartWorkout
+/// SessionRequest` (`backend/app/api/schemas/workout.py`) has no `tier`
+/// field to send it to — `ApiTrainRepository.startSession` never
+/// transmits the selection. It remains a real, client-side-only control
+/// rather than being removed outright, disclosed in `docs/TECH_DEBT.md`
+/// (TD-0007) and `docs/adr/0048-train-repository-integration.md` as
+/// inert pending a real backend concept of session intensity — distinct
+/// from the `estimatedMinutes`/`plannedExerciseNames` fields removed
+/// from [TrainWorkout] entirely, since those had no client-only affordance
+/// still worth preserving.
 class PreSessionScreen extends ConsumerStatefulWidget {
   const PreSessionScreen({required this.workoutId, super.key});
 
@@ -55,7 +66,11 @@ class _PreSessionScreenState extends ConsumerState<PreSessionScreen> {
           ),
         ),
         data: (TrainWorkout workout) {
-          final SessionTier tier = _selectedTier ?? workout.tier;
+          // `TrainWorkout` no longer carries a `tier` (see `train_models
+          // .dart`'s own doc comment — no backend concept to default it
+          // from), so the picker's own default, not a workout-derived
+          // one, seeds first selection.
+          final SessionTier tier = _selectedTier ?? SessionTier.standard;
           return _PreSessionContent(
             workout: workout,
             selectedTier: tier,
@@ -143,7 +158,7 @@ class _PreSessionContent extends StatelessWidget {
           Text(workout.name, style: textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '${workout.estimatedMinutes} min planned',
+            _formattedDate(workout.plannedDate),
             style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           if (workout.goal != null) ...<Widget>[
@@ -161,25 +176,6 @@ class _PreSessionContent extends StatelessWidget {
           Text('Choose your tier', style: textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           TierPicker(selected: selectedTier, onChanged: onTierChanged),
-          if (workout.plannedExerciseNames.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.xxl),
-            Text("What's planned", style: textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.sm),
-            AppCard(
-              elevation: AppElevationLevel.flat,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  for (final String name in workout.plannedExerciseNames) ...<Widget>[
-                    Text(name, style: textTheme.bodyMedium),
-                    if (name != workout.plannedExerciseNames.last)
-                      const SizedBox(height: AppSpacing.sm),
-                  ],
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: AppSpacing.xxl),
           AppButton(
             label: 'Start session',
@@ -190,4 +186,20 @@ class _PreSessionContent extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Same day-relative formatting as `TrainWorkoutCard._formattedDate` —
+/// duplicated rather than shared because it is presentation-only,
+/// four lines, and each widget already owns its own private copy
+/// (`train_workout_card.dart`); promoting it to the design system was
+/// judged unnecessary churn for this phase.
+String _formattedDate(DateTime date) {
+  final DateTime now = DateTime.now();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime target = DateTime(date.year, date.month, date.day);
+  final int diff = target.difference(today).inDays;
+  if (diff == 0) return 'Today';
+  if (diff == 1) return 'Tomorrow';
+  const List<String> weekdays = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return weekdays[date.weekday - 1];
 }

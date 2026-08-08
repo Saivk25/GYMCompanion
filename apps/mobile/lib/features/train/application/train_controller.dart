@@ -24,6 +24,29 @@ import '../domain/train_models.dart';
 /// directly rather than calling a repository method that could only ever
 /// return nothing. See `docs/adr/0037-train-module.md` for the full
 /// reasoning behind this split.
+/// Thrown by [TrainRepository.logSet]/[TrainRepository.completeSet] when
+/// the call cannot be serviced at all — see `docs/adr/0048-train-
+/// repository-integration.md`: no `GET /exercises`-shaped endpoint
+/// exists anywhere in the backend to discover a real `exercise_id`, and
+/// `LogExerciseSetHandler` (`backend/app/application/workout/handlers/
+/// log_exercise_set_handler.py`) 404s on any id the real seeded Exercise
+/// table doesn't already recognize. `ApiTrainRepository` throws this
+/// synchronously, before attempting any network call, rather than
+/// sending a request that could only ever fail — a deliberate,
+/// user-approved deferral (Train's exercise-catalog gap), not a bug.
+/// [MockTrainRepository] never throws it. `ActiveWorkoutScreen` catches
+/// it specifically to show permanent-unavailability copy instead of
+/// generic "try again" phrasing that would mislead the user into
+/// retrying something that can never succeed.
+class TrainLoggingUnavailableException implements Exception {
+  const TrainLoggingUnavailableException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 abstract interface class TrainRepository {
   Future<TrainHomeViewState> fetchHome();
 
