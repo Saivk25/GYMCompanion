@@ -146,9 +146,16 @@ class ApiTrainRepository implements TrainRepository {
     required int reps,
     required int rpe,
   }) async {
+    // No `exercise_id` this client could send is ever known to be valid —
+    // see this class's own doc comment, gap 3, and `TrainLoggingUnavailable
+    // Exception`'s own doc comment for the full reasoning. Thrown here,
+    // synchronously, as the very first statement — before `_client` is
+    // touched at all — so a caller never pays for a network round trip
+    // that could only ever 404.
     throw const TrainLoggingUnavailableException(
-      'Set logging needs a backend exercise catalog that does not exist '
-      'yet — see docs/adr/0048-train-repository-integration.md.',
+      "Exercise logging isn't available yet — the backend doesn't expose "
+      'the exercise identifiers this needs. See docs/adr/0048-train-'
+      'repository-integration.md.',
     );
   }
 
@@ -158,9 +165,13 @@ class ApiTrainRepository implements TrainRepository {
     required String performanceId,
     required int setNumber,
   }) async {
+    // Same reasoning as `logSet` above — `completeSet` marks a set on an
+    // `ExercisePerformance` that could itself only ever have been created
+    // by a `logSet` call, so it is equally unable to proceed.
     throw const TrainLoggingUnavailableException(
-      'Set logging needs a backend exercise catalog that does not exist '
-      'yet — see docs/adr/0048-train-repository-integration.md.',
+      "Exercise logging isn't available yet — the backend doesn't expose "
+      'the exercise identifiers this needs. See docs/adr/0048-train-'
+      'repository-integration.md.',
     );
   }
 

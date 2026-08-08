@@ -91,10 +91,13 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
             reps: reps,
             rpe: rpe,
           );
-    } on TrainLoggingUnavailableException {
+    } on TrainLoggingUnavailableException catch (error) {
       if (!mounted) return;
+      // The exception's own message is the one source of truth for this
+      // copy (`TrainLoggingUnavailableException`'s own doc comment) —
+      // shown verbatim, not re-worded here, so the two never drift apart.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Set logging isn\'t connected yet — this needs a backend exercise catalog that doesn\'t exist yet.')),
+        SnackBar(content: Text(error.message)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -111,10 +114,13 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
             setNumber: setNumber,
           );
       _startRest();
-    } on TrainLoggingUnavailableException {
+    } on TrainLoggingUnavailableException catch (error) {
       if (!mounted) return;
+      // The exception's own message is the one source of truth for this
+      // copy (`TrainLoggingUnavailableException`'s own doc comment) —
+      // shown verbatim, not re-worded here, so the two never drift apart.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Set logging isn\'t connected yet — this needs a backend exercise catalog that doesn\'t exist yet.')),
+        SnackBar(content: Text(error.message)),
       );
     } catch (_) {
       if (!mounted) return;
