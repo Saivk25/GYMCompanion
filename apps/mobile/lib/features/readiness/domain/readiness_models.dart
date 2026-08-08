@@ -15,7 +15,25 @@ library;
 /// today is [manual] — there is no wearable sync or import pipeline
 /// wired up yet, so [wearable]/[imported] exist here only for API-shape
 /// fidelity.
-enum ReadinessSource { manual, wearable, imported }
+enum ReadinessSource {
+  manual,
+  wearable,
+  imported;
+
+  /// Maps the backend's raw wire string (`"manual"`/`"wearable"`/
+  /// `"imported"`) — the `fromWire` convention `docs/adr/0044-
+  /// authentication-module.md` established and `docs/adr/0045-shared-
+  /// api-mapping-convention.md` named as this project's one enum-mapping
+  /// pattern, reused here rather than inventing a second style.
+  static ReadinessSource fromWire(String value) {
+    return switch (value) {
+      'manual' => ReadinessSource.manual,
+      'wearable' => ReadinessSource.wearable,
+      'imported' => ReadinessSource.imported,
+      _ => throw FormatException('Unknown ReadinessSource wire value: $value'),
+    };
+  }
+}
 
 /// One recorded check-in (mirrors `ReadinessResponse` exactly). Every
 /// field but the identifiers/timestamps is optional — a check-in with

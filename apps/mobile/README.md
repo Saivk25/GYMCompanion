@@ -285,17 +285,25 @@ Readiness (`docs/adr/0040`) is real but has no bottom tab of its own —
 reached from Today's check-in nudge and from Progress's own Recovery
 segment. Readiness Home, Check-in (one screen for sleep, energy, stress,
 soreness, resting heart rate, and HRV, pre-filled from the most recent
-entry), Timeline, and Entry Detail are fully real, built against a
-stateful `MockReadinessRepository` seeded with fourteen days of history.
-Real advisory warnings — genuinely derived server-side by
-`ReadinessRuleEngine`, never fabricated client-side — render on Readiness
-Home when a submission returns them. Formula/Score Explanation is a real,
-reachable "not connected yet" placeholder, since no endpoint returns a
-computed readiness score or band; Progress's Recovery segment keeps
-owning the sleep/HRV trend charts rather than this module duplicating
-them. `AppRatingSlider` (`lib/design/components/`) is this phase's own
-new design-system component, for the bounded 1-10 self-report scale no
-existing component modeled.
+entry), Timeline, and Entry Detail are fully real. Real advisory
+warnings — genuinely derived server-side by `ReadinessRuleEngine`, never
+fabricated client-side — render on Readiness Home when a submission
+returns them, and are also pushed into `CoachSignalLog` for Coach Home
+to surface. Formula/Score Explanation is a real, reachable "not
+connected yet" placeholder, since no endpoint returns a computed
+readiness score or band (`docs/TECH_DEBT.md`'s TD-0006); Progress's
+Recovery segment keeps owning the sleep/HRV trend charts rather than
+this module duplicating them. `AppRatingSlider` (`lib/design/
+components/`) is this phase's own new design-system component, for the
+bounded 1-10 self-report scale no existing component modeled.
+
+As of `docs/adr/0047-readiness-repository-integration.md` (Step 3 of
+production integration, below), `ApiReadinessRepository` replaced
+`MockReadinessRepository` — real check-in history from `GET
+/api/v1/readiness`, real submissions via `POST /api/v1/readiness`, and
+the real, unmodified `ReadinessRuleEngine` warnings that flow through
+unchanged, per this phase's own "never duplicate backend business
+logic" rule. `MockReadinessRepository` remains as a test fixture only.
 
 Coach (`docs/adr/0041`) is the fifth and final tab, and its own research
 finding was the widest gap of any phase: the backend has no `coach`
@@ -329,7 +337,8 @@ via `ApiClient`'s closures, logout-on-refresh-failure), `SecureTokenStorage` (re
 token only, Keychain/Keystore-backed), and a reactive `go_router` guard (`app_router.dart`
 is now a `Provider<GoRouter>`) that redirects unauthenticated sessions to `/login` and
 authenticated ones away from it. Step 3 (real per-feature repository integration, one feature at a time) is
-underway: Today (`docs/adr/0046`) is done, on top of a new shared mapping
-convention (`docs/adr/0045-shared-api-mapping-convention.md`) every later
-feature's own `ApiXRepository` will reuse. Readiness, Train, Fuel, Progress,
-and Coach still run on their existing mock repositories.
+underway: Today (`docs/adr/0046`) and Readiness (`docs/adr/0047`) are done,
+both on the shared mapping convention (`docs/adr/0045-shared-api-mapping-
+convention.md`) every later feature's own `ApiXRepository` reuses unchanged.
+Train, Fuel, Progress, and Coach still run on their existing mock
+repositories.

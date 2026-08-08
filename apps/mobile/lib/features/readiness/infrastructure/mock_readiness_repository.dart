@@ -1,8 +1,14 @@
 import '../application/readiness_controller.dart';
 import '../domain/readiness_models.dart';
 
-/// A placeholder [ReadinessRepository] — the same disclosed-limitation
-/// posture `MockProgressRepository`/`MockFuelRepository` established.
+/// A test/development-only [ReadinessRepository] fixture — no longer
+/// the production implementation as of `docs/adr/0047-readiness-
+/// repository-integration.md` (`ApiReadinessRepository`,
+/// `../infrastructure/api_readiness_repository.dart`, is; wired in
+/// `lib/main.dart`). Kept for `test/features/readiness/*_test.dart` and
+/// any future widget test that wants a deterministic, zero-network,
+/// stateful fixture.
+///
 /// Stateful: a submitted check-in must be visible on the very next
 /// fetch, so this mock keeps an in-memory `List<ReadinessEntry>`, seeded
 /// with two weeks of history (deliberately *not* including today, so
