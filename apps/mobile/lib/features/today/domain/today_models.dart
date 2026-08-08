@@ -4,14 +4,20 @@
 /// never *how* — `TodayScreen` and its widgets decide rendering; this file
 /// only decides shape. Naming mirrors the backend domain (`docs/
 /// Gym_Companion_Domain_Model_Decision_Engine_Bible.docx`, Sections 4.8,
-/// 4.12, 4.13) deliberately, so a future real `TodayRepository`
-/// implementation mapping API responses onto these types is a direct
-/// field-for-field translation, not a re-interpretation.
+/// 4.12, 4.13) deliberately, so `ApiTodayRepository`
+/// (`../infrastructure/api_today_repository.dart`) mapping real API
+/// responses onto these types is a direct field-for-field translation,
+/// not a re-interpretation.
+///
+/// [TodaySessionSummary] no longer carries a `SessionTier`, a duration
+/// estimate, a key-lifts list, or an AI one-line summary — see that
+/// class's own doc comment for why: `docs/adr/0046-today-repository-
+/// integration.md` found the real `Workout` aggregate
+/// (`backend/app/domain/workout/workout.py`) has no backend
+/// representation for any of the four, so this file's shape changed to
+/// match what the backend actually models, per this phase's own
+/// "follow the backend exactly, never fabricate" instruction.
 library;
-
-import '../../../shared/domain/session_tier.dart';
-
-export '../../../shared/domain/session_tier.dart' show SessionTier;
 
 /// The rolling recovery band a `RecoveryState` computation resolves to
 /// (Domain Model Bible Section 7.3: `Normal -> Light -> Recovery ->
@@ -48,27 +54,44 @@ enum ReadinessBand {
 enum SessionCardStatus { loading, ready, completed, empty, error }
 
 /// Today's session summary — populated once [SessionCardStatus.ready] or
-/// [.completed]. `keyLifts` is intentionally a short, ordered list (the
-/// Bible's own "key lifts" phrasing, Section 5.1) — a glance-length
-/// preview, not the full exercise list Train's Pre-session screen shows.
+/// [.completed]. A direct, honest projection of the real `Workout`
+/// aggregate's own fields (`backend/app/domain/workout/workout.py`) — no
+/// more.
+///
+/// **Does not have a `tier`, a duration estimate, a `keyLifts` list, or
+/// an AI one-line summary.** An earlier, mock-backed version of this
+/// class had all four; `docs/adr/0046-today-repository-integration.md`
+/// found none of them has any backend representation at all — `Workout`
+/// has no intensity-tier concept, no attached exercise list, and no
+/// pre-session duration estimate (`duration` is only ever set once a
+/// session *completes*), and no endpoint anywhere generates or returns
+/// AI-authored summary text. Fabricating any of the four client-side
+/// would mean this app inventing data the backend never produced —
+/// exactly what this phase's "never duplicate backend business logic"
+/// / "follow the backend exactly" rules forbid. [name]/[goal]/[notes]/
+/// [plannedDate] are what a real `Workout` genuinely has to show.
 class TodaySessionSummary {
   const TodaySessionSummary({
-    required this.tier,
-    required this.durationEstimateMinutes,
-    required this.keyLifts,
-    this.oneLineSummary,
+    required this.name,
+    required this.plannedDate,
+    this.goal,
+    this.notes,
   });
 
-  final SessionTier tier;
-  final int durationEstimateMinutes;
-  final List<String> keyLifts;
+  /// The workout's own name (`Workout.name` / `WorkoutResponse.name`).
+  final String name;
 
-  /// The AI's one-sentence phrasing of the day's summary (UX/UI Design
-  /// Bible: "AI may phrase the day's summary in one short sentence. It
-  /// never initiates a proactive chat bubble here"). `null` renders
-  /// nothing — this is flavor, never the only source of the session's
-  /// actual facts (tier/duration/lifts are always shown regardless).
-  final String? oneLineSummary;
+  /// `Workout.planned_date` — the calendar date this workout is
+  /// scheduled for (always today's date for the workout
+  /// [TodayViewState.session] describes, by construction of how
+  /// [SessionCardStatus] is derived — see `ApiTodayRepository`).
+  final DateTime plannedDate;
+
+  /// `Workout.goal` — free-text, user- or plan-supplied, optional.
+  final String? goal;
+
+  /// `Workout.notes` — free-text, optional.
+  final String? notes;
 }
 
 /// The understated streak indicator (UX/UI Design Bible: "an understated

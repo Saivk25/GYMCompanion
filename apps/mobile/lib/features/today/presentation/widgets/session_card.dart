@@ -94,22 +94,19 @@ class _SessionReadyCard extends StatelessWidget {
           Text("Today's session", style: textTheme.titleLarge),
           if (summary != null) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              '${summary.tier.label} · ${summary.durationEstimateMinutes} min',
-              style: textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(summary.keyLifts.join(' · '), style: textTheme.bodyMedium),
-            if (summary.oneLineSummary != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.sm),
+            Text(summary.name, style: textTheme.titleMedium),
+            if (summary.goal != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.xs),
               Text(
-                summary.oneLineSummary!,
-                style: textTheme.bodySmall?.copyWith(
+                summary.goal!,
+                style: textTheme.labelMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
+            ],
+            if (summary.notes != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              Text(summary.notes!, style: textTheme.bodyMedium),
             ],
           ],
           const SizedBox(height: AppSpacing.lg),
@@ -159,7 +156,7 @@ class _SessionCompletedCard extends StatelessWidget {
           if (session != null) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              session!.keyLifts.join(' · '),
+              session!.name,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

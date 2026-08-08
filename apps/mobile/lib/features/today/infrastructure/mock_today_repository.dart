@@ -1,20 +1,21 @@
 import '../application/today_controller.dart';
 import '../domain/today_models.dart';
 
-/// A placeholder [TodayRepository], returning a fixed, realistic snapshot
-/// instead of a real network call.
+/// A test/development-only [TodayRepository] fixture — no longer the
+/// production implementation as of `docs/adr/0046-today-repository-
+/// integration.md` (`ApiTodayRepository`,
+/// `../infrastructure/api_today_repository.dart`, is; wired in
+/// `lib/main.dart`). Kept for `test/features/today/today_screen_test.dart`
+/// and any future widget test that wants a deterministic, zero-network
+/// fixture rather than an `ApiClient` fake.
 ///
-/// **This is temporary and is disclosed as such deliberately** — the same
-/// posture ADR 0002 already established for Flutter verification in this
-/// sandbox, applied here to a missing data layer instead of a missing
-/// SDK. The backend already exposes real readiness, workout, and habit/
-/// streak data (`backend/app/api/routes/v1/`); wiring an authenticated
-/// HTTP client, response mapping onto `TodayViewState`, and local
-/// caching for the offline state are later, separately-scoped
-/// implementation stages, not something one screen's build should absorb
-/// speculatively. Swapping this out is a one-line change: override
-/// [todayRepositoryProvider] with the real implementation wherever it is
-/// built; nothing in `TodayScreen` or `TodayController` changes.
+/// This fixture's `streak`/`task` values are illustrative only —
+/// `ApiTodayRepository` always returns `null` for both, since the
+/// backend has no Habit/Streak or Task/Recommendation persistence at
+/// all (see that repository's own doc comment). `session.goal`/`.notes`
+/// here are similarly illustrative — a real `Workout`'s `goal`/`notes`
+/// are free text a user or plan entered, not guaranteed to look like
+/// this.
 class MockTodayRepository implements TodayRepository {
   const MockTodayRepository();
 
@@ -34,11 +35,11 @@ class MockTodayRepository implements TodayRepository {
       readinessBand: ReadinessBand.normal,
       checkInCompletedToday: false,
       sessionStatus: SessionCardStatus.ready,
-      session: const TodaySessionSummary(
-        tier: SessionTier.standard,
-        durationEstimateMinutes: 45,
-        keyLifts: <String>['Back Squat', 'Bench Press', 'Barbell Row'],
-        oneLineSummary: 'A standard session fits today — nothing flagged.',
+      session: TodaySessionSummary(
+        name: 'Upper Body Strength',
+        plannedDate: DateTime.now(),
+        goal: 'Build strength',
+        notes: 'Back Squat · Bench Press · Barbell Row',
       ),
       streak: const TodayStreak(currentDays: 12, graceUsed: false),
       task: const TodayTask(

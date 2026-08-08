@@ -45,10 +45,9 @@ TodayViewState _baseState({
     checkInCompletedToday: checkInCompletedToday,
     sessionStatus: sessionStatus,
     session: session ??
-        const TodaySessionSummary(
-          tier: SessionTier.standard,
-          durationEstimateMinutes: 45,
-          keyLifts: <String>['Back Squat', 'Bench Press'],
+        TodaySessionSummary(
+          name: 'Upper Body Strength',
+          plannedDate: DateTime(2026, 8, 4),
         ),
     streak: streak,
     task: task,

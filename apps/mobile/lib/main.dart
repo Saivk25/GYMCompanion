@@ -15,7 +15,7 @@ import 'features/progress/infrastructure/mock_progress_repository.dart';
 import 'features/readiness/application/readiness_controller.dart';
 import 'features/readiness/infrastructure/mock_readiness_repository.dart';
 import 'features/today/application/today_controller.dart';
-import 'features/today/infrastructure/mock_today_repository.dart';
+import 'features/today/infrastructure/api_today_repository.dart';
 import 'features/train/application/train_controller.dart';
 import 'features/train/infrastructure/mock_train_repository.dart';
 import 'shared/application/coach_signal_log.dart';
@@ -43,39 +43,48 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// The one place a provider's real implementation is chosen over its
-/// default. [todayRepositoryProvider]/[trainRepositoryProvider]/
-/// [fuelRepositoryProvider]/[progressRepositoryProvider]/
-/// [readinessRepositoryProvider]/[coachRepositoryProvider] have no
-/// default (they throw — see each one's own doc comment) precisely so a
-/// real repository can't be forgotten silently; their mock
-/// implementations are wired in here, honestly, until authenticated
-/// API-backed repositories replace them (except [coachRepositoryProvider]
-/// — see its own doc comment for why "real API-backed" is never coming
-/// for that one specifically). A widget test overrides the same
+/// default. [trainRepositoryProvider]/[fuelRepositoryProvider]/
+/// [progressRepositoryProvider]/[readinessRepositoryProvider]/
+/// [coachRepositoryProvider] have no default (they throw — see each
+/// one's own doc comment) precisely so a real repository can't be
+/// forgotten silently; their mock implementations are wired in here,
+/// honestly, until authenticated API-backed repositories replace them,
+/// one Step-3 feature at a time (`docs/adr/0042`'s own Today/Readiness/
+/// Train/Fuel/Progress/Coach order) — except [coachRepositoryProvider],
+/// see its own doc comment for why "real API-backed" is never coming
+/// for that one specifically. A widget test overrides the same
 /// providers with its own fakes instead of this file — none of
 /// `TodayController`/`TrainHomeController`/`FuelHomeController`/
 /// `ProgressHomeController`/`ReadinessHomeController`/`CoachHomeController`
 /// need to know which.
 ///
+/// [todayRepositoryProvider] is the first to make that switch
+/// (`docs/adr/0046-today-repository-integration.md`) —
+/// [ApiTodayRepository] is wired here instead of [MockTodayRepository]
+/// (still used by `test/features/today/today_screen_test.dart`, not
+/// deleted). Uses `overrideWith`, for the same reason
+/// [authRepositoryProvider] below does: it needs a closure reading
+/// [apiClientProvider] at call time, not a constant instance built
+/// before this `ProviderScope` exists.
+///
 /// [coachRepositoryProvider] uses `overrideWith`, not `overrideWithValue`
-/// like every other provider here — [MockCoachRepository] needs a
-/// closure reading [coachSignalLogProvider] at call time, not a
+/// like every other still-mocked provider here — [MockCoachRepository]
+/// needs a closure reading [coachSignalLogProvider] at call time, not a
 /// constant instance built before this `ProviderScope` even exists (see
 /// `MockCoachRepository`'s own doc comment for why it has no state of
 /// its own to construct with).
 ///
-/// [authRepositoryProvider]/[tokenStorageProvider] are the one pair
-/// wired to their *real* implementations here, not a mock — see
-/// `ApiAuthRepository`'s own doc comment for why Auth has no "mock
-/// until the real backend arrives" era the other six providers went
-/// through. [authRepositoryProvider] uses `overrideWith`, like
-/// [coachRepositoryProvider], for the same reason: [ApiAuthRepository]
-/// needs a closure reading [apiClientProvider] at call time.
+/// [authRepositoryProvider]/[tokenStorageProvider] are the pair wired to
+/// their *real* implementations here — see `ApiAuthRepository`'s own doc
+/// comment for why Auth has no "mock until the real backend arrives"
+/// era the other five still-mocked providers went through.
 void main() {
   runApp(
     ProviderScope(
       overrides: <Override>[
-        todayRepositoryProvider.overrideWithValue(const MockTodayRepository()),
+        todayRepositoryProvider.overrideWith(
+          (ref) => ApiTodayRepository(ref.read(apiClientProvider)),
+        ),
         trainRepositoryProvider.overrideWithValue(MockTrainRepository()),
         fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
         progressRepositoryProvider.overrideWithValue(MockProgressRepository()),

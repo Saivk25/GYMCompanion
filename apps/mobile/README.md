@@ -36,6 +36,16 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   for why the FAB lives here — and, as of the same phase, real sign-out from the Settings
   icon). Its `AppBar`/`NavigationBar`/`Chip` inherit the design system automatically
   through `ThemeData`'s component themes.
+- `lib/core/mapping/` — the shared JSON/DTO/date mapping convention every
+  real (`ApiX`-prefixed) repository follows: `json_field.dart` (typed,
+  named field extraction off a decoded `Map<String, dynamic>`, failing
+  loudly with the field name attached rather than a cryptic type-cast
+  error), `api_date_time.dart` (`parseApiDateTime`/`parseApiDate`/
+  `apiDateString` — two backend date shapes, two named parsers, never one
+  ambiguous `DateTime.parse`). `core/network/`'s sibling, not a layer on
+  top of it — network maps transport failures, mapping maps successful
+  JSON into DTOs and domain models. See `docs/adr/0045-shared-api-
+  mapping-convention.md`.
 - `lib/features/auth/` — the real authentication module, the same four-layer
   pattern as every other feature: `domain/` (`AuthState`/`AuthUser`/`AuthTokens`),
   `application/` (`AuthRepository`/`TokenStorage` interfaces + `AuthController`, an
@@ -207,10 +217,20 @@ Today (`docs/adr/0036`) is the first real feature screen: readiness band, sessio
 card (loading/ready/completed/empty/error), an outstanding-check-in prompt that
 outranks the session card per the UX/UI Design Bible, an understated streak line,
 an open-task card, offline indicator, pull-to-refresh, and the Today-only quick-add
-FAB. Built against a disclosed mock repository (`MockTodayRepository`) behind a
-`TodayRepository` interface — no real API client, cache, or offline sync yet; those
-are later, separately-scoped stages. "Start session" now navigates for real into
-Train's Pre-session screen.
+FAB. "Start session" navigates for real into Train's Pre-session screen.
+
+As of `docs/adr/0046-today-repository-integration.md` (Step 3 of production
+integration, below), `ApiTodayRepository` replaced `MockTodayRepository` as the
+real implementation: real workout-plan and check-in-status data from `GET
+/api/v1/workouts`/`GET /api/v1/readiness`. The session card's shape changed with
+it — `TodaySessionSummary` now shows the workout's real name/goal/notes/planned
+date rather than an intensity tier, key-lifts list, duration estimate, or AI
+summary, none of which the real `Workout` aggregate models at all. The readiness
+band, streak, and open-task card remain disclosed gaps with no backend source
+(`docs/TECH_DEBT.md`'s TD-0006) — not this repository's own limitation, the
+backend has no Habit/Streak or Task/Recommendation persistence, and no endpoint
+returns a computed readiness band. `MockTodayRepository` remains as a test
+fixture only.
 
 Train (`docs/adr/0037`) is the second real feature screen, covering every screen
 named in its own build directive: Train Home (This Week/History/Library in-page
@@ -308,5 +328,8 @@ built the real Auth module on top of it: `lib/features/auth/` (Splash/Login/Regi
 via `ApiClient`'s closures, logout-on-refresh-failure), `SecureTokenStorage` (refresh
 token only, Keychain/Keystore-backed), and a reactive `go_router` guard (`app_router.dart`
 is now a `Provider<GoRouter>`) that redirects unauthenticated sessions to `/login` and
-authenticated ones away from it. Every tab still runs on its existing mock repository —
-Step 3 (real per-feature repository integration, Today first) is the next phase.
+authenticated ones away from it. Step 3 (real per-feature repository integration, one feature at a time) is
+underway: Today (`docs/adr/0046`) is done, on top of a new shared mapping
+convention (`docs/adr/0045-shared-api-mapping-convention.md`) every later
+feature's own `ApiXRepository` will reuse. Readiness, Train, Fuel, Progress,
+and Coach still run on their existing mock repositories.

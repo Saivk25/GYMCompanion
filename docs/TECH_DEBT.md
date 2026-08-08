@@ -439,3 +439,66 @@ too") — not new. Recorded as a pattern to watch, not a current problem:
    else in this project.
 2. **If `WaterLogSheet` ever grows a dependency on Fuel-internal state**
    beyond its own repository provider.
+
+---
+
+## TD-0006: No backend source for Today's readiness band, streak, or Task/Recommendation
+
+- Status: **Open.**
+- Identified: 2026-08-08, during Step 3 (Today repository integration —
+  `docs/adr/0046-today-repository-integration.md`) of `docs/adr/0042-
+  production-integration-plan.md`.
+
+### What's missing
+
+`ApiTodayRepository` (`lib/features/today/infrastructure/
+api_today_repository.dart`) replaced `MockTodayRepository`, but three of
+`TodayViewState`'s fields have no real backend source at all, confirmed
+by a full sweep of `backend/app/domain/` and `backend/app/application/`:
+
+1. **`readinessBand`.** `docs/adr/0039-progress-module.md` already found
+   this gap for Progress's Recovery segment: `ReadinessRuleEngine`
+   computes a composite readiness score/band server-side, but no
+   endpoint returns it — only raw per-metric fields (`sleep_quality`,
+   `energy_level`, ...) come back from `GET /api/v1/readiness`. This
+   phase confirms the same gap applies to Today; `ApiTodayRepository`
+   always returns `ReadinessBand.normal`, never computed client-side
+   (which would mean re-implementing `ReadinessRuleEngine`'s own scoring
+   logic in Flutter).
+2. **`streak`.** No Habit/Streak aggregate exists anywhere in
+   `backend/app/domain/` or `backend/app/application/` — Domain Model
+   Bible Section 4.12's Habit/Streak concept was never built server-side
+   at all, not merely un-exposed. `ApiTodayRepository` always returns
+   `null` (the field is already nullable; `TodayScreen` already guards
+   on it).
+3. **`task`.** Same finding for Domain Model Bible Section 4.13's open
+   Task/Recommendation concept: `app/domain/rules/recommendation.py` is
+   a rule engine's *transient* output type (the same one Coach's own
+   `CoachSignalLog` already captures at the moment a mutation produces
+   it — `docs/adr/0041-coach-module.md`), not a persisted, independently
+   queryable Task aggregate. There is no `GET` endpoint that could ever
+   return "the current open task" outside of a mutation response.
+   `ApiTodayRepository` always returns `null`.
+
+### Why this was not fixed in this phase
+
+It cannot be fixed from the Flutter side at all — there is no backend
+capability to integrate against for any of the three. This phase's own
+scope (`docs/adr/0042`) is repository integration against the backend
+as it exists today, not backend feature development.
+
+### Trigger conditions for closing this item
+
+1. **A `GET` endpoint is added that returns a computed readiness band**
+   (or the raw score `ReadinessRuleEngine` already computes) — closes
+   item 1 for both Today and Progress's Recovery segment in the same
+   change.
+2. **A Habit/Streak aggregate is designed and built server-side** —
+   closes item 2. Until then, Today's streak line
+   (`_TodayHeader._StreakLine`, `today_screen.dart`) simply never
+   renders against real data.
+3. **A persisted Task/Recommendation concept is designed and built
+   server-side** — closes item 3. Coach's own `CoachSignalLog` remains
+   the one real, transient advisory-signal surface until then; it is not
+   a substitute for a queryable Task list (see `docs/adr/0041`'s own
+   Consequences section for why the two are deliberately not merged).
