@@ -24,6 +24,22 @@ dependencies:
   # without a code generator this environment can't run to verify.
   flutter_riverpod: ^2.5.1
 
+  # HTTP client for the real (non-mock) repositories — see
+  # docs/adr/0042-production-integration-plan.md Part 2 and
+  # lib/core/network/api_client.dart. Chosen over the lower-level `http`
+  # package for its built-in interceptor chain, which is what
+  # lib/core/network/interceptors/ builds the bearer-token-injection,
+  # retry, and debug-logging behavior on top of without hand-rolling
+  # request/response middleware.
+  dio: ^5.4.0
+
+  # Secure storage for the refresh token (`lib/features/auth/
+  # infrastructure/secure_token_storage.dart`) — Keychain on iOS,
+  # EncryptedSharedPreferences/Keystore-backed on Android. The access
+  # token is deliberately never written here (or anywhere on disk) — see
+  # that file's own doc comment for why only the refresh token persists.
+  flutter_secure_storage: ^9.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

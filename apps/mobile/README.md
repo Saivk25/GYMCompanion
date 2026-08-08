@@ -5,6 +5,21 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
 
 ## Layout
 
+- `lib/core/network/` — the shared HTTP layer every real (`ApiX`-prefixed)
+  repository is built on: `api_client.dart` (wraps `package:dio`, the one
+  place that package is imported outside this folder), `api_config.dart`
+  (base URL — platform-aware, see its own doc comment for the Android-
+  emulator-vs-`localhost` gotcha — and timeouts), `api_exception.dart` /
+  `api_error_mapper.dart` (the one exception type and mapper that ever
+  crosses out of this folder, built directly from the real backend's own
+  `ErrorResponse{detail}` shape and status-code taxonomy — see
+  `backend/app/api/errors.py`), and `interceptors/` (bearer-token
+  injection + automatic refresh-then-retry, a GET-only/network-failure-
+  only retry policy, and debug-only request logging). Import
+  `core/network/network.dart` rather than individual files. See
+  `docs/adr/0042-production-integration-plan.md` for the plan this
+  implements and `docs/adr/0043-core-networking-layer.md` for this
+  layer's own decisions.
 - `lib/design/` — the design system: `tokens/` (color, typography, spacing, radius,
   elevation, motion, breakpoints, icons — pure values, no widgets), `theme/`
   (assembles tokens into real `ColorScheme`/`TextTheme`/`ThemeData`), `components/`
