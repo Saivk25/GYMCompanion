@@ -36,13 +36,61 @@ enum MealType {
         MealType.dinner => 'Dinner',
         MealType.snack => 'Snack',
       };
+
+  /// The `fromWire` convention `docs/adr/0045-shared-api-mapping-
+  /// convention.md` established (`ReadinessSource.fromWire` first),
+  /// reused here rather than inventing a second enum-mapping style.
+  static MealType fromWire(String value) {
+    return switch (value) {
+      'breakfast' => MealType.breakfast,
+      'lunch' => MealType.lunch,
+      'dinner' => MealType.dinner,
+      'snack' => MealType.snack,
+      _ => throw FormatException('Unknown MealType wire value: $value'),
+    };
+  }
+
+  /// The inverse of [fromWire] — `ApiFuelRepository.logMeal`
+  /// (`../infrastructure/api_fuel_repository.dart`) is this project's
+  /// first real repository that writes a client-chosen enum *into* a
+  /// request body rather than only ever reading one out of a response,
+  /// so an explicit inverse mapping is written by hand here rather than
+  /// relied on coincidentally matching `.name` — the wire string and the
+  /// Dart member name happen to agree today, but this method is the one
+  /// place that fact is asserted, not assumed at every call site.
+  String get toWire => switch (this) {
+        MealType.breakfast => 'breakfast',
+        MealType.lunch => 'lunch',
+        MealType.dinner => 'dinner',
+        MealType.snack => 'snack',
+      };
 }
 
 /// How an entry's values were obtained. Every entry this module creates
 /// today is [manual] — there is no barcode scanner or import pipeline
 /// wired up yet, so [barcode]/[import] exist here only for API-shape
 /// fidelity, not because any screen offers them.
-enum NutritionSource { manual, barcode, import }
+enum NutritionSource {
+  manual,
+  barcode,
+  import;
+
+  /// The `fromWire` convention `docs/adr/0045-shared-api-mapping-
+  /// convention.md` established, reused here rather than inventing a
+  /// second enum-mapping style. `import` is a Dart *built-in
+  /// identifier* (unlike a reserved word, it's only barred from naming a
+  /// *type*), so it names this enum member exactly as the wire value
+  /// spells it — no escaping suffix needed, unlike some other languages'
+  /// stricter keyword rules.
+  static NutritionSource fromWire(String value) {
+    return switch (value) {
+      'manual' => NutritionSource.manual,
+      'barcode' => NutritionSource.barcode,
+      'import' => NutritionSource.import,
+      _ => throw FormatException('Unknown NutritionSource wire value: $value'),
+    };
+  }
+}
 
 /// One logged entry — a meal, a water-only log, or both at once
 /// (mirrors `NutritionResponse` exactly).

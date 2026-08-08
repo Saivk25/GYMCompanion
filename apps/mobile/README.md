@@ -262,6 +262,22 @@ more honest placeholders. `AppProgressBar` (promoted from Train's local
 `lib/shared/presentation/`) are both design-system/shared-widget extractions
 made the moment a second feature needed them, not guessed at ahead of time.
 
+As of `docs/adr/0049-fuel-repository-integration.md` (Step 3 of
+production integration, below), `ApiFuelRepository` replaced
+`MockFuelRepository` — real logged-meal and water data from `GET
+/api/v1/nutrition`, real logging via `POST /api/v1/nutrition` (the same
+endpoint for both meals and water, per the backend's own "one per-entry
+log, not a daily rollup" design), and the real, unmodified
+`NutritionRuleEngine` warnings that flow into `CoachSignalLog`
+unchanged. Unlike Today/Train, no domain-model reduction was needed —
+`FuelEntry` already mapped onto `NutritionResponse` field-for-field.
+One disclosed gap (`docs/TECH_DEBT.md`'s TD-0008): the weekly
+protein-consistency line is always absent, since `ProteinRule` is a
+single-entry sanity check, not a personalized weekly target, and no
+endpoint returns a computed consistency figure; the existing UI already
+guards on this being optional. `MockFuelRepository` remains as a test
+fixture only.
+
 Progress (`docs/adr/0039`) is the fourth real feature screen, and the
 widest spread of gap severity of any phase so far: Nutrition (a real weekly
 protein trend line plus a real weekly consistency heatmap, computed

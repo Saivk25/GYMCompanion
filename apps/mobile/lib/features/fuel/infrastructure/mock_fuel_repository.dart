@@ -1,14 +1,18 @@
 import '../application/fuel_controller.dart';
 import '../domain/fuel_models.dart';
 
-/// A placeholder [FuelRepository] — the same disclosed-limitation
-/// posture `MockTodayRepository`/`MockTrainRepository` established.
-/// Stateful like `MockTrainRepository` (not read-only like
-/// `MockTodayRepository`): a logged meal or water entry must be visible
-/// on the very next fetch, so this mock keeps an in-memory `List
-/// <FuelEntry>`, mutated by [logMeal]/[logWater] and read back by
-/// [fetchHome] — reset on every app restart, fully disclosed here rather
-/// than silently behaving like a real backend.
+/// No longer the production [FuelRepository] — `main.dart` now wires
+/// `ApiFuelRepository` (`../infrastructure/api_fuel_repository.dart`)
+/// for real use, per `docs/adr/0049-fuel-repository-integration.md`.
+/// Kept as `test/features/fuel/`'s fixture, mirroring
+/// `MockTodayRepository`'s/`MockReadinessRepository`'s/
+/// `MockTrainRepository`'s own updated doc comments. Stateful like
+/// `MockTrainRepository` (not read-only like `MockTodayRepository`): a
+/// logged meal or water entry must be visible on the very next fetch, so
+/// this mock keeps an in-memory `List<FuelEntry>`, mutated by
+/// [logMeal]/[logWater] and read back by [fetchHome] — reset on every
+/// app restart, fully disclosed here rather than silently behaving like
+/// a real backend.
 class MockFuelRepository implements FuelRepository {
   MockFuelRepository() : _entries = _seedEntries();
 

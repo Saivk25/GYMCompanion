@@ -9,7 +9,7 @@ import 'features/auth/infrastructure/secure_token_storage.dart';
 import 'features/coach/application/coach_controller.dart';
 import 'features/coach/infrastructure/mock_coach_repository.dart';
 import 'features/fuel/application/fuel_controller.dart';
-import 'features/fuel/infrastructure/mock_fuel_repository.dart';
+import 'features/fuel/infrastructure/api_fuel_repository.dart';
 import 'features/progress/application/progress_controller.dart';
 import 'features/progress/infrastructure/mock_progress_repository.dart';
 import 'features/readiness/application/readiness_controller.dart';
@@ -43,10 +43,9 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// The one place a provider's real implementation is chosen over its
-/// default. [trainRepositoryProvider]/[fuelRepositoryProvider]/
-/// [progressRepositoryProvider]/[coachRepositoryProvider] have no
-/// default (they throw — see each one's own doc comment) precisely so a
-/// real repository can't be forgotten silently; their mock
+/// default. [progressRepositoryProvider]/[coachRepositoryProvider] have
+/// no default (they throw — see each one's own doc comment) precisely
+/// so a real repository can't be forgotten silently; their mock
 /// implementations are wired in here, honestly, until authenticated
 /// API-backed repositories replace them, one Step-3 feature at a time
 /// (`docs/adr/0042`'s own Today/Readiness/Train/Fuel/Progress/Coach
@@ -57,15 +56,16 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 /// `TrainHomeController`/`FuelHomeController`/`ProgressHomeController`/
 /// `ReadinessHomeController`/`CoachHomeController` need to know which.
 ///
-/// [todayRepositoryProvider], [readinessRepositoryProvider], and
-/// [trainRepositoryProvider] have already made that switch
-/// (`docs/adr/0046-today-repository-integration.md`, `docs/adr/0047-
-/// readiness-repository-integration.md`, `docs/adr/0048-train-
-/// repository-integration.md`) — [ApiTodayRepository]/
-/// [ApiReadinessRepository]/[ApiTrainRepository] are wired here instead
-/// of `MockTodayRepository`/[MockReadinessRepository]/
-/// `MockTrainRepository` (all three still used by their own feature's
-/// widget tests, none deleted). All three use `overrideWith`, for the
+/// [todayRepositoryProvider], [readinessRepositoryProvider],
+/// [trainRepositoryProvider], and [fuelRepositoryProvider] have already
+/// made that switch (`docs/adr/0046-today-repository-integration.md`,
+/// `docs/adr/0047-readiness-repository-integration.md`, `docs/adr/0048-
+/// train-repository-integration.md`, `docs/adr/0049-fuel-repository-
+/// integration.md`) — [ApiTodayRepository]/[ApiReadinessRepository]/
+/// [ApiTrainRepository]/[ApiFuelRepository] are wired here instead of
+/// `MockTodayRepository`/[MockReadinessRepository]/`MockTrainRepository`/
+/// `MockFuelRepository` (all four still used by their own feature's
+/// widget tests, none deleted). All four use `overrideWith`, for the
 /// same reason [authRepositoryProvider]
 /// below does: each needs a closure reading [apiClientProvider] at call
 /// time, not a constant instance built before this `ProviderScope`
@@ -92,7 +92,9 @@ void main() {
         trainRepositoryProvider.overrideWith(
           (ref) => ApiTrainRepository(ref.read(apiClientProvider)),
         ),
-        fuelRepositoryProvider.overrideWithValue(MockFuelRepository()),
+        fuelRepositoryProvider.overrideWith(
+          (ref) => ApiFuelRepository(ref.read(apiClientProvider)),
+        ),
         progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
         readinessRepositoryProvider.overrideWith(
           (ref) => ApiReadinessRepository(ref.read(apiClientProvider)),

@@ -569,3 +569,52 @@ it exists today, not a UI-simplification pass.
    `StartWorkoutSessionRequest` server-side** — closes item 3:
    `ApiTrainRepository.startSession` can send the real selection instead
    of discarding it.
+
+---
+
+## TD-0008: No backend source for Fuel's weekly protein-consistency label
+
+- Status: **Open.**
+- Identified: 2026-08-08, during Step 3 (Fuel repository integration —
+  `docs/adr/0049-fuel-repository-integration.md`) of `docs/adr/0042-
+  production-integration-plan.md`.
+
+### What's missing
+
+`ApiFuelRepository` (`lib/features/fuel/infrastructure/
+api_fuel_repository.dart`) replaced `MockFuelRepository`, but
+`FuelHomeViewState.proteinConsistencyLabel` has no real backend source,
+confirmed by reading `backend/app/domain/nutrition/rules/protein_rule.py`
+directly: `ProteinRule` flags a single logged entry's protein against a
+fixed 50-250 g sanity range (its own docstring: "a wide, generic
+single-day sanity range... not a personalized macro target"), evaluated
+once, at record time, by `RecordNutritionHandler` — never stored, never
+aggregated across a week, and no endpoint anywhere returns a computed
+"N of the last 7 days on target" figure. `ApiFuelRepository` always
+returns `null` (the field is already nullable; `FuelHomeScreen` already
+guards on it with `if (state.proteinConsistencyLabel != null)`).
+
+### Why this was not fixed in this phase
+
+It cannot be fixed from the Flutter side at all — there is no backend
+capability to integrate against. Computing a "days on target" figure
+client-side would require inventing a personalized weekly macro target
+this backend does not model anywhere (`ProteinRule`'s own range is
+explicitly not one), which would mean fabricating a threshold the real
+`NutritionRuleEngine` never computed — exactly the kind of business-
+logic duplication this phase's own instructions forbid.
+
+### Trigger conditions for closing this item
+
+1. **A personalized macro-target concept is added to `User`/
+   `UserPreferences` server-side, and an endpoint computes a real weekly
+   protein-consistency figure from it** — closes this item.
+2. **Progress's own Nutrition segment** (`docs/adr/0039-progress-
+   module.md`) already renders a real weekly protein trend line computed
+   client-side from real per-entry totals, without needing a personalized
+   target — if that segment's own approach is ever judged sufficient for
+   Fuel's one-line summary too, this could close without a new backend
+   endpoint by reusing that same client-side aggregation instead. Not
+   done as part of this phase, since it would mean Fuel depending on
+   Progress's own computation — a cross-feature coupling decision outside
+   this phase's repository-integration scope.
