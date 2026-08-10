@@ -667,3 +667,171 @@ revalidate hit, so the app never runs meaningfully stale for long.
 2. **The next phase that substantively touches `lib/core/cache/`** should
    evaluate this alongside whatever else it's already changing there,
    rather than as an unrelated drive-by fix.
+
+---
+
+## TD-0010: `ReadinessTimelineScreen` eagerly builds its entire, unbounded check-in history
+
+- Status: **Open.**
+- Identified: 2026-08-11, during Step 5 (performance and accessibility
+  audit — `docs/adr/0053-performance-and-accessibility-audit.md`) of
+  `docs/adr/0042-production-integration-plan.md`.
+
+### What's inefficient
+
+`ReadinessTimelineScreen` (`lib/features/readiness/presentation/
+readiness_timeline_screen.dart`) renders `data.entries` — the complete,
+unpaginated result of `GET /api/v1/readiness` (ADR 0042 Part 2's own "no
+pagination exists anywhere" finding) — inside a plain `ListView` with a
+`for` comprehension, not `ListView.builder`. Every check-in the user has
+ever logged is built into a widget on every visit to this screen, and on
+every rebuild it undergoes (e.g. a background stale-while-revalidate
+completing, `docs/adr/0052`). For a long-tenured daily user this is
+hundreds of `ReadinessEntryTile` widgets built eagerly where only a
+screen's worth would ever be visible at once.
+
+### Why this was not fixed in this phase
+
+The list is nested inside one shared `AppCard`/`Column` specifically to
+render as a single grouped card with dividers between rows — the visual
+treatment every check-in row shares. Converting to `ListView.builder`
+for true lazy building is not a mechanical swap here: it requires either
+per-item corner-radius logic (rounding only the first/last row) or
+restructuring around a `SliverList`, both of which are real layout
+decisions this audit-only phase's own "only fix what's clearly justified
+and low-risk" instruction argues against making unreviewed.
+
+### Trigger conditions for closing this item
+
+1. **Server-side pagination is added to `GET /api/v1/readiness`** — the
+   more fundamental fix; closes both the eager-widget-building cost here
+   and the same unbounded-payload cost `LocalCache`/`readThroughCache`
+   already pay for the same list (`docs/adr/0052`).
+2. **A real device profiling pass (once a Flutter SDK is available,
+   `docs/adr/0002`) shows this screen janks or feels slow for a test
+   account seeded with a large check-in history** — fires regardless of
+   whether condition 1 has landed yet.
+3. **The next phase that substantively touches this screen or
+   `ReadinessEntryTile`** should evaluate the `ListView.builder`
+   conversion (with its corner-radius handling) as part of its own scope.
+
+---
+
+## TD-0011: `PreSessionController`/`ActiveSessionController` have no `.autoDispose`
+
+- Status: **Open.**
+- Identified: 2026-08-11, during Step 5 (`docs/adr/0053-performance-and-
+  accessibility-audit.md`) of `docs/adr/0042-production-integration-
+  plan.md`.
+
+### What's accepted
+
+`preSessionControllerProvider`/`activeSessionControllerProvider`
+(`lib/features/train/application/train_controller.dart`) are
+`AsyncNotifierProvider.family<_, _, String>` keyed by `workoutId`/
+`sessionId`, with no `.autoDispose`. Every distinct workout previewed or
+session opened during one app run keeps its own provider instance (and
+last-known `TrainWorkout`/`TrainSession` value) resident in memory for
+the rest of that run, even after the screen that reads it is popped.
+
+### Why this was not fixed in this phase
+
+Negligible for typical usage (a handful of workouts/sessions touched per
+day). Adding `.autoDispose` is not a safe default to flip during an
+audit: it changes *when* state is discarded, which interacts with this
+app's own `StatefulShellRoute.indexedStack` state-preservation
+guarantee, and it's a real product question — should re-opening the same
+workout a minute after leaving its Pre-session screen show the
+last-known preview instantly, or always refetch? — not a performance-only
+decision this phase is scoped to make unilaterally.
+
+### Trigger conditions for closing this item
+
+1. **A real device profiling pass shows measurable memory growth from
+   this pattern in realistic usage** (many different workouts/sessions
+   opened in one long-lived session) — fires the fix directly.
+2. **The next phase that substantively redesigns Train's provider
+   structure** should decide the `.autoDispose` question deliberately, as
+   part of that redesign, rather than as an unreviewed audit-phase flip.
+
+---
+
+## TD-0012: `LoggedSetRow`'s "Mark complete" tap target is likely under 48dp
+
+- Status: **Open.**
+- Identified: 2026-08-11, during Step 5 (`docs/adr/0053-performance-and-
+  accessibility-audit.md`) of `docs/adr/0042-production-integration-
+  plan.md`.
+
+### What's wrong
+
+`LoggedSetRow` (`lib/features/train/presentation/widgets/
+logged_set_row.dart`) wraps its whole `Row` in `ConstrainedBox(
+minHeight: kMinInteractiveDimension)` (48dp), but the "Mark complete"
+`InkWell` itself only wraps a `Padding` around a `Text` label, not the
+full row height. A `Row`'s default `CrossAxisAlignment.center` does not
+stretch children to fill the row's constrained height, so the actual
+tappable/ink area is only as tall as its own padding plus the text's
+line height — under the 48dp minimum this app's design system enforces
+everywhere else (`docs/adr/0035`).
+
+### Why this was not fixed in this phase
+
+`LoggedSetRow` stacks many sets per exercise in Active Workout's logging
+list — a screen this app's own design deliberately keeps dense.
+Stretching the tap target to the full 48dp row height risks visually and
+functionally colliding with adjacent rows; the right fix (taller row,
+different padding distribution, or an explicit `SizedBox`/`Align` around
+just the `InkWell`) is a density trade-off this audit-only phase
+shouldn't make unreviewed, unlike `ExerciseNav`'s own touch-target fix
+(same audit), which had no competing density constraint.
+
+### Trigger conditions for closing this item
+
+1. **The next phase that substantively touches `LoggedSetRow` or Active
+   Workout's set-logging density** should close this as part of its own
+   scope.
+2. **A real device accessibility pass (VoiceOver/TalkBack/Switch
+   Control) confirms this tap target is difficult to hit** — fires
+   directly, regardless of density concerns.
+
+---
+
+## TD-0013: Three multi-field forms have no keyboard focus chaining
+
+- Status: **Open.**
+- Identified: 2026-08-11, during Step 5 (`docs/adr/0053-performance-and-
+  accessibility-audit.md`) of `docs/adr/0042-production-integration-
+  plan.md`.
+
+### What's missing
+
+`LogMealScreen` (~8 fields), `LogMeasurementScreen` (~11 fields), and
+`ReadinessCheckInScreen` (~6 fields) construct every `AppTextField`
+without `textInputAction` or a `FocusNode` — the on-screen keyboard's
+"Next" action does not advance focus to the next field, forcing a manual
+dismiss-and-tap for every field in sequence. `AppTextField` already
+exposes both parameters (`lib/design/components/app_text_field.dart`),
+and `LoginScreen`/`RegisterScreen` already wire them — this is an
+inconsistency across the app's forms, not a missing design-system
+capability.
+
+### Why this was not fixed in this phase
+
+Correctly wiring `FocusNode` chaining across three forms with 6-11
+fields each — creating and disposing one `FocusNode` per field, wiring
+`textInputAction`/`onSubmitted` to call `FocusScope.of(context)
+.nextFocus()` (or a dedicated final-field `onSubmitted` that instead
+submits the form), and getting traversal order right for every field —
+is real, multi-file implementation work with genuine dispose-safety risk
+if rushed through an audit pass. This phase's own instruction was to
+document findings like this rather than implement them speculatively.
+
+### Trigger conditions for closing this item
+
+1. **The next phase that substantively touches any of these three
+   screens** should wire focus chaining as part of its own scope, using
+   `LoginScreen`/`RegisterScreen`'s existing pattern as the template.
+2. **A real device accessibility pass (external keyboard, Switch
+   Control) confirms this materially slows down logging a meal/
+   measurement/check-in** — fires directly.

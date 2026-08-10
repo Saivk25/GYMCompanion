@@ -446,3 +446,19 @@ so that refetch shows the real new data instead of a stale cached list
 (`docs/adr/0052` Decision 6). Pull-to-refresh's own interaction with the
 cache's 5-minute freshness window is a disclosed, different trade-off,
 not fixed the same way — see `docs/TECH_DEBT.md`'s TD-0009.
+
+Step 5 (`docs/adr/0053-performance-and-accessibility-audit.md`) was an
+audit, not an optimization pass: static-analysis review of rebuild
+scope, provider granularity, `StatefulShellRoute.indexedStack`, chart
+repaint behavior, and the Step 4 cache's own interaction with
+unpaginated backend lists, plus a composed-screen accessibility review
+building on `docs/adr/0035`'s design-system-level pass. One low-risk fix
+was applied — `ExerciseNav`'s exercise-switcher chip grew from 40dp to
+the design system's own 48dp touch-target minimum. Four other findings
+(Readiness Timeline's eager unbounded list, missing `.autoDispose` on
+Train's per-workout/session providers, a likely-undersized tap target on
+`LoggedSetRow`, and missing keyboard focus chaining across three
+multi-field forms) were deliberately left as documented findings rather
+than fixed, since each needs a real design decision this audit-only
+phase wasn't scoped to make unilaterally — see `docs/TECH_DEBT.md`'s
+TD-0010 through TD-0013.

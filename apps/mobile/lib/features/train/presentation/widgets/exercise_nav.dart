@@ -26,8 +26,17 @@ class ExerciseNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 48, not 40 — Step 5's own accessibility audit (`docs/adr/0053-
+    // performance-and-accessibility-audit.md`) found the previous 40dp
+    // height put this chip row's own tap target below the 48dp minimum
+    // every other interactive control in this app meets (`docs/adr/0035`).
+    // The row is a fixed-height horizontal scroller with no competing
+    // density constraint, so raising it is a mechanical, low-risk fix —
+    // unlike `LoggedSetRow`'s own touch-target gap (same audit), which
+    // was left as a documented finding because it sits inside a dense,
+    // multi-row list where the same fix could cause overflow.
     return SizedBox(
-      height: 40,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: performances.length,
