@@ -179,6 +179,34 @@ void main() {
     expect(find.text('Coaching history not connected yet'), findsOneWidget);
   });
 
+  testWidgets('tapping a signal opens its real detail — full message, module, '
+      'severity, and a plain-language sourcing disclosure', (tester) async {
+    await _pumpCoach(tester, <CoachSignal>[
+      _signal(
+        id: 's1',
+        module: CoachModule.recovery,
+        severity: CoachSeverity.warning,
+        message: 'Sleep has been below target.',
+      ),
+    ]);
+
+    await tester.tap(find.text('Sleep has been below target.'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guidance detail'), findsOneWidget); // AppBar title
+    // Coach Home's own route stays mounted underneath this pushed one
+    // (the same reason `checkin_flow_test.dart`'s "See all" test uses
+    // `findsWidgets`, not `findsOneWidget`, for text that also appears
+    // on the screen beneath), so the message matches both the still-
+    // present feed tile and this detail screen's own repeated text.
+    expect(find.text('Sleep has been below target.'), findsWidgets);
+    expect(find.textContaining('Recovery'), findsWidgets);
+    expect(
+      find.textContaining('a real, deterministic rule check on the backend'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a genuine page fetch failure offers retry, not a silent blank screen', (
     tester,
   ) async {

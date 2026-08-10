@@ -835,3 +835,48 @@ document findings like this rather than implement them speculatively.
 2. **A real device accessibility pass (external keyboard, Switch
    Control) confirms this materially slows down logging a meal/
    measurement/check-in** — fires directly.
+
+---
+
+## TD-0014: Automated accessibility guideline tests cover only 2 of ~24 screens
+
+- Status: **Open — representative coverage, not exhaustive.**
+- Identified: 2026-08-11, during Step 6 (testing and release readiness —
+  `docs/adr/0054-testing-and-release-readiness.md`) of `docs/adr/0042-
+  production-integration-plan.md`.
+
+### What's covered, and what isn't
+
+`test/accessibility/guideline_test.dart` (new this phase) runs
+`flutter_test`'s `meetsGuideline(androidTapTargetGuideline)`/
+`meetsGuideline(textContrastGuideline)` against Today and Coach Home —
+the first use of these matchers anywhere in this suite, closing the
+automatable half of `docs/adr/0042` Part 6 item 4. The other ~22 screens
+across Train/Fuel/Progress/Readiness/Coach/Auth have no equivalent
+automated check; they inherit the design system's own component-level
+guarantees (`docs/adr/0035`) but have not been individually verified by
+this specific matcher.
+
+### Why this was not widened in this phase
+
+Two screens were chosen deliberately as a representative sample (the
+landing screen, and the most visually varied composed screen — badges,
+filter chips, and tiles together), to prove the check is wired
+correctly and demonstrate the pattern, per this phase's own "audit for
+gaps rather than write unnecessary tests" instruction. Mechanically
+copying the same two-line check across all ~24 screens is easy, but
+doing it without also being able to *run* it (`docs/adr/0002` — no
+Flutter SDK in this environment) means every additional copy is
+unverified in the same way the first two are; widening coverage now
+would add volume without adding confidence beyond what the
+representative sample already demonstrates.
+
+### Trigger conditions for closing this item
+
+1. **The first real `flutter test` run** (release checklist item 1,
+   `docs/adr/0042`) should include running this file and, if it passes,
+   extending the same two-matcher pattern to every remaining `XHomeScreen`
+   and drill-in screen as a mechanical follow-up.
+2. **Any screen redesign or new screen** should add its own
+   `meetsGuideline` pair as part of that work, rather than waiting for a
+   dedicated sweep.

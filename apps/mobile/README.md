@@ -462,3 +462,20 @@ multi-field forms) were deliberately left as documented findings rather
 than fixed, since each needs a real design decision this audit-only
 phase wasn't scoped to make unilaterally — see `docs/TECH_DEBT.md`'s
 TD-0010 through TD-0013.
+
+Step 6 (`docs/adr/0054-testing-and-release-readiness.md`) closed the
+roadmap: a coverage audit (not a speculative test-writing pass) found
+one real gap — `CoachSignalDetailScreen` had zero test coverage — and
+closed it, and added `test/accessibility/guideline_test.dart`, the
+first use of `flutter_test`'s `meetsGuideline` matchers in this suite
+(Today and Coach Home, representative rather than exhaustive —
+`docs/TECH_DEBT.md`'s TD-0014). ADR 0042's own 9-item release checklist
+was verified item by item: Steps 1-4 (API integration, auth, offline
+caching) are done; golden tests, a real DevTools pass, a real TalkBack/
+VoiceOver pass, platform folders, and store metadata all remain undone,
+each blocked on a real Flutter SDK/device this sandbox does not have
+(`docs/adr/0002`) or a product decision outside this phase's own
+validation-only scope — not a gap in what this roadmap planned. A
+dead-code/stale-documentation sweep found nothing needing a fix. This
+concludes the planned roadmap from `docs/adr/0042-production-
+integration-plan.md`; see ADR 0054 for the full assessment.
