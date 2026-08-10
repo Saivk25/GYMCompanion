@@ -383,6 +383,20 @@ Coach. The Coach tab icon changed from a chat bubble to `insights`,
 correcting a stale visual promise from before this module's real,
 non-chat scope existed.
 
+As of `docs/adr/0051-coach-repository-integration.md` (Step 3 of
+production integration, below), Coach's own Step 3 phase is complete
+with no `ApiCoachRepository` built and no code changed —
+`MockCoachRepository` was already Coach's real implementation before
+this phase, and re-verification confirmed the backend still has no
+`coach` concept, no aggregation endpoint, and no new rule engine or
+Goal surface since ADR 0041's original research. `CoachSignalLog` has
+carried genuinely real, backend-sourced warnings (not illustrative mock
+text) since Readiness/Fuel/Train each finished their own Step 3 phases,
+since the line that populates it reads whichever repository each
+module's own provider currently resolves to. `MockCoachRepository`
+remains permanently, not as an interim test fixture like the other five
+modules' mocks.
+
 Production integration is underway (`docs/adr/0042-production-integration-plan.md`).
 Step 1 (`docs/adr/0043-core-networking-layer.md`) built the shared `lib/core/network/`
 HTTP layer — `dio`-based client, bearer-token injection, a GET-only/network-failure-only
@@ -394,10 +408,12 @@ via `ApiClient`'s closures, logout-on-refresh-failure), `SecureTokenStorage` (re
 token only, Keychain/Keystore-backed), and a reactive `go_router` guard (`app_router.dart`
 is now a `Provider<GoRouter>`) that redirects unauthenticated sessions to `/login` and
 authenticated ones away from it. Step 3 (real per-feature repository integration, one feature at a time) is
-underway: Today (`docs/adr/0046`), Readiness (`docs/adr/0047`), Train
-(`docs/adr/0048`), Fuel (`docs/adr/0049`), and Progress (`docs/adr/0050`)
-are done, all on the shared mapping convention (`docs/adr/0045-shared-
-api-mapping-convention.md`) every later feature's own `ApiXRepository`
-reuses unchanged. Coach still runs on its existing mock repository —
-see `MockCoachRepository`'s own doc comment for why "real API-backed"
-is not coming for that one.
+now complete for all six features: Today (`docs/adr/0046`), Readiness
+(`docs/adr/0047`), Train (`docs/adr/0048`), Fuel (`docs/adr/0049`), and
+Progress (`docs/adr/0050`) each replaced their mock repository with a
+real `ApiXRepository` on the shared mapping convention
+(`docs/adr/0045-shared-api-mapping-convention.md`); Coach
+(`docs/adr/0051`) closed the same phase without a new repository, since
+`MockCoachRepository` already reads real, backend-sourced data via
+`CoachSignalLog` — see `MockCoachRepository`'s own doc comment for why
+"real API-backed" is not coming, and never needs to, for that one.

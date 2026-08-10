@@ -43,11 +43,11 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// The one place a provider's real implementation is chosen over its
-/// default. [coachRepositoryProvider] has no default (it throws — see
-/// its own doc comment) precisely so a real repository can't be
-/// forgotten silently; its mock implementation is wired in here,
-/// honestly — see [coachRepositoryProvider]'s own doc comment for why
-/// "real API-backed" is never coming for that one specifically.
+/// default. [todayRepositoryProvider], [readinessRepositoryProvider],
+/// [trainRepositoryProvider], [fuelRepositoryProvider], and
+/// [progressRepositoryProvider] have no default (they throw — see each
+/// one's own doc comment) precisely so a real repository can't be
+/// forgotten silently; their real implementations are wired in here.
 /// A widget test overrides the same providers with its own fakes
 /// instead of this file — none of `TodayController`/
 /// `TrainHomeController`/`FuelHomeController`/`ProgressHomeController`/
@@ -55,7 +55,7 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 ///
 /// [todayRepositoryProvider], [readinessRepositoryProvider],
 /// [trainRepositoryProvider], [fuelRepositoryProvider], and
-/// [progressRepositoryProvider] have already made that switch
+/// [progressRepositoryProvider] have all made the mock-to-real switch
 /// (`docs/adr/0046-today-repository-integration.md`, `docs/adr/0047-
 /// readiness-repository-integration.md`, `docs/adr/0048-train-
 /// repository-integration.md`, `docs/adr/0049-fuel-repository-
@@ -69,12 +69,19 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 /// does: each needs a closure reading [apiClientProvider] at call time,
 /// not a constant instance built before this `ProviderScope` exists.
 ///
-/// [coachRepositoryProvider] uses `overrideWith`, not `overrideWithValue`
-/// like every other still-mocked provider here — [MockCoachRepository]
-/// needs a closure reading [coachSignalLogProvider] at call time, not a
-/// constant instance built before this `ProviderScope` even exists (see
-/// `MockCoachRepository`'s own doc comment for why it has no state of
-/// its own to construct with).
+/// [coachRepositoryProvider] is the one exception, and deliberately
+/// stays on [MockCoachRepository] permanently — not a phase still
+/// pending. `docs/adr/0051-coach-repository-integration.md` re-confirmed
+/// there is no backend Coach endpoint to call; [MockCoachRepository] is
+/// already Coach's real implementation, reading the same
+/// [coachSignalLogProvider] that `ReadinessHomeController`/
+/// `FuelHomeController`/`ActiveSessionController` push real,
+/// backend-sourced warnings into (see [coachRepositoryProvider]'s own
+/// doc comment). It uses `overrideWith`, not `overrideWithValue` like
+/// every other still-mocked-in-name provider here, because
+/// [MockCoachRepository] needs a closure reading [coachSignalLogProvider]
+/// at call time, not a constant instance built before this
+/// `ProviderScope` even exists.
 ///
 /// [authRepositoryProvider]/[tokenStorageProvider] are the pair wired to
 /// their *real* implementations here — see `ApiAuthRepository`'s own doc
