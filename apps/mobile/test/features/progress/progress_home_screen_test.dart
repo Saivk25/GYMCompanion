@@ -46,7 +46,7 @@ class _FakeProgressRepository implements ProgressRepository {
   Future<ProgressHomeViewState> fetchHome() => _completer.future;
 
   @override
-  Future<ProgressEntry> logMeasurement({
+  Future<ProgressLogResult> logMeasurement({
     required DateTime date,
     double? bodyWeight,
     double? bodyFatPercentage,

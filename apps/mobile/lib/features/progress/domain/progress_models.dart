@@ -151,6 +151,33 @@ class ProgressEntry {
       thigh != null || calf != null || neck != null;
 }
 
+/// The result of logging a measurement: the entry itself, plus whichever
+/// real advisory strings `ProgressEvaluationRuleEngine` produced for it
+/// (`ConsistencyRule`/`PlateauRule`/`MeasurementTrendRule`, evaluated
+/// server-side against the user's full check-in history) —
+/// `POST /api/v1/progress`'s own real response shape (`IdResponse
+/// .warnings`). The same real-warnings shape `FuelLogResult`/
+/// `ReadinessCheckInResult` already established, reused here — see
+/// those types' own doc comments for the full reasoning, which applies
+/// unchanged. Unlike Readiness's/Fuel's/Train's equivalents, these
+/// warnings are *not* pushed into `CoachSignalLog`: `CoachModule`
+/// (`lib/shared/domain/coach_signal.dart`) is a deliberately closed
+/// three-value set (recovery/nutrition/training) that its own doc
+/// comment explicitly states does not include a fourth value for
+/// Progress's advisory output, a scope decision `docs/adr/0041-coach-
+/// module.md` made before this repository existed. [warnings] is
+/// instead rendered directly on Progress Home's own Transformation
+/// segment (`ProgressHomeViewState.lastLogWarnings`) — real, non-
+/// fabricated advisory data is still surfaced to the user, just not
+/// cross-posted to a module whose own documented scope excludes it. See
+/// `docs/adr/0050-progress-repository-integration.md`.
+class ProgressLogResult {
+  const ProgressLogResult({required this.entry, this.warnings = const <String>[]});
+
+  final ProgressEntry entry;
+  final List<String> warnings;
+}
+
 /// One day's real, summed nutrition activity — Fuel's own "per-entry log,
 /// not a daily rollup" rule (`docs/adr/0011`, backend) applied the same
 /// way here: [proteinGrams]/[waterMl] are the sum of that day's real
@@ -227,6 +254,7 @@ class ProgressHomeViewState {
     this.readinessWeek = const <ReadinessDayEntry>[],
     this.hasLoggedAnyMeasurementEver = true,
     this.isOffline = false,
+    this.lastLogWarnings = const <String>[],
   });
 
   final DateTime asOf;
@@ -253,6 +281,15 @@ class ProgressHomeViewState {
   final bool hasLoggedAnyMeasurementEver;
 
   final bool isOffline;
+
+  /// The real `ProgressEvaluationRuleEngine` warnings the *most recent*
+  /// [ProgressRepository.logMeasurement] call returned — see
+  /// [ProgressLogResult]'s own doc comment for why these render here
+  /// rather than flowing into `CoachSignalLog`. Transient like
+  /// `ReadinessHomeViewState.lastCheckInWarnings` — not persisted, not
+  /// re-derivable from a plain [ProgressRepository.fetchHome], genuinely
+  /// empty again after the next plain fetch.
+  final List<String> lastLogWarnings;
 
   ProgressEntry? get latestMeasurement =>
       measurements.isEmpty ? null : measurements.first;

@@ -297,6 +297,25 @@ consuming the `chartSeries`/`chartReference` tokens the design system
 reserved for exactly this moment rather than guessing at chart needs
 ahead of time.
 
+As of `docs/adr/0050-progress-repository-integration.md` (Step 3 of
+production integration, below), `ApiProgressRepository` replaced
+`MockProgressRepository` — real measurement history from `GET
+/api/v1/progress`, real logging via `POST /api/v1/progress` (`unit`/
+`source` hardcoded to `'metric'`/`'manual'`, mirroring the mock's own
+prior hardcoding, since the backend requires both and no personalized
+preference exists anywhere in this client), and real client-side
+7-day aggregation over the full `GET /api/v1/nutrition`/`GET
+/api/v1/readiness` lists for the Nutrition/Recovery trend charts. This
+phase also extended `ProgressRepository.logMeasurement`'s return type
+to `ProgressLogResult{entry, warnings}` so the real
+`ProgressEvaluationRuleEngine` warnings `POST /api/v1/progress` returns
+are no longer silently discarded — unlike Readiness/Fuel/Train, these
+render inline on Progress Home's own Transformation segment rather
+than flowing into `CoachSignalLog`, since `CoachModule`'s own
+deliberately closed three-value enum (`docs/adr/0041`) has no fourth
+category for Progress's advisory output. `MockProgressRepository`
+remains as a test fixture only.
+
 Readiness (`docs/adr/0040`) is real but has no bottom tab of its own —
 reached from Today's check-in nudge and from Progress's own Recovery
 segment. Readiness Home, Check-in (one screen for sleep, energy, stress,
@@ -375,8 +394,10 @@ via `ApiClient`'s closures, logout-on-refresh-failure), `SecureTokenStorage` (re
 token only, Keychain/Keystore-backed), and a reactive `go_router` guard (`app_router.dart`
 is now a `Provider<GoRouter>`) that redirects unauthenticated sessions to `/login` and
 authenticated ones away from it. Step 3 (real per-feature repository integration, one feature at a time) is
-underway: Today (`docs/adr/0046`) and Readiness (`docs/adr/0047`) are done,
-both on the shared mapping convention (`docs/adr/0045-shared-api-mapping-
-convention.md`) every later feature's own `ApiXRepository` reuses unchanged.
-Train, Fuel, Progress, and Coach still run on their existing mock
-repositories.
+underway: Today (`docs/adr/0046`), Readiness (`docs/adr/0047`), Train
+(`docs/adr/0048`), Fuel (`docs/adr/0049`), and Progress (`docs/adr/0050`)
+are done, all on the shared mapping convention (`docs/adr/0045-shared-
+api-mapping-convention.md`) every later feature's own `ApiXRepository`
+reuses unchanged. Coach still runs on its existing mock repository —
+see `MockCoachRepository`'s own doc comment for why "real API-backed"
+is not coming for that one.

@@ -168,6 +168,7 @@ class _ProgressHomeContent extends StatelessWidget {
               _ProgressTab.transformation => ProgressTransformationSection(
                   hasLoggedAnyMeasurementEver: state.hasLoggedAnyMeasurementEver,
                   measurementsNewestFirst: state.measurements,
+                  lastLogWarnings: state.lastLogWarnings,
                 ),
               _ProgressTab.reports => const NotConnectedPlaceholder(
                   title: 'Reports not connected yet',

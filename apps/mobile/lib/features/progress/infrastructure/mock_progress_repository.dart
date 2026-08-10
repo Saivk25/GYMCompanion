@@ -29,6 +29,7 @@ class MockProgressRepository implements ProgressRepository {
   final List<NutritionDayTotal> _nutritionWeek;
   final List<ReadinessDayEntry> _readinessWeek;
   int _nextId = 100;
+  bool _hasShownIllustrativeWarnings = false;
 
   static List<ProgressEntry> _seedMeasurements() {
     final DateTime today = DateTime.now();
@@ -107,7 +108,7 @@ class MockProgressRepository implements ProgressRepository {
   }
 
   @override
-  Future<ProgressEntry> logMeasurement({
+  Future<ProgressLogResult> logMeasurement({
     required DateTime date,
     double? bodyWeight,
     double? bodyFatPercentage,
@@ -143,7 +144,26 @@ class MockProgressRepository implements ProgressRepository {
       notes: notes ?? '',
     );
     _entries.add(entry);
-    return entry;
+
+    // Two fixed, clearly-illustrative advisory strings on the first
+    // logged measurement only, never a reimplementation of
+    // `ProgressEvaluationRuleEngine`'s real consistency/plateau/trend
+    // thresholds — the same disclosed posture
+    // `MockReadinessRepository.submitCheckIn` already established; see
+    // that file's own doc comment for the full reasoning, which applies
+    // unchanged here.
+    List<String> warnings = const <String>[];
+    if (!_hasShownIllustrativeWarnings) {
+      _hasShownIllustrativeWarnings = true;
+      warnings = const <String>[
+        '[advisory] Example advisory — real recommendations come from the '
+            'backend progress-evaluation rule engine once connected.',
+        '[warning] This illustrates where trend advice appears; it is not '
+            'computed from the values you just entered.',
+      ];
+    }
+
+    return ProgressLogResult(entry: entry, warnings: warnings);
   }
 
   /// See `MockTodayRepository`'s own doc comment for why this delay is

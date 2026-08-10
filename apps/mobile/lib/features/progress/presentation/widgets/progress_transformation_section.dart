@@ -14,15 +14,27 @@ import 'measurement_list_tile.dart';
 /// a real measurement dashboard with two honest, reachable placeholders
 /// for the photo half of the Bible's own name for it, never a silent
 /// omission.
+///
+/// Also renders [lastLogWarnings] — real `ProgressEvaluationRuleEngine`
+/// advisory strings from the most recent log — inline below the latest
+/// summary card, mirroring `ReadinessHomeScreen`'s own "Advisory notes
+/// from your last check-in" pattern.
 class ProgressTransformationSection extends StatelessWidget {
   const ProgressTransformationSection({
     required this.hasLoggedAnyMeasurementEver,
     required this.measurementsNewestFirst,
+    this.lastLogWarnings = const <String>[],
     super.key,
   });
 
   final bool hasLoggedAnyMeasurementEver;
   final List<ProgressEntry> measurementsNewestFirst;
+
+  /// Real `ProgressEvaluationRuleEngine` advisory strings from the most
+  /// recent [ProgressRepository.logMeasurement] call, rendered inline
+  /// rather than pushed to `CoachSignalLog` — see [ProgressLogResult]'s
+  /// own doc comment (`progress_models.dart`) for why.
+  final List<String> lastLogWarnings;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +65,21 @@ class ProgressTransformationSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         _LatestSummaryCard(latest: latest, previous: previous),
+        if (lastLogWarnings.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Advisory notes from your last check-in',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          for (final String warning in lastLogWarnings)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(warning, style: Theme.of(context).textTheme.bodySmall),
+            ),
+        ],
         const SizedBox(height: AppSpacing.xl),
         AppButton(
           label: 'Log measurements',

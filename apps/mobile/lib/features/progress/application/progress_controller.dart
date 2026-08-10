@@ -27,7 +27,7 @@ import '../domain/progress_models.dart';
 abstract interface class ProgressRepository {
   Future<ProgressHomeViewState> fetchHome();
 
-  Future<ProgressEntry> logMeasurement({
+  Future<ProgressLogResult> logMeasurement({
     required DateTime date,
     double? bodyWeight,
     double? bodyFatPercentage,
@@ -89,7 +89,7 @@ class ProgressHomeController extends AsyncNotifier<ProgressHomeViewState> {
     double? neck,
     String? notes,
   }) async {
-    await ref.read(progressRepositoryProvider).logMeasurement(
+    final ProgressLogResult result = await ref.read(progressRepositoryProvider).logMeasurement(
           date: date,
           bodyWeight: bodyWeight,
           bodyFatPercentage: bodyFatPercentage,
@@ -104,8 +104,22 @@ class ProgressHomeController extends AsyncNotifier<ProgressHomeViewState> {
           neck: neck,
           notes: notes,
         );
-    state = await AsyncValue.guard(
-      () => ref.read(progressRepositoryProvider).fetchHome(),
+    final ProgressHomeViewState refreshed =
+        await ref.read(progressRepositoryProvider).fetchHome();
+    // See `ProgressLogResult`'s own doc comment for why these real
+    // warnings render on this page directly (`lastLogWarnings`) rather
+    // than flowing into `CoachSignalLog` — `CoachModule`'s own scope
+    // deliberately excludes Progress.
+    state = AsyncValue<ProgressHomeViewState>.data(
+      ProgressHomeViewState(
+        asOf: refreshed.asOf,
+        measurements: refreshed.measurements,
+        nutritionWeek: refreshed.nutritionWeek,
+        readinessWeek: refreshed.readinessWeek,
+        hasLoggedAnyMeasurementEver: refreshed.hasLoggedAnyMeasurementEver,
+        isOffline: refreshed.isOffline,
+        lastLogWarnings: result.warnings,
+      ),
     );
   }
 }
