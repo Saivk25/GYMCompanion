@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/core/mapping/mapping.dart';
 import 'package:gym_companion_mobile/core/network/network.dart';
 import 'package:gym_companion_mobile/features/progress/domain/progress_models.dart';
 import 'package:gym_companion_mobile/features/progress/infrastructure/api_progress_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/fakes/fake_http_client_adapter.dart';
 
@@ -19,6 +21,22 @@ ApiClient _clientWith(HttpClientAdapter adapter) {
   final Dio dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.httpClientAdapter = adapter;
   return ApiClient(dio: dio);
+}
+
+/// A fresh, empty [LocalCache] per call — backed by a real (mocked)
+/// [SharedPreferences] instance (`docs/adr/0052-offline-caching.md`),
+/// the same pattern `test/features/today/api_today_repository_test.dart`
+/// established.
+Future<LocalCache> _freshCache() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return LocalCache(await SharedPreferences.getInstance());
+}
+
+Future<ApiProgressRepository> _repoWith(
+  HttpClientAdapter adapter, {
+  LocalCache? cache,
+}) async {
+  return ApiProgressRepository(_clientWith(adapter), cache ?? await _freshCache());
 }
 
 Map<String, dynamic> _progressJson({
@@ -110,7 +128,7 @@ void main() {
         const FakeResponse(body: <Map<String, dynamic>>[]),
         const FakeResponse(body: <Map<String, dynamic>>[]),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressHomeViewState state = await repo.fetchHome();
 
@@ -139,7 +157,7 @@ void main() {
         ),
         const FakeResponse(body: <Map<String, dynamic>>[]),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressHomeViewState state = await repo.fetchHome();
 
@@ -173,7 +191,7 @@ void main() {
           ],
         ),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressHomeViewState state = await repo.fetchHome();
 
@@ -189,7 +207,7 @@ void main() {
         const FakeResponse(body: <Map<String, dynamic>>[]),
         const FakeResponse(body: <Map<String, dynamic>>[]),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressHomeViewState state = await repo.fetchHome();
 
@@ -197,13 +215,125 @@ void main() {
       expect(state.measurements, isEmpty);
     });
 
-    test('a network failure propagates as ApiException', () async {
+    test('a network failure propagates as ApiException when there is no cached fallback',
+        () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         const FakeResponse(throwConnectionError: true),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+  });
+
+  group('fetchHome read-through cache (docs/adr/0052-offline-caching.md)', () {
+    test('a network failure falls back to a stale cached bundle with isOffline: true', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'progress_home',
+        <String, dynamic>{
+          'progress': <Map<String, dynamic>>[
+            _progressJson(id: 'p-cached', progressDate: '2026-08-08', bodyWeight: 81.0),
+          ],
+          'nutrition': <Map<String, dynamic>>[],
+          'readiness': <Map<String, dynamic>>[],
+        },
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        const FakeResponse(throwConnectionError: true),
+      ]);
+      final ApiProgressRepository repo = await _repoWith(adapter, cache: cache);
+
+      final ProgressHomeViewState state = await repo.fetchHome();
+
+      expect(state.isOffline, isTrue);
+      expect(state.measurements.single.progressId, 'p-cached');
+    });
+
+    test('a genuine 500 is never masked by a stale cache hit', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'progress_home',
+        <String, dynamic>{
+          'progress': <Map<String, dynamic>>[],
+          'nutrition': <Map<String, dynamic>>[],
+          'readiness': <Map<String, dynamic>>[],
+        },
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+      ]);
+      final ApiProgressRepository repo = await _repoWith(adapter, cache: cache);
+
+      expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+
+    test('a fresh cache entry is served immediately (stale-while-revalidate), '
+        'not a blocking second round of three fetches', () async {
+      final LocalCache cache = await _freshCache();
+      int callCount = 0;
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding((
+        RequestOptions options,
+        int callIndex,
+      ) {
+        callCount++;
+        if (callCount > 3) {
+          return const FakeResponse(throwConnectionError: true);
+        }
+        if (options.path.contains('/progress')) {
+          return FakeResponse(
+            body: <Map<String, dynamic>>[
+              _progressJson(id: 'p-fresh', progressDate: '2026-08-08', bodyWeight: 79.0),
+            ],
+          );
+        }
+        return const FakeResponse(body: <Map<String, dynamic>>[]);
+      });
+      final ApiProgressRepository repo = await _repoWith(adapter, cache: cache);
+
+      final ProgressHomeViewState first = await repo.fetchHome();
+      expect(first.isOffline, isFalse);
+
+      final ProgressHomeViewState second = await repo.fetchHome();
+      expect(second.isOffline, isFalse);
+      expect(second.measurements.single.progressId, 'p-fresh');
+    });
+  });
+
+  group('logMeasurement invalidates the fetchHome cache (docs/adr/0052-offline-caching.md)', () {
+    test('a fresh cached bundle does not shadow the just-logged measurement', () async {
+      final LocalCache cache = await _freshCache();
+      // A *fresh* (not stale) bundle — proves invalidation, not maxAge
+      // expiry, is what forces the next fetchHome() live.
+      await cache.write('progress_home', <String, dynamic>{
+        'progress': <Map<String, dynamic>>[
+          _progressJson(id: 'p-old', progressDate: '2026-07-01', bodyWeight: 82.0),
+        ],
+        'nutrition': <Map<String, dynamic>>[],
+        'readiness': <Map<String, dynamic>>[],
+      });
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        FakeResponse(
+          statusCode: 201,
+          body: <String, dynamic>{'id': 'p-new', 'warnings': <String>[]},
+        ),
+        FakeResponse(
+          body: <Map<String, dynamic>>[
+            _progressJson(id: 'p-old', progressDate: '2026-07-01', bodyWeight: 82.0),
+            _progressJson(id: 'p-new', progressDate: '2026-08-08', bodyWeight: 79.5),
+          ],
+        ),
+        const FakeResponse(body: <Map<String, dynamic>>[]),
+        const FakeResponse(body: <Map<String, dynamic>>[]),
+      ]);
+      final ApiProgressRepository repo = await _repoWith(adapter, cache: cache);
+
+      await repo.logMeasurement(date: DateTime(2026, 8, 8), bodyWeight: 79.5);
+      final ProgressHomeViewState state = await repo.fetchHome();
+
+      expect(state.measurements.map((ProgressEntry e) => e.progressId), contains('p-new'));
     });
   });
 
@@ -221,7 +351,7 @@ void main() {
           },
         ),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressLogResult result = await repo.logMeasurement(
         date: DateTime(2026, 8, 8),
@@ -257,7 +387,7 @@ void main() {
           body: <String, dynamic>{'id': 'p-clean', 'warnings': <String>[]},
         ),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       final ProgressLogResult result = await repo.logMeasurement(date: DateTime(2026, 8, 8));
 
@@ -268,7 +398,7 @@ void main() {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid body_weight'}),
       ]);
-      final ApiProgressRepository repo = ApiProgressRepository(_clientWith(adapter));
+      final ApiProgressRepository repo = await _repoWith(adapter);
 
       expect(repo.logMeasurement(date: DateTime(2026, 8, 8)), throwsA(isA<ApiException>()));
     });

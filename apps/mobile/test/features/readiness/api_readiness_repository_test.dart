@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/core/mapping/mapping.dart';
 import 'package:gym_companion_mobile/core/network/network.dart';
 import 'package:gym_companion_mobile/features/readiness/domain/readiness_models.dart';
 import 'package:gym_companion_mobile/features/readiness/infrastructure/api_readiness_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/fakes/fake_http_client_adapter.dart';
 
@@ -16,6 +18,22 @@ ApiClient _clientWith(HttpClientAdapter adapter) {
   final Dio dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.httpClientAdapter = adapter;
   return ApiClient(dio: dio);
+}
+
+/// A fresh, empty [LocalCache] per call — backed by a real (mocked)
+/// [SharedPreferences] instance (`docs/adr/0052-offline-caching.md`),
+/// the same pattern `test/features/today/api_today_repository_test.dart`
+/// established.
+Future<LocalCache> _freshCache() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return LocalCache(await SharedPreferences.getInstance());
+}
+
+Future<ApiReadinessRepository> _repoWith(
+  HttpClientAdapter adapter, {
+  LocalCache? cache,
+}) async {
+  return ApiReadinessRepository(_clientWith(adapter), cache ?? await _freshCache());
 }
 
 Map<String, dynamic> _entryJson({
@@ -60,7 +78,7 @@ void main() {
           ],
         ),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       final ReadinessHomeViewState state = await repo.fetchHome();
 
@@ -91,7 +109,7 @@ void main() {
           ],
         ),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       final ReadinessHomeViewState state = await repo.fetchHome();
       final ReadinessEntry entry = state.entries.single;
@@ -111,20 +129,123 @@ void main() {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         const FakeResponse(body: <Map<String, dynamic>>[]),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       final ReadinessHomeViewState state = await repo.fetchHome();
 
       expect(state.hasCheckedInEver, isFalse);
     });
 
-    test('a network failure propagates as ApiException', () async {
+    test('a network failure propagates as ApiException when there is no cached fallback',
+        () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         const FakeResponse(throwConnectionError: true),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+  });
+
+  group('fetchHome read-through cache (docs/adr/0052-offline-caching.md)', () {
+    test('a network failure falls back to a stale cached list with isOffline: true', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'readiness_home',
+        <Map<String, dynamic>>[
+          _entryJson(id: 'r-cached', readinessDate: '2026-08-05', sleepQuality: 8),
+        ],
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        const FakeResponse(throwConnectionError: true),
+      ]);
+      final ApiReadinessRepository repo = await _repoWith(adapter, cache: cache);
+
+      final ReadinessHomeViewState state = await repo.fetchHome();
+
+      expect(state.isOffline, isTrue);
+      expect(state.entries.single.readinessId, 'r-cached');
+    });
+
+    test('a genuine 500 is never masked by a stale cache hit', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'readiness_home',
+        <Map<String, dynamic>>[],
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+      ]);
+      final ApiReadinessRepository repo = await _repoWith(adapter, cache: cache);
+
+      expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+
+    test('a fresh cache entry is served immediately (stale-while-revalidate), '
+        'not a blocking second fetch', () async {
+      final LocalCache cache = await _freshCache();
+      int callCount = 0;
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding((
+        RequestOptions options,
+        int callIndex,
+      ) {
+        callCount++;
+        if (callCount > 1) {
+          // The second `fetchHome()` call below must be served from the
+          // still-fresh cache, never a second live GET — if it were,
+          // this failure would propagate synchronously and fail the
+          // test loudly instead of being silently swallowed as a
+          // background revalidate failure would be.
+          return const FakeResponse(throwConnectionError: true);
+        }
+        return FakeResponse(
+          body: <Map<String, dynamic>>[
+            _entryJson(id: 'r-fresh', readinessDate: '2026-08-05', sleepQuality: 9),
+          ],
+        );
+      });
+      final ApiReadinessRepository repo = await _repoWith(adapter, cache: cache);
+
+      final ReadinessHomeViewState first = await repo.fetchHome();
+      expect(first.isOffline, isFalse);
+
+      final ReadinessHomeViewState second = await repo.fetchHome();
+      expect(second.isOffline, isFalse);
+      expect(second.entries.single.readinessId, 'r-fresh');
+    });
+  });
+
+  group('submitCheckIn invalidates the fetchHome cache (docs/adr/0052-offline-caching.md)', () {
+    test('a fresh cached fetchHome list does not shadow the just-submitted entry', () async {
+      final LocalCache cache = await _freshCache();
+      // A *fresh* (not stale) cache entry — proves invalidation is what
+      // forces the next fetchHome() to go live, not merely that maxAge
+      // happened to expire.
+      await cache.write(
+        'readiness_home',
+        <Map<String, dynamic>>[_entryJson(id: 'r-old', readinessDate: '2026-08-01')],
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        FakeResponse(
+          statusCode: 201,
+          body: <String, dynamic>{'id': 'r-new', 'warnings': <String>[]},
+        ),
+        FakeResponse(
+          body: <Map<String, dynamic>>[
+            _entryJson(id: 'r-old', readinessDate: '2026-08-01'),
+            _entryJson(id: 'r-new', readinessDate: '2026-08-08'),
+          ],
+        ),
+      ]);
+      final ApiReadinessRepository repo = await _repoWith(adapter, cache: cache);
+
+      await repo.submitCheckIn(date: DateTime(2026, 8, 8));
+      final ReadinessHomeViewState state = await repo.fetchHome();
+
+      expect(state.entries.map((ReadinessEntry e) => e.readinessId), contains('r-new'));
+      expect(state.isOffline, isFalse);
     });
   });
 
@@ -139,7 +260,7 @@ void main() {
           },
         ),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       final ReadinessCheckInResult result = await repo.submitCheckIn(
         date: DateTime(2026, 8, 8),
@@ -180,7 +301,7 @@ void main() {
           body: <String, dynamic>{'id': 'r-clean', 'warnings': <String>[]},
         ),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       final ReadinessCheckInResult result = await repo.submitCheckIn(date: DateTime(2026, 8, 8));
 
@@ -194,7 +315,7 @@ void main() {
           body: <String, dynamic>{'id': 'r-minimal', 'warnings': <String>[]},
         ),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       await repo.submitCheckIn(date: DateTime(2026, 8, 8), sleepQuality: 8);
 
@@ -209,7 +330,7 @@ void main() {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid soreness_level'}),
       ]);
-      final ApiReadinessRepository repo = ApiReadinessRepository(_clientWith(adapter));
+      final ApiReadinessRepository repo = await _repoWith(adapter);
 
       expect(
         repo.submitCheckIn(date: DateTime(2026, 8, 8)),

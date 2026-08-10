@@ -40,6 +40,16 @@ dependencies:
   # that file's own doc comment for why only the refresh token persists.
   flutter_secure_storage: ^9.2.2
 
+  # Local read-through cache for offline reads (`lib/core/cache/`) — see
+  # docs/adr/0052-offline-caching.md for the trade-off record against
+  # Hive/Drift/sqflite. Chosen for this app's actual cache shape: a
+  # handful of small JSON view-state blobs, read/written by key, with no
+  # querying or relational needs — the plain, official, zero-codegen
+  # key-value store this shape calls for, not the encrypted secret store
+  # `flutter_secure_storage` above already covers for the one real
+  # secret this app persists.
+  shared_preferences: ^2.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

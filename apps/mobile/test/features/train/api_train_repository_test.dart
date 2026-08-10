@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/core/mapping/mapping.dart';
 import 'package:gym_companion_mobile/core/network/network.dart';
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/domain/train_models.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/api_train_repository.dart';
 import 'package:gym_companion_mobile/shared/domain/session_tier.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/fakes/fake_http_client_adapter.dart';
 
@@ -18,6 +20,26 @@ ApiClient _clientWith(HttpClientAdapter adapter) {
   final Dio dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.httpClientAdapter = adapter;
   return ApiClient(dio: dio);
+}
+
+/// A fresh, empty [LocalCache] per call — backed by a real (mocked)
+/// [SharedPreferences] instance (`docs/adr/0052-offline-caching.md`),
+/// the same pattern `test/features/today/api_today_repository_test.dart`
+/// established. Only [ApiTrainRepository.fetchHome] is actually
+/// read-through cached — [fetchWorkout]/[fetchSession]/every mutation
+/// still needs a [LocalCache] instance to construct the repository
+/// (the constructor takes one unconditionally), even though those
+/// methods never touch it.
+Future<LocalCache> _freshCache() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return LocalCache(await SharedPreferences.getInstance());
+}
+
+Future<ApiTrainRepository> _repoWith(
+  HttpClientAdapter adapter, {
+  LocalCache? cache,
+}) async {
+  return ApiTrainRepository(_clientWith(adapter), cache ?? await _freshCache());
 }
 
 Map<String, dynamic> _workoutJson({
@@ -117,7 +139,7 @@ void main() {
           ],
         ),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainHomeViewState state = await repo.fetchHome();
 
@@ -135,20 +157,87 @@ void main() {
           ],
         ),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainHomeViewState state = await repo.fetchHome();
 
       expect(state.hasActivePlan, isFalse);
     });
 
-    test('a network failure propagates as ApiException', () async {
+    test('a network failure propagates as ApiException when there is no cached fallback',
+        () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         const FakeResponse(throwConnectionError: true),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+  });
+
+  group('fetchHome read-through cache (docs/adr/0052-offline-caching.md)', () {
+    test('a network failure falls back to a stale cached list with isOffline: true', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'train_home',
+        <Map<String, dynamic>>[
+          _workoutJson(id: 'w-cached', status: 'planned', plannedDate: apiDateString(DateTime.now())),
+        ],
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        const FakeResponse(throwConnectionError: true),
+      ]);
+      final ApiTrainRepository repo = await _repoWith(adapter, cache: cache);
+
+      final TrainHomeViewState state = await repo.fetchHome();
+
+      expect(state.isOffline, isTrue);
+      expect(state.thisWeek.single.workoutId, 'w-cached');
+    });
+
+    test('a genuine 500 is never masked by a stale cache hit', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'train_home',
+        <Map<String, dynamic>>[],
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
+        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+      ]);
+      final ApiTrainRepository repo = await _repoWith(adapter, cache: cache);
+
+      expect(repo.fetchHome(), throwsA(isA<ApiException>()));
+    });
+
+    test('a fresh cache entry is served immediately (stale-while-revalidate), '
+        'not a blocking second fetch', () async {
+      final LocalCache cache = await _freshCache();
+      final String todayKey = apiDateString(DateTime.now());
+      int callCount = 0;
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding((
+        RequestOptions options,
+        int callIndex,
+      ) {
+        callCount++;
+        if (callCount > 1) {
+          return const FakeResponse(throwConnectionError: true);
+        }
+        return FakeResponse(
+          body: <Map<String, dynamic>>[
+            _workoutJson(id: 'w-fresh', status: 'planned', plannedDate: todayKey),
+          ],
+        );
+      });
+      final ApiTrainRepository repo = await _repoWith(adapter, cache: cache);
+
+      final TrainHomeViewState first = await repo.fetchHome();
+      expect(first.isOffline, isFalse);
+
+      final TrainHomeViewState second = await repo.fetchHome();
+      expect(second.isOffline, isFalse);
+      expect(second.thisWeek.single.workoutId, 'w-fresh');
     });
   });
 
@@ -164,7 +253,7 @@ void main() {
           ),
         ),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainWorkout workout = await repo.fetchWorkout('w1');
 
@@ -187,7 +276,7 @@ void main() {
         FakeResponse(body: _sessionJson(id: 's-new', workoutId: 'w1', status: 'active')),
         FakeResponse(body: _workoutJson(id: 'w1', plannedDate: '2026-08-08')),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainSession session =
           await repo.startSession('w1', tier: SessionTier.standard);
@@ -218,7 +307,7 @@ void main() {
         FakeResponse(body: _sessionJson(id: 's-new')),
         FakeResponse(body: _workoutJson()),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainSession session = await repo.startSession('w1', tier: SessionTier.min);
 
@@ -244,7 +333,7 @@ void main() {
         ),
         FakeResponse(body: _workoutJson(id: 'w1', name: 'Upper Body Strength', plannedDate: '2026-08-08')),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainSession session = await repo.fetchSession('s1');
 
@@ -270,7 +359,7 @@ void main() {
         FakeResponse(body: _sessionJson(id: 's1', workoutId: 'w1', status: 'completed')),
         FakeResponse(body: _workoutJson(id: 'w1', plannedDate: '2026-08-08')),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       final TrainSession session = await repo.completeSession(
         's1',
@@ -295,7 +384,7 @@ void main() {
         FakeResponse(body: _sessionJson(id: 's1')),
         FakeResponse(body: _workoutJson()),
       ]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       await repo.completeSession('s1', durationSeconds: 100, completionPercentage: 50);
 
@@ -307,7 +396,7 @@ void main() {
   group('logSet / completeSet — deliberately deferred', () {
     test('logSet throws TrainLoggingUnavailableException before any network call', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       await expectLater(
         repo.logSet(
@@ -326,7 +415,7 @@ void main() {
 
     test('completeSet throws TrainLoggingUnavailableException before any network call', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[]);
-      final ApiTrainRepository repo = ApiTrainRepository(_clientWith(adapter));
+      final ApiTrainRepository repo = await _repoWith(adapter);
 
       await expectLater(
         repo.completeSet('s1', performanceId: 'perf1', setNumber: 1),

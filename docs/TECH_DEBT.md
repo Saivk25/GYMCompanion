@@ -618,3 +618,52 @@ logic duplication this phase's own instructions forbid.
    done as part of this phase, since it would mean Fuel depending on
    Progress's own computation — a cross-feature coupling decision outside
    this phase's repository-integration scope.
+
+---
+
+## TD-0009: Pull-to-refresh can return a still-cached value instead of guaranteeing a live fetch
+
+- Status: **Open — accepted, disclosed trade-off, not a defect.**
+- Identified: 2026-08-10, during Step 4 (offline caching —
+  `docs/adr/0052-offline-caching.md`) of `docs/adr/0042-production-
+  integration-plan.md`, Decision 7.
+
+### What's accepted
+
+Every `*HomeController.refresh()` (`TodayController`/
+`ReadinessHomeController`/`TrainHomeController`/`FuelHomeController`/
+`ProgressHomeController`) — used for pull-to-refresh and manual retry —
+calls the same `Repository.fetchHome()`/`fetchToday()` that
+`readThroughCache` now fronts. A pull-to-refresh within
+`kCacheFreshDuration` (5 minutes) of the previous read can return the
+still-fresh cached value immediately, with a real background
+revalidation kicked off for the *next* read, rather than guaranteeing
+that pulling-to-refresh always performs a live network round trip. This
+is different from the mutation-invalidation bug this same phase found
+and fixed (ADR 0052 Decision 6): pull-to-refresh isn't showing stale
+data that masks an action the user just took — it's showing data that
+is, at most, `kCacheFreshDuration` old, with a real refresh already in
+flight underneath it.
+
+### Why this was not fixed in this phase
+
+Guaranteeing a true bypass-the-cache live fetch on every pull-to-refresh
+would require adding a `forceRefresh` parameter to every
+`Repository.fetchHome()`/`fetchToday()` signature across all five
+repositories — a real interface change this phase's own "keep existing
+repository interfaces stable wherever possible" instruction weighs
+against, for a UX nicety rather than a correctness bug. `readThroughCache`
+already revalidates the cache in the background on every stale-while-
+revalidate hit, so the app never runs meaningfully stale for long.
+
+### Trigger conditions for closing this item
+
+1. **User-facing feedback or a design review finds `kCacheFreshDuration`-
+   old data on pull-to-refresh confusing or unacceptable** — closes by
+   adding an optional `forceRefresh` bool to `readThroughCache` (and
+   threading it through each repository's `fetchHome()`/`fetchToday()`
+   as an optional, default-`false` parameter — additive, not breaking)
+   that skips the freshness check and always calls `fetchRawJson()`.
+2. **The next phase that substantively touches `lib/core/cache/`** should
+   evaluate this alongside whatever else it's already changing there,
+   rather than as an unrelated drive-by fix.

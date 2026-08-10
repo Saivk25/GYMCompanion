@@ -1,3 +1,4 @@
+import '../../../core/cache/cache.dart';
 import '../../../core/mapping/mapping.dart';
 import '../../../core/network/network.dart';
 import '../application/today_controller.dart';
@@ -42,26 +43,56 @@ import 'dto/workout_dto.dart';
 /// `null` (see `_TodayContent`'s existing `if (state.task != null)`/
 /// `if (state.streak != null)` guards). See TD-0006.
 ///
-/// [TodayViewState.isOffline] is always `false` — this repository has
-/// no local cache; offline reads are Step 5 of `docs/adr/0042`, not
-/// this phase.
+/// [TodayViewState.isOffline] reflects a real read-through cache as of
+/// Step 4 (`docs/adr/0052-offline-caching.md`): [fetchToday] serves a
+/// fresh-enough cached bundle immediately (revalidating in the
+/// background), falls back to the last cached bundle on a genuine
+/// network failure, and otherwise fetches live and writes through —
+/// see `core/cache/read_through_cache.dart`'s own doc comment for the
+/// full shared policy every real repository's own `fetchHome()` now
+/// reuses unchanged.
 class ApiTodayRepository implements TodayRepository {
-  ApiTodayRepository(this._client);
+  ApiTodayRepository(this._client, this._cache);
 
   final ApiClient _client;
+  final LocalCache _cache;
+
+  static const String _cacheKey = 'today';
 
   @override
-  Future<TodayViewState> fetchToday() async {
+  Future<TodayViewState> fetchToday() {
+    return readThroughCache<TodayViewState>(
+      cache: _cache,
+      key: _cacheKey,
+      maxAge: kCacheFreshDuration,
+      fetchRawJson: _fetchRawJson,
+      build: _buildViewState,
+    );
+  }
+
+  /// The real network half of [fetchToday] — exactly the two `GET`s this
+  /// method always made, now returning their raw decoded JSON bundled
+  /// into one cacheable `Map` rather than being parsed immediately, so
+  /// [_buildViewState] can run identically over a live or a cached
+  /// bundle.
+  Future<Object?> _fetchRawJson() async {
     final List<List<dynamic>> results = await Future.wait(<Future<List<dynamic>>>[
       _client.getList('${ApiConfig.v1PathPrefix}/workouts'),
       _client.getList('${ApiConfig.v1PathPrefix}/readiness'),
     ]);
+    return <String, dynamic>{'workouts': results[0], 'readiness': results[1]};
+  }
 
-    final List<WorkoutDto> workouts = results[0]
+  /// The real parsing/derivation logic [fetchToday] always ran —
+  /// unchanged, just factored out so it can run over either a fresh or
+  /// a cached [rawJson] bundle, per [readThroughCache]'s own contract.
+  TodayViewState _buildViewState(Object? rawJson, {required bool isOffline}) {
+    final Map<String, dynamic> bundle = rawJson! as Map<String, dynamic>;
+    final List<WorkoutDto> workouts = (bundle['workouts']! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(WorkoutDto.fromJson)
         .toList(growable: false);
-    final List<ReadinessSummaryDto> readinessEntries = results[1]
+    final List<ReadinessSummaryDto> readinessEntries = (bundle['readiness']! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(ReadinessSummaryDto.fromJson)
         .toList(growable: false);
@@ -98,6 +129,7 @@ class ApiTodayRepository implements TodayRepository {
       checkInCompletedToday: checkInCompletedToday,
       sessionStatus: sessionStatus,
       session: session,
+      isOffline: isOffline,
     );
   }
 

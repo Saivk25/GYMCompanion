@@ -1,3 +1,4 @@
+import '../../../core/cache/cache.dart';
 import '../../../core/mapping/mapping.dart';
 import '../../../core/network/network.dart';
 import '../application/fuel_controller.dart';
@@ -69,15 +70,42 @@ import 'dto/fuel_entry_dto.dart';
 /// forbid. `FuelHomeScreen` already guards on this field being `null`
 /// (`if (state.proteinConsistencyLabel != null)`), so no presentation
 /// change was needed. See `docs/TECH_DEBT.md`'s TD-0008.
+///
+/// ## `fetchHome` is now read-through cached (Step 4)
+///
+/// `docs/adr/0052-offline-caching.md` — [fetchHome] reuses the shared
+/// `readThroughCache` policy (`core/cache/read_through_cache.dart`):
+/// serves a fresh-enough cached response immediately while revalidating
+/// in the background, falls back to the last cached response on a real
+/// network failure ([FuelHomeViewState.isOffline] now genuinely reflects
+/// this rather than always being `false`), and otherwise fetches live
+/// and writes through. [logMeal]/[logWater] are mutations, not reads —
+/// deliberately not cached, per this phase's own scope. Both do,
+/// however, invalidate [fetchHome]'s own cache entry on success
+/// (`LocalCache.invalidate`) so `FuelHomeController`'s existing mutate-
+/// then-refetch call sites see the real new entry instead of a stale
+/// cached list.
 class ApiFuelRepository implements FuelRepository {
-  ApiFuelRepository(this._client);
+  ApiFuelRepository(this._client, this._cache);
 
   final ApiClient _client;
+  final LocalCache _cache;
+
+  static const String _cacheKey = 'fuel_home';
 
   @override
-  Future<FuelHomeViewState> fetchHome() async {
-    final List<dynamic> raw = await _client.getList('${ApiConfig.v1PathPrefix}/nutrition');
-    final List<FuelEntry> entries = raw
+  Future<FuelHomeViewState> fetchHome() {
+    return readThroughCache<FuelHomeViewState>(
+      cache: _cache,
+      key: _cacheKey,
+      maxAge: kCacheFreshDuration,
+      fetchRawJson: () => _client.getList('${ApiConfig.v1PathPrefix}/nutrition'),
+      build: _buildViewState,
+    );
+  }
+
+  FuelHomeViewState _buildViewState(Object? rawJson, {required bool isOffline}) {
+    final List<FuelEntry> entries = (rawJson! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(FuelEntryDto.fromJson)
         .map((FuelEntryDto dto) => dto.toDomain())
@@ -97,7 +125,7 @@ class ApiFuelRepository implements FuelRepository {
       // No endpoint returns a computed weekly consistency figure — see
       // this class's own doc comment.
       proteinConsistencyLabel: null,
-      isOffline: false,
+      isOffline: isOffline,
     );
   }
 
@@ -133,6 +161,11 @@ class ApiFuelRepository implements FuelRepository {
     final List<String> warnings =
         (json.optionalList('warnings') ?? const <dynamic>[]).cast<String>();
 
+    // `FuelHomeController.logMeal` refetches `fetchHome()` immediately
+    // after this returns and expects the new entry to be there — see
+    // `LocalCache.invalidate`'s own doc comment.
+    await _cache.invalidate(_cacheKey);
+
     final FuelEntry entry = FuelEntry(
       nutritionId: nutritionId,
       nutritionDate: date,
@@ -161,6 +194,11 @@ class ApiFuelRepository implements FuelRepository {
       },
     );
     final String nutritionId = json.requireString('id');
+
+    // `FuelHomeController.logWater` refetches `fetchHome()` immediately
+    // after this returns and expects the new entry to be there — see
+    // `LocalCache.invalidate`'s own doc comment.
+    await _cache.invalidate(_cacheKey);
 
     return FuelEntry(
       nutritionId: nutritionId,

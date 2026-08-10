@@ -1,3 +1,4 @@
+import '../../../core/cache/cache.dart';
 import '../../../core/mapping/mapping.dart';
 import '../../../core/network/network.dart';
 import '../application/progress_controller.dart';
@@ -83,31 +84,69 @@ import 'dto/readiness_summary_entry_dto.dart';
 /// phase — no backend analytics/report/photo/correlation route exists
 /// anywhere (`ProgressRepository`'s own doc comment) — and remain
 /// untouched; this repository adds no method for any of them.
+///
+/// ## `fetchHome` is now read-through cached (Step 4)
+///
+/// `docs/adr/0052-offline-caching.md` — [fetchHome] reuses the shared
+/// `readThroughCache` policy (`core/cache/read_through_cache.dart`),
+/// caching the raw three-endpoint JSON bundle as one unit: serves a
+/// fresh-enough cached bundle immediately while revalidating in the
+/// background, falls back to the last cached bundle on a real network
+/// failure ([ProgressHomeViewState.isOffline] now genuinely reflects
+/// this rather than always being `false`), and otherwise fetches live
+/// and writes through. [logMeasurement] is a mutation, not a read —
+/// deliberately not cached, per this phase's own scope. It does,
+/// however, invalidate [fetchHome]'s own cache entry on success
+/// (`LocalCache.invalidate`) so `ProgressHomeController`'s existing
+/// mutate-then-refetch call site sees the real new entry instead of a
+/// stale cached bundle.
 class ApiProgressRepository implements ProgressRepository {
-  ApiProgressRepository(this._client);
+  ApiProgressRepository(this._client, this._cache);
 
   final ApiClient _client;
+  final LocalCache _cache;
+
+  static const String _cacheKey = 'progress_home';
 
   @override
-  Future<ProgressHomeViewState> fetchHome() async {
+  Future<ProgressHomeViewState> fetchHome() {
+    return readThroughCache<ProgressHomeViewState>(
+      cache: _cache,
+      key: _cacheKey,
+      maxAge: kCacheFreshDuration,
+      fetchRawJson: _fetchRawJson,
+      build: _buildViewState,
+    );
+  }
+
+  Future<Object?> _fetchRawJson() async {
     final List<List<dynamic>> results = await Future.wait(<Future<List<dynamic>>>[
       _client.getList('${ApiConfig.v1PathPrefix}/progress'),
       _client.getList('${ApiConfig.v1PathPrefix}/nutrition'),
       _client.getList('${ApiConfig.v1PathPrefix}/readiness'),
     ]);
+    return <String, dynamic>{
+      'progress': results[0],
+      'nutrition': results[1],
+      'readiness': results[2],
+    };
+  }
 
-    final List<ProgressEntry> measurements = results[0]
+  ProgressHomeViewState _buildViewState(Object? rawJson, {required bool isOffline}) {
+    final Map<String, dynamic> bundle = rawJson! as Map<String, dynamic>;
+
+    final List<ProgressEntry> measurements = (bundle['progress']! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(ProgressEntryDto.fromJson)
         .map((ProgressEntryDto dto) => dto.toDomain())
         .toList()
       ..sort((ProgressEntry a, ProgressEntry b) => b.progressDate.compareTo(a.progressDate));
 
-    final List<NutritionSummaryEntryDto> nutritionEntries = results[1]
+    final List<NutritionSummaryEntryDto> nutritionEntries = (bundle['nutrition']! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(NutritionSummaryEntryDto.fromJson)
         .toList(growable: false);
-    final List<ReadinessSummaryEntryDto> readinessEntries = results[2]
+    final List<ReadinessSummaryEntryDto> readinessEntries = (bundle['readiness']! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(ReadinessSummaryEntryDto.fromJson)
         .toList(growable: false);
@@ -120,7 +159,7 @@ class ApiProgressRepository implements ProgressRepository {
       nutritionWeek: aggregateNutritionWeek(nutritionEntries, today),
       readinessWeek: aggregateReadinessWeek(readinessEntries, today),
       hasLoggedAnyMeasurementEver: measurements.isNotEmpty,
-      isOffline: false,
+      isOffline: isOffline,
     );
   }
 
@@ -168,6 +207,11 @@ class ApiProgressRepository implements ProgressRepository {
     final String progressId = json.requireString('id');
     final List<String> warnings =
         (json.optionalList('warnings') ?? const <dynamic>[]).cast<String>();
+
+    // `ProgressHomeController.logMeasurement` refetches `fetchHome()`
+    // immediately after this returns and expects the new entry to be
+    // there — see `LocalCache.invalidate`'s own doc comment.
+    await _cache.invalidate(_cacheKey);
 
     final ProgressEntry entry = ProgressEntry(
       progressId: progressId,

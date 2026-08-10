@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/core/network/api_exception.dart';
 import 'package:gym_companion_mobile/features/auth/application/auth_controller.dart';
 import 'package:gym_companion_mobile/features/auth/domain/auth_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// A controllable fake — real backend response shapes, no network I/O.
 /// [failLogin]/[failRegister]/[failRefresh] each throw a real
@@ -97,14 +99,25 @@ class _FakeTokenStorage implements TokenStorage {
   }
 }
 
-ProviderContainer _container({
+/// [AuthController._clearLocalSession] now also clears the shared
+/// [LocalCache] (`docs/adr/0052-offline-caching.md`) — every
+/// `logout`/`forceLogoutFromRefreshFailure` call site needs a real
+/// [SharedPreferences] instance behind it, the same
+/// `setMockInitialValues` pattern every real repository's own test uses
+/// (`test/core/network/fakes/fake_http_client_adapter.dart`'s sibling
+/// convention), not a hand-rolled fake — [LocalCache] itself is a thin
+/// concrete wrapper, not an interface, so there is nothing to fake here.
+Future<ProviderContainer> _container({
   required AuthRepository repository,
   required TokenStorage storage,
-}) {
+}) async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
   final ProviderContainer container = ProviderContainer(
     overrides: <Override>[
       authRepositoryProvider.overrideWithValue(repository),
       tokenStorageProvider.overrideWithValue(storage),
+      localCacheProvider.overrideWithValue(LocalCache(prefs)),
     ],
   );
   addTearDown(container.dispose);
@@ -114,7 +127,7 @@ ProviderContainer _container({
 void main() {
   group('AuthController.build (cold start)', () {
     test('no stored refresh token resolves straight to AuthUnauthenticated', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: _FakeTokenStorage(),
       );
@@ -125,7 +138,7 @@ void main() {
     });
 
     test('a valid stored refresh token resolves to AuthAuthenticated with the real user', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: _FakeTokenStorage(seed: 'refresh-1'),
       );
@@ -143,7 +156,7 @@ void main() {
     test('a stored refresh token that the backend rejects clears storage and resolves '
         'to AuthUnauthenticated, not a stuck error state', () async {
       final _FakeTokenStorage storage = _FakeTokenStorage(seed: 'stale-token');
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(failRefresh: true),
         storage: storage,
       );
@@ -159,7 +172,7 @@ void main() {
     test('a successful login moves state to AuthAuthenticated and persists the refresh token',
         () async {
       final _FakeTokenStorage storage = _FakeTokenStorage();
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: storage,
       );
@@ -175,7 +188,7 @@ void main() {
     });
 
     test('a failed login (real 401) surfaces as an AsyncError, not a silent no-op', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(failLogin: true),
         storage: _FakeTokenStorage(),
       );
@@ -192,7 +205,7 @@ void main() {
     });
 
     test('a successful registration moves state to AuthAuthenticated', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: _FakeTokenStorage(),
       );
@@ -213,7 +226,7 @@ void main() {
     test('calls the real backend logout endpoint and clears local state', () async {
       final _FakeAuthRepository repo = _FakeAuthRepository();
       final _FakeTokenStorage storage = _FakeTokenStorage(seed: 'refresh-1');
-      final ProviderContainer container = _container(repository: repo, storage: storage);
+      final ProviderContainer container = await _container(repository: repo, storage: storage);
       await container.read(authControllerProvider.future);
 
       await container.read(authControllerProvider.notifier).logout();
@@ -227,7 +240,7 @@ void main() {
 
   group('AuthController.attemptRefresh (the closure AuthInterceptor calls)', () {
     test('returns true and updates the in-memory access token on success', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: _FakeTokenStorage(seed: 'refresh-1'),
       );
@@ -243,7 +256,7 @@ void main() {
     });
 
     test('returns false, never throws, when the backend rejects the refresh token', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(failRefresh: true),
         storage: _FakeTokenStorage(seed: 'refresh-1'),
       );
@@ -255,7 +268,7 @@ void main() {
     });
 
     test('returns false immediately when there is no stored refresh token at all', () async {
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: _FakeAuthRepository(),
         storage: _FakeTokenStorage(),
       );
@@ -270,7 +283,7 @@ void main() {
   group('AuthController.forceLogoutFromRefreshFailure (the closure onRefreshFailed calls)', () {
     test('clears local state without calling the backend logout endpoint', () async {
       final _FakeAuthRepository repo = _FakeAuthRepository();
-      final ProviderContainer container = _container(
+      final ProviderContainer container = await _container(
         repository: repo,
         storage: _FakeTokenStorage(seed: 'refresh-1'),
       );

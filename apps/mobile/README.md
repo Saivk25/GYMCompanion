@@ -46,6 +46,14 @@ The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), pe
   top of it — network maps transport failures, mapping maps successful
   JSON into DTOs and domain models. See `docs/adr/0045-shared-api-
   mapping-convention.md`.
+- `lib/core/cache/` — the shared local cache every real `ApiXRepository`'s
+  `fetchHome()`/`fetchToday()` is built on: `local_cache.dart`
+  (`LocalCache`, a thin `shared_preferences` wrapper — read/write/
+  invalidate/clear-all one JSON envelope per key) and
+  `read_through_cache.dart` (`readThroughCache<T>()`, the one generic
+  read-through + stale-while-revalidate + offline-fallback policy every
+  repository reuses, rather than five hand-rolled per-feature caches).
+  Import `core/cache/cache.dart`. See `docs/adr/0052-offline-caching.md`.
 - `lib/features/auth/` — the real authentication module, the same four-layer
   pattern as every other feature: `domain/` (`AuthState`/`AuthUser`/`AuthTokens`),
   `application/` (`AuthRepository`/`TokenStorage` interfaces + `AuthController`, an
@@ -417,3 +425,24 @@ real `ApiXRepository` on the shared mapping convention
 `MockCoachRepository` already reads real, backend-sourced data via
 `CoachSignalLog` — see `MockCoachRepository`'s own doc comment for why
 "real API-backed" is not coming, and never needs to, for that one.
+
+Step 4 (`docs/adr/0052-offline-caching.md`) added the supportable subset
+of offline support: one shared `lib/core/cache/` layer
+(`shared_preferences`-backed) every real repository's own `fetchHome()`/
+`fetchToday()` now reuses for read-through caching and stale-while-
+revalidate, with genuine offline reads (`XHomeViewState.isOffline` now
+reflects a real network failure rather than always being `false`) and
+every repository interface's public signature unchanged. Mutation retry
+queues, conflict resolution, background sync, optimistic updates, and
+offline writes remain explicitly out of scope — this backend has no
+idempotency-key or synchronization concept to build any of them against
+safely. This phase's own review caught and fixed a real regression the
+cache would otherwise have introduced: `ReadinessHomeController
+.submitCheckIn`/`FuelHomeController.logMeal`/`.logWater`/
+`ProgressHomeController.logMeasurement` each already had an established
+"mutate, then immediately refetch" contract, and each repository's
+matching mutation method now invalidates its own cache entry on success
+so that refetch shows the real new data instead of a stale cached list
+(`docs/adr/0052` Decision 6). Pull-to-refresh's own interaction with the
+cache's 5-minute freshness window is a disclosed, different trade-off,
+not fixed the same way — see `docs/TECH_DEBT.md`'s TD-0009.

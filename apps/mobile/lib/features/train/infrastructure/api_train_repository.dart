@@ -1,3 +1,4 @@
+import '../../../core/cache/cache.dart';
 import '../../../core/mapping/mapping.dart';
 import '../../../core/network/network.dart';
 import '../../../shared/domain/session_tier.dart';
@@ -73,15 +74,38 @@ import 'dto/train_workout_dto.dart';
 /// 2's own "no pagination or filtering exists anywhere" finding, reused
 /// here rather than treated as a new gap). This is a real, disclosed
 /// heuristic over real data, not a fabricated field.
+///
+/// ## `fetchHome` is now read-through cached (Step 4)
+///
+/// `docs/adr/0052-offline-caching.md` — [fetchHome] reuses the shared
+/// `readThroughCache` policy (`core/cache/read_through_cache.dart`), the
+/// same one every other real repository's own `fetchHome()` now uses.
+/// [fetchWorkout]/[fetchSession] and every mutation
+/// ([startSession]/[completeSession]/[logSet]/[completeSet]) are
+/// deliberately not cached — only the Home list read has an `isOffline`
+/// slot in its return type at all, and offline *writes* are out of this
+/// phase's scope (no backend idempotency support to retry them against).
 class ApiTrainRepository implements TrainRepository {
-  ApiTrainRepository(this._client);
+  ApiTrainRepository(this._client, this._cache);
 
   final ApiClient _client;
+  final LocalCache _cache;
+
+  static const String _cacheKey = 'train_home';
 
   @override
-  Future<TrainHomeViewState> fetchHome() async {
-    final List<dynamic> raw = await _client.getList('${ApiConfig.v1PathPrefix}/workouts');
-    final List<TrainWorkout> workouts = raw
+  Future<TrainHomeViewState> fetchHome() {
+    return readThroughCache<TrainHomeViewState>(
+      cache: _cache,
+      key: _cacheKey,
+      maxAge: kCacheFreshDuration,
+      fetchRawJson: () => _client.getList('${ApiConfig.v1PathPrefix}/workouts'),
+      build: _buildViewState,
+    );
+  }
+
+  TrainHomeViewState _buildViewState(Object? rawJson, {required bool isOffline}) {
+    final List<TrainWorkout> workouts = (rawJson! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(TrainWorkoutDto.fromJson)
         .map((TrainWorkoutDto dto) => dto.toDomain())
@@ -108,7 +132,7 @@ class ApiTrainRepository implements TrainRepository {
       // No `GET /workout-sessions` list endpoint exists — see this
       // class's own doc comment.
       history: const <TrainSession>[],
-      isOffline: false,
+      isOffline: isOffline,
     );
   }
 

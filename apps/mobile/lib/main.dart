@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'core/cache/cache.dart';
 import 'core/network/network.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/auth/infrastructure/api_auth_repository.dart';
@@ -87,24 +89,40 @@ final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
 /// their *real* implementations here — see `ApiAuthRepository`'s own doc
 /// comment for why Auth has no "mock until the real backend arrives"
 /// era the other four still-mocked providers went through.
-void main() {
+///
+/// [sharedPreferencesProvider] is the one provider here resolved
+/// *before* `runApp`, not inside an `overrideWith` closure — unlike
+/// `Dio`/`ApiClient`, `SharedPreferences.getInstance()` is itself async,
+/// so there is no synchronous `Provider` body it could be built from
+/// (`docs/adr/0052-offline-caching.md`, Step 4). [ApiTodayRepository]/
+/// [ApiReadinessRepository]/[ApiTrainRepository]/[ApiFuelRepository]/
+/// [ApiProgressRepository] each now also take [ref.read
+/// (localCacheProvider)] — an additive constructor parameter, not an
+/// interface change: `TodayRepository`/`ReadinessRepository`/etc. still
+/// declare only `fetchToday()`/`fetchHome()`, unchanged.
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+
   runApp(
     ProviderScope(
       overrides: <Override>[
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         todayRepositoryProvider.overrideWith(
-          (ref) => ApiTodayRepository(ref.read(apiClientProvider)),
+          (ref) => ApiTodayRepository(ref.read(apiClientProvider), ref.read(localCacheProvider)),
         ),
         trainRepositoryProvider.overrideWith(
-          (ref) => ApiTrainRepository(ref.read(apiClientProvider)),
+          (ref) => ApiTrainRepository(ref.read(apiClientProvider), ref.read(localCacheProvider)),
         ),
         fuelRepositoryProvider.overrideWith(
-          (ref) => ApiFuelRepository(ref.read(apiClientProvider)),
+          (ref) => ApiFuelRepository(ref.read(apiClientProvider), ref.read(localCacheProvider)),
         ),
         progressRepositoryProvider.overrideWith(
-          (ref) => ApiProgressRepository(ref.read(apiClientProvider)),
+          (ref) => ApiProgressRepository(ref.read(apiClientProvider), ref.read(localCacheProvider)),
         ),
         readinessRepositoryProvider.overrideWith(
-          (ref) => ApiReadinessRepository(ref.read(apiClientProvider)),
+          (ref) =>
+              ApiReadinessRepository(ref.read(apiClientProvider), ref.read(localCacheProvider)),
         ),
         coachRepositoryProvider.overrideWith(
           (ref) => MockCoachRepository(() => ref.read(coachSignalLogProvider)),

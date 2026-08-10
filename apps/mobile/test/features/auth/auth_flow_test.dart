@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_companion_mobile/app.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/features/auth/application/auth_controller.dart';
 import 'package:gym_companion_mobile/features/auth/infrastructure/mock_auth_repository.dart';
 import 'package:gym_companion_mobile/features/coach/application/coach_controller.dart';
@@ -17,6 +18,7 @@ import 'package:gym_companion_mobile/features/today/infrastructure/mock_today_re
 import 'package:gym_companion_mobile/features/train/application/train_controller.dart';
 import 'package:gym_companion_mobile/features/train/infrastructure/mock_train_repository.dart';
 import 'package:gym_companion_mobile/shared/application/coach_signal_log.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// End-to-end through the real router (`lib/shell/app_router.dart`'s
 /// `routerProvider`) and the real [AuthController] — proving the
@@ -35,13 +37,26 @@ List<Override> _featureRepositoryOverrides() => <Override>[
       ),
     ];
 
+/// `AuthController._clearLocalSession` now also clears the shared
+/// [LocalCache] (`docs/adr/0052-offline-caching.md`), and the "logging
+/// out from the top bar" test below exercises that real path — every
+/// pump helper here needs a real (mocked) [SharedPreferences] instance
+/// behind [localCacheProvider], the same `setMockInitialValues` pattern
+/// `test/features/auth/auth_controller_test.dart` uses.
+Future<SharedPreferences> _mockSharedPreferences() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return SharedPreferences.getInstance();
+}
+
 Future<void> _pumpUnauthenticatedApp(WidgetTester tester) async {
+  final SharedPreferences prefs = await _mockSharedPreferences();
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
         ..._featureRepositoryOverrides(),
         authRepositoryProvider.overrideWithValue(const MockAuthRepository()),
         tokenStorageProvider.overrideWithValue(MockTokenStorage(seedRefreshToken: null)),
+        localCacheProvider.overrideWithValue(LocalCache(prefs)),
       ],
       child: const GymCompanionApp(),
     ),
@@ -50,12 +65,14 @@ Future<void> _pumpUnauthenticatedApp(WidgetTester tester) async {
 }
 
 Future<void> _pumpAuthenticatedApp(WidgetTester tester) async {
+  final SharedPreferences prefs = await _mockSharedPreferences();
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
         ..._featureRepositoryOverrides(),
         authRepositoryProvider.overrideWithValue(const MockAuthRepository()),
         tokenStorageProvider.overrideWithValue(MockTokenStorage()),
+        localCacheProvider.overrideWithValue(LocalCache(prefs)),
       ],
       child: const GymCompanionApp(),
     ),

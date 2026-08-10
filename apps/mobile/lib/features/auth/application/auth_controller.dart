@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/cache.dart';
 import '../domain/auth_models.dart';
 
 /// The seam between Auth's presentation layer and wherever session
@@ -188,9 +189,19 @@ class AuthController extends AsyncNotifier<AuthState> {
     return AuthAuthenticated(user);
   }
 
+  /// Clears the refresh token *and* every real repository's own local
+  /// read-through cache (`core/cache/local_cache.dart`,
+  /// `docs/adr/0052-offline-caching.md`) — every cached entry is
+  /// per-account data (a user's own workouts, meals, measurements,
+  /// check-ins), so a logout must not leave it behind for the next
+  /// person to sign into this device and see on their very first, still-
+  /// loading frame. See [LocalCache.clearAll]'s own doc comment for why
+  /// this is a full clear rather than a per-user key namespace threaded
+  /// through every repository constructor.
   Future<void> _clearLocalSession() async {
     _accessToken = null;
     await ref.read(tokenStorageProvider).clear();
+    await ref.read(localCacheProvider).clearAll();
     state = const AsyncValue<AuthState>.data(AuthUnauthenticated());
   }
 }

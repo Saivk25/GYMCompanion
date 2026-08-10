@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_companion_mobile/core/cache/cache.dart';
 import 'package:gym_companion_mobile/core/mapping/mapping.dart';
 import 'package:gym_companion_mobile/core/network/network.dart';
 import 'package:gym_companion_mobile/features/today/domain/today_models.dart';
 import 'package:gym_companion_mobile/features/today/infrastructure/api_today_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/fakes/fake_http_client_adapter.dart';
 
@@ -17,6 +19,24 @@ ApiClient _clientWith(FakeHttpClientAdapter adapter) {
   final Dio dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.httpClientAdapter = adapter;
   return ApiClient(dio: dio);
+}
+
+/// A fresh, empty [LocalCache] per call — backed by a real (mocked)
+/// [SharedPreferences] instance (`docs/adr/0052-offline-caching.md`),
+/// not a hand-rolled fake: [LocalCache] is a thin concrete wrapper, not
+/// an interface, so there is nothing to fake here, the same reasoning
+/// `test/features/auth/auth_controller_test.dart` already established
+/// for its own [LocalCache] test usage.
+Future<LocalCache> _freshCache() async {
+  SharedPreferences.setMockInitialValues(<String, Object>{});
+  return LocalCache(await SharedPreferences.getInstance());
+}
+
+Future<ApiTodayRepository> _repoWith(
+  FakeHttpClientAdapter adapter, {
+  LocalCache? cache,
+}) async {
+  return ApiTodayRepository(_clientWith(adapter), cache ?? await _freshCache());
 }
 
 Map<String, dynamic> _workoutJson({
@@ -82,20 +102,18 @@ void main() {
   final String yesterday = apiDateString(DateTime.now().subtract(const Duration(days: 1)));
 
   test('a planned workout for today maps to a ready session with real fields', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[
-            _workoutJson(
-              plannedDate: today,
-              status: 'planned',
-              name: 'Upper Body Strength',
-              goal: 'Build strength',
-              notes: 'Focus on form',
-            ),
-          ],
-          readiness: <Map<String, dynamic>>[],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[
+          _workoutJson(
+            plannedDate: today,
+            status: 'planned',
+            name: 'Upper Body Strength',
+            goal: 'Build strength',
+            notes: 'Focus on form',
+          ),
+        ],
+        readiness: <Map<String, dynamic>>[],
       ),
     );
 
@@ -115,14 +133,12 @@ void main() {
   });
 
   test('an in-progress workout for today also maps to a ready session', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[
-            _workoutJson(plannedDate: today, status: 'in_progress'),
-          ],
-          readiness: <Map<String, dynamic>>[],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[
+          _workoutJson(plannedDate: today, status: 'in_progress'),
+        ],
+        readiness: <Map<String, dynamic>>[],
       ),
     );
 
@@ -132,14 +148,12 @@ void main() {
   });
 
   test('a completed workout for today maps to a completed session', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[
-            _workoutJson(plannedDate: today, status: 'completed'),
-          ],
-          readiness: <Map<String, dynamic>>[],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[
+          _workoutJson(plannedDate: today, status: 'completed'),
+        ],
+        readiness: <Map<String, dynamic>>[],
       ),
     );
 
@@ -150,14 +164,12 @@ void main() {
   });
 
   test('a cancelled workout for today is treated as empty, not ready', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[
-            _workoutJson(plannedDate: today, status: 'cancelled'),
-          ],
-          readiness: <Map<String, dynamic>>[],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[
+          _workoutJson(plannedDate: today, status: 'cancelled'),
+        ],
+        readiness: <Map<String, dynamic>>[],
       ),
     );
 
@@ -171,14 +183,12 @@ void main() {
   });
 
   test('no workout for today, but a future one exists, still has an active plan', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[
-            _workoutJson(plannedDate: '2099-01-01', status: 'planned'),
-          ],
-          readiness: <Map<String, dynamic>>[],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[
+          _workoutJson(plannedDate: '2099-01-01', status: 'planned'),
+        ],
+        readiness: <Map<String, dynamic>>[],
       ),
     );
 
@@ -190,10 +200,8 @@ void main() {
   });
 
   test('zero workouts at all has no active plan', () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(workouts: <Map<String, dynamic>>[], readiness: <Map<String, dynamic>>[]),
-      ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(workouts: <Map<String, dynamic>>[], readiness: <Map<String, dynamic>>[]),
     );
 
     final TodayViewState state = await repo.fetchToday();
@@ -203,15 +211,13 @@ void main() {
   });
 
   test("a readiness entry recorded today sets checkInCompletedToday", () async {
-    final ApiTodayRepository repo = ApiTodayRepository(
-      _clientWith(
-        _adapterFor(
-          workouts: <Map<String, dynamic>>[],
-          readiness: <Map<String, dynamic>>[
-            _readinessJson(readinessDate: yesterday),
-            _readinessJson(id: 'r2', readinessDate: today),
-          ],
-        ),
+    final ApiTodayRepository repo = await _repoWith(
+      _adapterFor(
+        workouts: <Map<String, dynamic>>[],
+        readiness: <Map<String, dynamic>>[
+          _readinessJson(readinessDate: yesterday),
+          _readinessJson(id: 'r2', readinessDate: today),
+        ],
       ),
     );
 
@@ -220,13 +226,98 @@ void main() {
     expect(state.checkInCompletedToday, isTrue);
   });
 
-  test('a network failure from either endpoint propagates as ApiException', () async {
+  test('a network failure from either endpoint propagates as ApiException '
+      'when there is no cached fallback', () async {
     final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding(
       (RequestOptions options, int callIndex) =>
           const FakeResponse(throwConnectionError: true),
     );
-    final ApiTodayRepository repo = ApiTodayRepository(_clientWith(adapter));
+    final ApiTodayRepository repo = await _repoWith(adapter);
 
     expect(repo.fetchToday(), throwsA(isA<ApiException>()));
+  });
+
+  group('read-through cache (docs/adr/0052-offline-caching.md)', () {
+    test('a network failure falls back to a stale cached bundle with isOffline: true', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'today',
+        <String, dynamic>{
+          'workouts': <Map<String, dynamic>>[
+            _workoutJson(plannedDate: today, status: 'planned', name: 'Cached Session'),
+          ],
+          'readiness': <Map<String, dynamic>>[],
+        },
+        // Older than `kCacheFreshDuration` (5 minutes) — forces the
+        // "try live, fall back to cache" branch rather than the
+        // stale-while-revalidate fast path exercised below.
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding(
+        (RequestOptions options, int callIndex) => const FakeResponse(throwConnectionError: true),
+      );
+      final ApiTodayRepository repo = await _repoWith(adapter, cache: cache);
+
+      final TodayViewState state = await repo.fetchToday();
+
+      expect(state.isOffline, isTrue);
+      expect(state.session!.name, 'Cached Session');
+    });
+
+    test('a genuine 500 is never masked by a stale cache hit', () async {
+      final LocalCache cache = await _freshCache();
+      await cache.write(
+        'today',
+        <String, dynamic>{
+          'workouts': <Map<String, dynamic>>[],
+          'readiness': <Map<String, dynamic>>[],
+        },
+        cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding(
+        (RequestOptions options, int callIndex) =>
+            const FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+      );
+      final ApiTodayRepository repo = await _repoWith(adapter, cache: cache);
+
+      expect(repo.fetchToday(), throwsA(isA<ApiException>()));
+    });
+
+    test('a fresh cache entry is served immediately (stale-while-revalidate), '
+        'not a blocking second fetch', () async {
+      final LocalCache cache = await _freshCache();
+      int callCount = 0;
+      final FakeHttpClientAdapter adapter = FakeHttpClientAdapter.responding((
+        RequestOptions options,
+        int callIndex,
+      ) {
+        callCount++;
+        if (callCount > 2) {
+          // Any call past the first fetchToday()'s own two GETs must be
+          // the fire-and-forget background revalidate, never something
+          // the *second* fetchToday() call below blocks on awaiting —
+          // if it did, this failure would propagate synchronously and
+          // fail this test loudly.
+          return const FakeResponse(throwConnectionError: true);
+        }
+        if (options.path.contains('/workouts')) {
+          return FakeResponse(
+            body: <Map<String, dynamic>>[
+              _workoutJson(plannedDate: today, status: 'planned', name: 'Fresh Session'),
+            ],
+          );
+        }
+        return const FakeResponse(body: <Map<String, dynamic>>[]);
+      });
+      final ApiTodayRepository repo = await _repoWith(adapter, cache: cache);
+
+      final TodayViewState first = await repo.fetchToday();
+      expect(first.isOffline, isFalse);
+      expect(first.session!.name, 'Fresh Session');
+
+      final TodayViewState second = await repo.fetchToday();
+      expect(second.isOffline, isFalse);
+      expect(second.session!.name, 'Fresh Session');
+    });
   });
 }

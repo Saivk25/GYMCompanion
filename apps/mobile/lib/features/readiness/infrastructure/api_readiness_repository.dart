@@ -1,3 +1,4 @@
+import '../../../core/cache/cache.dart';
 import '../../../core/mapping/mapping.dart';
 import '../../../core/network/network.dart';
 import '../application/readiness_controller.dart';
@@ -56,15 +57,42 @@ import 'dto/readiness_entry_dto.dart';
 /// not the authoritative server-assigned timestamp; harmless while
 /// unused, and any future caller that needs the real value should fetch
 /// `GET /api/v1/readiness/{id}` instead of trusting this field.
+///
+/// ## `fetchHome` is now read-through cached (Step 4)
+///
+/// `docs/adr/0052-offline-caching.md` — [fetchHome] reuses the shared
+/// `readThroughCache` policy (`core/cache/read_through_cache.dart`):
+/// serves a fresh-enough cached response immediately while revalidating
+/// in the background, falls back to the last cached response on a real
+/// network failure ([ReadinessHomeViewState.isOffline] now genuinely
+/// reflects this rather than always being `false`), and otherwise
+/// fetches live and writes through. [submitCheckIn] is a mutation, not a
+/// read — deliberately not cached, per this phase's own scope (offline
+/// *writes* require backend idempotency support this API does not have).
+/// It does, however, invalidate [fetchHome]'s own cache entry on success
+/// (`LocalCache.invalidate`) so the controller's existing mutate-then-
+/// refetch call sees the real new entry instead of a stale cached list.
 class ApiReadinessRepository implements ReadinessRepository {
-  ApiReadinessRepository(this._client);
+  ApiReadinessRepository(this._client, this._cache);
 
   final ApiClient _client;
+  final LocalCache _cache;
+
+  static const String _cacheKey = 'readiness_home';
 
   @override
-  Future<ReadinessHomeViewState> fetchHome() async {
-    final List<dynamic> raw = await _client.getList('${ApiConfig.v1PathPrefix}/readiness');
-    final List<ReadinessEntry> entries = raw
+  Future<ReadinessHomeViewState> fetchHome() {
+    return readThroughCache<ReadinessHomeViewState>(
+      cache: _cache,
+      key: _cacheKey,
+      maxAge: kCacheFreshDuration,
+      fetchRawJson: () => _client.getList('${ApiConfig.v1PathPrefix}/readiness'),
+      build: _buildViewState,
+    );
+  }
+
+  ReadinessHomeViewState _buildViewState(Object? rawJson, {required bool isOffline}) {
+    final List<ReadinessEntry> entries = (rawJson! as List<dynamic>)
         .cast<Map<String, dynamic>>()
         .map(ReadinessEntryDto.fromJson)
         .map((ReadinessEntryDto dto) => dto.toDomain())
@@ -75,6 +103,7 @@ class ApiReadinessRepository implements ReadinessRepository {
       asOf: DateTime.now(),
       entries: entries,
       hasCheckedInEver: entries.isNotEmpty,
+      isOffline: isOffline,
     );
   }
 
@@ -109,6 +138,12 @@ class ApiReadinessRepository implements ReadinessRepository {
     final String readinessId = json.requireString('id');
     final List<String> warnings =
         (json.optionalList('warnings') ?? const <dynamic>[]).cast<String>();
+
+    // `ReadinessHomeController.submitCheckIn` refetches `fetchHome()`
+    // immediately after this returns and expects the new entry to be
+    // there — see `LocalCache.invalidate`'s own doc comment for why this
+    // call is required now that `fetchHome` is cached.
+    await _cache.invalidate(_cacheKey);
 
     final ReadinessEntry entry = ReadinessEntry(
       readinessId: readinessId,
