@@ -251,7 +251,20 @@ void main() {
       await pumpToActiveWorkout(tester);
       await tester.tap(find.text('Cues'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      // active_workout_screen_test.dart's own "viewing cues" test only
+      // pumps 50ms here, but that test only asserts the placeholder text
+      // exists in the tree — tolerant of a still-mid-transition page.
+      // meetsGuideline instead inspects actual rendered color/opacity, so
+      // it needs the push route's page-transition animation (Flutter's
+      // default ~300ms) to actually finish; 50ms caught it still fading
+      // in, compositing near-white text over the previous route's white
+      // background and reading as a false contrast failure. Still a
+      // bounded pump, not pumpAndSettle() — Active Workout stays mounted
+      // underneath this pushed route with its own live Timer.periodic
+      // still ticking (see pumpToActiveWorkout's own comment), so
+      // pumpAndSettle() here would hang the same way it would on that
+      // screen directly.
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Cues and history not connected yet'), findsOneWidget);
       await _checkGuideline(tester);

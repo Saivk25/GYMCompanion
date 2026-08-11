@@ -174,8 +174,8 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     if (reduceMotion) {
       _controller?.dispose();
       _controller = null;
-    } else if (_controller == null) {
-      _controller = AnimationController(
+    } else {
+      _controller ??= AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 900),
       )..repeat(reverse: true);

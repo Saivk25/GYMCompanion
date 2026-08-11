@@ -75,40 +75,49 @@ class _SetInputRowState extends State<SetInputRow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
-              child: AppTextField(
-                label: 'Weight',
-                controller: _weightController,
-                dense: true,
-                textAlign: TextAlign.center,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onChanged: (_) => setState(() {}),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+                child: AppTextField(
+                  label: 'Weight',
+                  controller: _weightController,
+                  dense: true,
+                  textAlign: TextAlign.center,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: AppTextField(
-                label: 'Reps',
-                controller: _repsController,
-                dense: true,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                onChanged: (_) => setState(() {}),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+                child: AppTextField(
+                  label: 'Reps',
+                  controller: _repsController,
+                  dense: true,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: AppTextField(
-                label: 'RPE',
-                controller: _rpeController,
-                dense: true,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                onChanged: (_) => setState(() {}),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
+                child: AppTextField(
+                  label: 'RPE',
+                  controller: _rpeController,
+                  dense: true,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
             ),
           ],
