@@ -8,7 +8,7 @@ architecturally release-ready (real-device validation, `flutter analyze`/`flutte
 release engineering remain, per `docs/adr/0002`'s standing "no Flutter SDK in this build
 environment" constraint).
 
-For the *why* behind any decision summarized here, the ADR index in Section 10 links to the
+For the *why* behind any decision summarized here, the ADR index in Section 12 links to the
 document that made it. For known, deliberately-deferred gaps, see `docs/TECH_DEBT.md`.
 
 ---
@@ -24,18 +24,13 @@ training load, exercise recommendation) lives server-side; the Flutter client ne
 re-implements or fabricates business logic, only renders what the backend already computed
 (`docs/adr/0045`'s "follow the backend exactly" convention, applied throughout Steps 3–6).
 
-```
-┌─────────────────────────┐        HTTPS / JSON        ┌──────────────────────────┐
-│   apps/mobile (Flutter) │ ─────────────────────────▶ │   backend (FastAPI)      │
-│   Riverpod + go_router  │ ◀───────────────────────── │   Domain/Application/    │
-│                          │                             │   Infra/API layers       │
-└─────────────────────────┘                             └──────────────────────────┘
-        │                                                          │
-        ▼                                                          ▼
-  SharedPreferences                                          PostgreSQL
-  (read-through cache,                                        (via SQLAlchemy +
-   refresh token via                                           Alembic migrations)
-   flutter_secure_storage)
+```mermaid
+graph LR
+    Mobile["apps/mobile (Flutter)<br/>Riverpod + go_router"] -- "HTTPS / JSON" --> Backend["backend (FastAPI)<br/>Domain / Application / Infra / API layers"]
+    Backend -- "HTTPS / JSON" --> Mobile
+    Mobile -.-> SP[("SharedPreferences<br/>read-through cache")]
+    Mobile -.-> SS[("Secure storage<br/>refresh token")]
+    Backend --> PG[("PostgreSQL<br/>via SQLAlchemy + Alembic")]
 ```
 
 Six user-facing feature modules exist on both sides, in the same order the bottom
@@ -45,11 +40,77 @@ from Today/Progress rather than a tab; Coach has **no backend concept at all** a
 client-side aggregation of signals the other five features' own mutations already receive —
 see Section 9's Coach flow and `docs/adr/0041`).
 
+### 1.1 Flutter layered architecture (per feature)
+
+Every one of the six feature modules — and `auth/` — repeats the same four-layer shape. Nothing
+in `domain/` or `application/` ever imports `infrastructure/` or `presentation/` directly;
+dependencies point inward, resolved at runtime by Riverpod (Section 4).
+
+```mermaid
+graph TD
+    subgraph Feature["lib/features/&lt;feature&gt;/"]
+        P["presentation/<br/>screens + widgets<br/>(Riverpod ref.watch)"]
+        A["application/<br/>AsyncNotifier controllers<br/>+ XRepository interface"]
+        I["infrastructure/<br/>ApiXRepository / MockXRepository<br/>+ DTOs"]
+        D["domain/<br/>view-state models<br/>(plain Dart classes)"]
+        P --> A
+        A --> D
+        I -.implements.-> A
+        I --> D
+    end
+    I --> NET["core/network/<br/>ApiClient"]
+    I --> CACHE["core/cache/<br/>LocalCache"]
+```
+
+The `application/` layer defines the `XRepository` *interface* (an inward-facing seam); the
+`infrastructure/` layer *implements* it and is the only layer allowed to know about `dio`,
+`shared_preferences`, or JSON shapes — this is why `main.dart` (the composition root) is the one
+file allowed to wire a concrete `infrastructure/` class into an `application/`-declared
+provider (Section 4).
+
+### 1.2 Backend Clean Architecture
+
+```mermaid
+graph TD
+    subgraph API["app/api/ — thin controllers"]
+        Routes["routes/v1/*.py<br/>(37 endpoints)"]
+        Schemas["schemas/<br/>Pydantic request/response models"]
+    end
+    subgraph AppLayer["app/application/ — orchestration only"]
+        Commands["Commands / Queries"]
+        Handlers["Handlers<br/>(no business logic)"]
+    end
+    subgraph Domain["app/domain/ — framework-free"]
+        Aggregates["Aggregates<br/>(User, Workout, Nutrition, ...)"]
+        Rules["9 Rule Engines<br/>(deterministic, explainable)"]
+    end
+    subgraph Infra["app/infra/ — the only layer that knows Postgres"]
+        Repos["SQLAlchemy repositories"]
+        UoW["UnitOfWork"]
+    end
+    subgraph Composition["app/composition/ — hand-rolled DI"]
+        Container["Container + bootstrap"]
+    end
+
+    Routes --> Schemas --> Commands --> Handlers
+    Handlers --> Aggregates
+    Handlers --> Rules
+    Handlers -.depends on interface only.-> Repos
+    Repos --> UoW --> DB[("PostgreSQL<br/>row-level security")]
+    Container -.wires concrete Repos into Handlers.-> Handlers
+```
+
+`app/domain/` depends on nothing outside the Python standard library — not even `pydantic` —
+enforced by a static import-boundary test, not just convention (`backend/README.md`'s "Domain
+Core" section). This is what makes the nine rule engines unit-testable with zero database or
+HTTP framework involved, and what the CI job `backend-quality`'s "Domain Core import boundaries"
+step actually checks on every push.
+
 ---
 
 ## 2. Repository layout
 
-```
+```text
 GYM/
 ├── backend/                     FastAPI backend — Clean Architecture, Python 3.10
 │   ├── app/
@@ -81,7 +142,7 @@ GYM/
 ├── docs/
 │   ├── adr/                      55 Architecture Decision Records (0001–0055)
 │   ├── TECH_DEBT.md              14 tracked, deliberately-deferred items with triggers
-│   └── Gym_Companion_*.docx      The six founding design documents (Product/Domain
+│   └── design-docs/              The six founding design documents (Product/Domain
 │                                  Model/UX-UI/Engineering Master Plan/System Architecture
 │                                  Bibles) — the specs every ADR traces decisions back to
 │
@@ -303,6 +364,24 @@ own log lines still appear):
    genuine double-mutation (e.g. two meals logged from one tap) with nothing on either end to
    detect it.
 3. **`ApiLoggingInterceptor`** — debug-mode only (`kDebugMode`).
+
+**API request flow** — a repository call and everything it passes through before a screen sees
+the result:
+
+```mermaid
+flowchart LR
+    Repo["ApiXRepository<br/>.get / .post / ..."] --> Auth["AuthInterceptor<br/>attach Bearer token"]
+    Auth --> Retry["RetryInterceptor<br/>GET + network-failure only"]
+    Retry --> Log["ApiLoggingInterceptor<br/>debug builds only"]
+    Log --> Dio["Dio → backend"]
+    Dio -->|2xx| Data["raw JSON"]
+    Dio -->|401| Refresh["AuthInterceptor:<br/>one refresh attempt,<br/>de-duplicated"]
+    Refresh -->|refreshed| Dio
+    Refresh -->|refresh failed| Logout["onRefreshFailed()<br/>→ AuthController logout"]
+    Dio -->|4xx / 5xx / network error| Mapper["ApiErrorMapper<br/>→ ApiException"]
+    Data --> Repo
+    Mapper --> Repo
+```
 
 **Error mapping** (`ApiErrorMapper`) is the one place `DioException` is translated into this
 app's own `ApiException` — every repository's catch block calls `ApiErrorMapper.map` and

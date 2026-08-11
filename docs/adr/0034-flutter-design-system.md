@@ -251,7 +251,7 @@ backend's own TD-0001 history already established for this project.
 
 ### 13. Folder structure
 
-```
+```text
 lib/design/
   tokens/       — pure values only (color, type, spacing, radius,
                    elevation, motion, breakpoints, icons). No widgets.

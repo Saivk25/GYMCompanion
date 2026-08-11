@@ -1,0 +1,29 @@
+# Gym Companion — spell check.
+#
+# Runs codespell against docs, source comments, and config — the same tool run locally to
+# produce .codespellrc's ignore-words-list (each entry there was verified by hand against the
+# real line it flagged, not blanket-suppressed; see that file's own comments). A clean run here
+# means the same clean baseline this workflow was added against, not a fresh, unverified list.
+name: Spell Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+concurrency:
+  group: spellcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codespell:
+    name: codespell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: codespell
+        uses: codespell-project/actions-codespell@v2
+        with:
+          config: .codespellrc
+          path: backend/app apps/mobile/lib docs scripts infra README.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md CHANGELOG.md .github

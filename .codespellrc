@@ -1,0 +1,13 @@
+[codespell]
+# Config for codespell (.github/workflows/spellcheck.yml). Every entry in ignore-words-list was
+# verified by hand against the actual line it flagged — not blanket-suppressed — see the
+# workflow's own comment for how this list was produced.
+skip = *.docx,*.lock,*.svg,*.pyc,*.pdf,.git,*/.venv/*,*/__pycache__/*,*.ruff_cache*,*.mypy_cache*,*.pytest_cache*,backend/requirements-lock.txt,apps/mobile/pubspec.lock
+
+# - redeclaring/preempt: real, correctly-hyphenated English words codespell's dictionary
+#   doesn't recognize in their hyphenated form.
+# - CheckIn: a real identifier (ReadinessCheckIn-adjacent naming), codespell is matching
+#   "checkin"-as-substring against its "check in"/"checking" dictionary entry, not a typo.
+# - retuned: "a shade is retuned" (re-tuned/re-adjusted) in a design-tokens doc comment —
+#   intentional word, not a typo for "returned".
+ignore-words-list = re-declaring,pre-empt,checkin,retuned

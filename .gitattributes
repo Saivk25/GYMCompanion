@@ -1,0 +1,42 @@
+# See https://git-scm.com/docs/gitattributes
+
+# --- Default: normalize line endings for text files, let Git decide the rest ---
+* text=auto eol=lf
+
+# --- Force LF regardless of platform for anything executed as a script ---
+*.sh text eol=lf
+Makefile text eol=lf
+*.py text eol=lf
+*.dart text eol=lf
+
+# --- Windows-specific scripts, if any ever appear, keep CRLF ---
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# --- Binary — never diff, never line-ending-normalize ---
+*.docx binary diff=none
+*.pdf binary diff=none
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pt binary
+*.pth binary
+*.onnx binary
+*.tflite binary
+
+# --- Lockfiles: real content, but not meant for line-by-line human review ---
+backend/requirements-lock.txt linguist-generated=true
+apps/mobile/pubspec.lock linguist-generated=true -diff
+
+# --- GitHub Linguist: keep the language stats meaningful ---
+# Design/planning documents shouldn't count toward "this repo is mostly prose."
+docs/*.docx linguist-documentation
+docs/design-docs/*.docx linguist-documentation
+*.md linguist-documentation

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Saivk25/GYMCompanion/security/advisories/new
+    about: Do not open a public issue for security reports — see SECURITY.md instead.
+  - name: Questions & discussion
+    url: https://github.com/Saivk25/GYMCompanion/discussions
+    about: >
+      For open-ended questions ("why was X built this way?") — check docs/adr/README.md
+      first, then ask here rather than filing an issue. Enable Discussions in repository
+      Settings before this link will resolve; see .github/REPOSITORY_SETTINGS.md.

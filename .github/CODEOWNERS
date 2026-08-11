@@ -1,0 +1,10 @@
+# CODEOWNERS — automatically requests review from the listed owner(s) when a
+# matching path changes in a pull request. See:
+# https://docs.github.com/en/repository/collaborating-with-issues-and-pull-requests/about-code-owners
+#
+# Single-maintainer project today — everything routes to one owner. Split
+# this out (e.g. @org/backend-team for backend/, @org/mobile-team for
+# apps/mobile/) the moment a second regular contributor with a specific area
+# of ownership joins; don't invent teams that don't exist yet.
+
+* @Saivk25

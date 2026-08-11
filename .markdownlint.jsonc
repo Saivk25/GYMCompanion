@@ -1,0 +1,33 @@
+{
+  // Config for markdownlint-cli2 (.github/workflows/markdown-lint.yml). Defaults are tuned for
+  // short READMEs; this repo's ADRs and TECH_DEBT.md are long-form prose by design (see
+  // CONTRIBUTING.md), so a few rules that fight that style are relaxed below with a reason each.
+  "default": true,
+
+  // MD013 (line-length): this repo hard-wraps prose by hand at ~90-100 chars for readability in
+  // a diff, not at a fixed column enforced by a linter — flagging every ADR would be thousands
+  // of false positives against a deliberate style, not a real issue.
+  "MD013": false,
+
+  // MD033 (no inline HTML): README.md uses <div align="center"> for the hero section and <img>
+  // sizing is a legitimate, common README pattern GitHub renders fine.
+  "MD033": false,
+
+  // MD041 (first line must be a top-level heading): a few files (e.g. this repo's issue/PR
+  // templates, .github/*.md) intentionally start with front matter or a short lead-in comment.
+  "MD041": false,
+
+  // MD024 (no duplicate headings): ADRs share section names like "## Context"/"## Decision"
+  // across different files, which is fine — duplicates are only a real problem *within* one
+  // file, which remains checked by default (siblings_only below).
+  "MD024": { "siblings_only": true },
+
+  // MD060 (table pipe spacing): every table in this repository — every ADR, every README —
+  // consistently pairs a padded header row (`| Col | Col |`) with an unpadded separator row
+  // (`|---|---|`), which is the single most common table style on GitHub and renders
+  // identically either way. That pairing is what MD060 flags as "inconsistent." Reformatting
+  // every table separator in 55 ADRs to satisfy a purely cosmetic, non-rendering rule is out of
+  // proportion for a documentation pass — this repo's actual, consistent style is disabled here
+  // rather than mass-edited.
+  "MD060": false
+}

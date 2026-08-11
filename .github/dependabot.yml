@@ -1,0 +1,55 @@
+version: 2
+updates:
+  # --- Backend: Python dependencies (pyproject.toml) ---
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "backend"]
+    commit-message:
+      prefix: "backend"
+      include: "scope"
+    groups:
+      backend-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- Backend: Dockerfile base image ---
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "backend", "docker"]
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+  # --- Mobile: Dart/Flutter dependencies (pubspec.yaml) ---
+  - package-ecosystem: "pub"
+    directory: "/apps/mobile"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "mobile"]
+    commit-message:
+      prefix: "mobile"
+      include: "scope"
+    groups:
+      mobile-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # --- GitHub Actions workflow versions ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"

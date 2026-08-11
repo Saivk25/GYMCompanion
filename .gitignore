@@ -46,3 +46,22 @@ Thumbs.db
 
 # --- Docker / infra local state ---
 infra/.pgdata/
+
+# --- Node (only if a docs/CI tool like markdownlint-cli2 or cspell is ever
+#     installed locally rather than via the pinned Actions runner) ---
+node_modules/
+
+# --- Coverage output ---
+apps/mobile/coverage/
+*.lcov
+htmlcov/
+
+# --- Windows ---
+desktop.ini
+*.tmp
+
+# --- Editor / merge artifacts ---
+*.orig
+*.bak
+*.rej
+*.swp

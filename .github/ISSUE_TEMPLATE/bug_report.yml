@@ -1,0 +1,80 @@
+name: Bug report
+description: Something in the backend or mobile app doesn't work as documented.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please check `docs/TECH_DEBT.md` first —
+        some behavior that looks like a bug is a disclosed, tracked trade-off with its own
+        trigger condition, not an oversight.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Where is the bug?
+      options:
+        - backend (FastAPI service)
+        - apps/mobile (Flutter client)
+        - docs / CI / repo tooling
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        Backend: Python version, OS. Mobile: `flutter --version` output, device/simulator, OS.
+      placeholder: |
+        - Python: 3.12
+        - flutter --version: ...
+        - Device: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / stack trace
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I checked `docs/TECH_DEBT.md` and this isn't already a disclosed, tracked gap.
+          required: true

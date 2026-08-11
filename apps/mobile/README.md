@@ -1,7 +1,8 @@
 # Gym Companion — mobile
 
 The Flutter client: one app, five tabs (Today, Train, Fuel, Progress, Coach), per
-`docs/Gym_Companion_UX_UI_Design_Bible.docx` (repository root).
+`docs/design-docs/Gym_Companion_UX_UI_Design_Bible.docx` (repository root). See also
+`docs/ARCHITECTURE.md` for the current, code-reflecting architecture overview.
 
 ## Layout
 

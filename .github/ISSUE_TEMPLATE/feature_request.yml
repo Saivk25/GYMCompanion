@@ -1,0 +1,56 @@
+name: Feature request
+description: Propose a new feature or a change to existing behavior.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before requesting a feature, check `docs/adr/README.md` and `docs/TECH_DEBT.md` —
+        the gap you're describing may already be a documented, deliberate scope decision
+        with a reason it isn't built yet.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part of the app?
+      options:
+        - backend (FastAPI service / a new rule engine or endpoint)
+        - apps/mobile (Flutter client / a new screen or flow)
+        - Both
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the gap or friction, not just the feature you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true
+        - label: I checked `docs/TECH_DEBT.md` and `docs/adr/README.md` — this isn't already a
+            documented, deliberate scope decision.
+          required: true

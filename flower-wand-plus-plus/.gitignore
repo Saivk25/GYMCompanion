@@ -1,0 +1,18 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.log
+.DS_Store
+coverage
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Vercel
+.vercel
+
+# Environment variables (never committed — see README "Deployment" section)
+.env
+.env.local
+.env.*.local

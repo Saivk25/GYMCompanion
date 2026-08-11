@@ -1,7 +1,9 @@
+# License: MIT — see repository LICENSE (repository root).
 name: gym_companion_mobile
 description: >
-  Gym Companion client — a private, AI-assisted fitness companion. Five-tab
-  shell (Today, Train, Fuel, Progress, Coach) per the UX/UI Design Bible.
+  Gym Companion client — a fitness companion with a deterministic, rule-based coaching
+  layer (not AI/ML — see repository README's "What this is" section). Five-tab shell
+  (Today, Train, Fuel, Progress, Coach) per the UX/UI Design Bible.
 publish_to: "none"
 version: 0.1.0
 

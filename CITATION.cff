@@ -1,0 +1,30 @@
+# This CITATION.cff file was generated to make this repository citable.
+# Validate after editing: https://citation-file-format.github.io/cff-initializer-javascript/
+#
+# TODO: confirm the author's preferred citable family-name/affiliation below.
+cff-version: 1.2.0
+message: "If you reference this project, please cite it as below."
+type: software
+title: "Gym Companion"
+version: 0.1.0
+date-released: "2026-08-11"
+abstract: >
+  Gym Companion is a two-app fitness-companion system: a FastAPI backend implementing
+  Clean Architecture with deterministic, explainable rule engines (readiness, nutrition,
+  progressive overload, safety, goal alignment, training load, exercise recommendation),
+  and a Flutter mobile client covering six feature modules (Today, Train, Fuel, Progress,
+  Readiness, Coach). Built first for a single user, with every architectural decision
+  recorded as an ADR.
+authors:
+  - given-names: "Sai"
+    # TODO: add family-name / full legal name if you want a formal citation entry.
+url: "https://github.com/Saivk25/GYMCompanion"
+repository-code: "https://github.com/Saivk25/GYMCompanion"
+license: MIT
+keywords:
+  - fitness
+  - flutter
+  - fastapi
+  - clean-architecture
+  - domain-driven-design
+  - rule-engine

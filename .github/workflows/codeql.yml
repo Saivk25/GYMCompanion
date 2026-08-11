@@ -1,0 +1,50 @@
+# Gym Companion — CodeQL security scanning.
+#
+# Python is the only CodeQL-supported language in this repository (`backend/`) — Dart has no
+# CodeQL query pack, so `apps/mobile/` isn't (and can't be) covered by this workflow; its own
+# static-analysis coverage is `flutter analyze` in ci.yml plus the manual reviews recorded in
+# docs/adr/0053. Scheduled weekly in addition to push/PR so a newly-published CodeQL query can
+# surface an issue in code that hasn't changed recently.
+name: CodeQL
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: "17 3 * * 1" # Mondays, 03:17 UTC — off-peak, deliberately not on the hour
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended adds broader (slightly noisier) query coverage beyond the
+          # default security-and-quality pack — reasonable for a solo-reviewed project where
+          # an extra finding costs a few minutes of triage, not a team's worth of noise.
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

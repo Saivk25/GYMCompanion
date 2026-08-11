@@ -1,0 +1,54 @@
+# Gym Companion — Markdown lint.
+#
+# This repository is documentation-heavy (55 ADRs, TECH_DEBT.md, multiple READMEs) — broken
+# links, inconsistent heading levels, and malformed tables degrade a reader's trust in the docs
+# faster than they degrade trust in code, since there's no compiler to catch them. This workflow
+# is that compiler.
+name: Markdown Lint
+
+on:
+  push:
+    branches: [main, master]
+    paths: ["**/*.md"]
+  pull_request:
+    paths: ["**/*.md"]
+
+concurrency:
+  group: markdown-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdownlint:
+    name: markdownlint-cli2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint all Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v23
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !**/.venv/**
+
+  link-check:
+    name: Broken link check (internal + external)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Internal links (docs/adr/0042.md style cross-references, README relative links) are
+          # the ones most likely to break silently after a file move like docs/design-docs/'s
+          # own reorganization — those must always pass. External links (this repo cites GitHub
+          # docs, SemVer, Keep a Changelog, etc.) are informational: a third-party site being
+          # briefly down shouldn't fail this repo's own CI, so failures there don't block the
+          # job — see `args` below.
+          args: >-
+            --no-progress
+            --accept 200,204,206,301,302,308,429
+            "**/*.md"
+          fail: false # external-link flakiness shouldn't block merges; see comment above

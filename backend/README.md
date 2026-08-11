@@ -1,7 +1,9 @@
 # Gym Companion — backend
 
-FastAPI service over a framework-free domain core. See `docs/Gym_Companion_Engineering_Master_Plan.docx`
-(repository root) for the full rationale; this file only covers running the code.
+FastAPI service over a framework-free domain core. See
+`docs/design-docs/Gym_Companion_Engineering_Master_Plan.docx` (repository root) for the full
+rationale, and `docs/ARCHITECTURE.md` for the current, code-reflecting architecture overview;
+this file only covers running the code.
 
 ## Layout
 
@@ -61,9 +63,11 @@ Two ways to get a local Postgres for development, either works:
 - **Docker Compose** (simplest if you have Docker): `cd infra && docker compose up` — see
   `infra/README.md`.
 - **`scripts/local_postgres.sh`** (no Docker required, uses your system's installed Postgres):
+
   ```bash
   scripts/local_postgres.sh start
   ```
+
   This initializes a data directory under `~/.gym-companion/pgdata` on first run, and creates
   the `gymcompanion` role/database. It prints the connection URL to export as
   `GYM_DATABASE_URL` (for running the app) and `GYM_TEST_DATABASE_URL` (for running the

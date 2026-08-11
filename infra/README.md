@@ -36,4 +36,3 @@ Compose YAML is schema-validated; the Dockerfile follows a conventional, minimal
 multi-stage-free pattern deliberately kept simple because `psycopg[binary]` needs no
 compiler toolchain), but `docker compose up` on a real machine is this configuration's
 first real test, not a formality.
-

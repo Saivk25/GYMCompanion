@@ -18,3 +18,8 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Makefiles require literal tab characters for recipe lines — this is not a
+# style preference, `make` fails to parse a Makefile indented with spaces.
+[Makefile]
+indent_style = tab

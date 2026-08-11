@@ -1,0 +1,83 @@
+# Gym Companion — release.
+#
+# Runs only on a `v*` tag push (see docs/RELEASE_PROCESS.md for the full cut-a-release process:
+# bump the version, move CHANGELOG.md's [Unreleased] section under the new version heading,
+# tag, push the tag). This workflow does two things and nothing more:
+#
+#   1. Builds and publishes the backend Docker image to GitHub Container Registry, tagged with
+#      the release version.
+#   2. Drafts a GitHub Release for the tag, using GitHub's own auto-generated notes (commit/PR
+#      list since the previous tag) as a starting point — it does not attempt to parse
+#      CHANGELOG.md into release-note prose; a human reviews and can hand-edit the draft before
+#      publishing.
+#
+# It does NOT deploy anywhere and does NOT publish a mobile build to any app store — no
+# deployment target or app-store account exists yet (docs/adr/0004, docs/RELEASE_PROCESS.md).
+# Adding real deployment here before that infrastructure exists would be exactly the kind of
+# speculative automation this project's own "not yet, until it's justified" convention (see
+# ci.yml's own header comment) argues against.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write # to create the GitHub Release
+  packages: write # to push the backend image to ghcr.io
+
+jobs:
+  docker-image:
+    name: Build + publish backend image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  github-release:
+    name: Draft GitHub Release
+    runs-on: ubuntu-latest
+    needs: docker-image
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true # a human reviews and publishes — never auto-published
+          generate_release_notes: true
+          body: |
+            See `CHANGELOG.md` for the human-curated summary of this release; the list below is
+            GitHub's auto-generated commit/PR history since the previous tag.
+
+            Backend image: `ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}`

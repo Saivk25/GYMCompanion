@@ -1,0 +1,36 @@
+# Gym Companion — dependency review.
+#
+# Flags newly-introduced dependencies with a known vulnerability or an incompatible license on
+# every pull request, using the manifests GitHub already understands
+# (backend/pyproject.toml + requirements-lock.txt, apps/mobile/pubspec.yaml/.lock). This is a
+# GitHub-native action (`actions/dependency-review-action`) — no separate account/service
+# required, unlike a full SCA tool.
+name: Dependency Review
+
+on:
+  pull_request:
+    paths:
+      - "backend/pyproject.toml"
+      - "backend/requirements-lock.txt"
+      - "apps/mobile/pubspec.yaml"
+      - "apps/mobile/pubspec.lock"
+
+permissions:
+  contents: read
+  pull-requests: write # to post the summary comment on the PR
+
+jobs:
+  dependency-review:
+    name: Scan changed dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v5
+        with:
+          # MIT-licensed project (see LICENSE) — flag anything with a license that would be
+          # incompatible to depend on, not merely "not MIT."
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Zlib
+          fail-on-severity: high
+          comment-summary-in-pr: always
