@@ -146,9 +146,9 @@ of that scaffold.
 
 ## First-time setup
 
-This project's Dart/Flutter code was authored without a local Flutter SDK available
-(see ADR 0002) — **running `flutter pub get` on a real machine is the first real
-verification this code gets**, not a formality:
+This project's Dart/Flutter code was originally authored without a local Flutter SDK
+available (see ADR 0002) — its own "Update" note records the first real run: 0
+`flutter analyze` issues, 303/303 `flutter test` cases passing, on a real machine.
 
 ```bash
 cd apps/mobile
@@ -158,20 +158,10 @@ flutter test
 flutter run
 ```
 
-If `flutter pub get` reports a version conflict, that's expected-possible per ADR 0002
-— loosen the offending constraint in `pubspec.yaml` and note the fix in a new ADR.
-
-Platform folders (`android/`, `ios/`) are not yet generated — this scaffold is the Dart
-application layer only. Generate them with:
-
-```bash
-flutter create --platforms=android,ios --org com.gymcompanion .
-```
-
-run from inside `apps/mobile/`. This is safe: it only adds the platform folders when
-they don't already exist. If it prompts to overwrite `pubspec.yaml`, `lib/main.dart`,
-or `test/`, decline (or restore afterward with `git checkout -- pubspec.yaml lib/main.dart test/`)
-— those are already hand-written for this project.
+`android`/`ios` platform folders are already generated and committed to this
+repository — no `flutter create` step is needed. If `flutter pub get` reports a
+version conflict, that's expected-possible per ADR 0002 — loosen the offending
+constraint in `pubspec.yaml` and note the fix in a new ADR.
 
 ## Testing
 
@@ -498,3 +488,12 @@ and from `MockTodayRepository`'s own matching fixture id for the mock
 path), and `TodayScreen` now navigates with the real id. No other
 issue required a code change; see `docs/adr/0055-final-integration-
 audit.md` for the full audit report.
+
+**Update (2026-08-11):** the first real `flutter analyze`/`flutter test` run against
+this codebase happened, on Sai's own machine — see `docs/adr/0002`'s own "Update" note
+for the full list of what that surfaced (61 lint issues, 6 test bugs, one real
+application bug, all fixed). Alongside that run, TD-0004/TD-0010/TD-0012/TD-0013 were
+closed and `test/accessibility/guideline_test.dart` was widened from 2 to 28 of this
+app's 29 screens (TD-0014), which itself caught two further real bugs — see
+`docs/TECH_DEBT.md` for each item's own "Resolution" section. Current state: 0
+analyzer issues, 303/303 tests passing.

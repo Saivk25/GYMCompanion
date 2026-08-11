@@ -1,10 +1,11 @@
 # Screenshots
 
-**No screenshots exist yet.** This directory is a placeholder — the Flutter app has never been
-run on a real device or simulator (`docs/adr/0002`; no `android`/`ios` platform folders exist
-yet), so there is nothing genuine to capture. This file exists so the expected set is decided
-in advance, and so the root `README.md`'s screenshots section has something real to link to the
-moment images land here, instead of an `<img>` tag pointing at a file that was never added.
+**No screenshots exist yet.** This directory is a placeholder — `flutter analyze`/`flutter test`
+now run clean (`docs/adr/0002`'s "Update" note), and `android`/`ios` platform folders are
+committed, but the app itself has never been run on a real device or simulator, so there is
+nothing genuine to capture. This file exists so the expected set is decided in advance, and so
+the root `README.md`'s screenshots section has something real to link to the moment images land
+here, instead of an `<img>` tag pointing at a file that was never added.
 
 ## TODO — capture once a real build exists
 

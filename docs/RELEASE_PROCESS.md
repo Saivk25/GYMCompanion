@@ -31,20 +31,18 @@ independently; they are not required to match, though they currently do by coinc
 
 ## What blocks the first tagged release
 
-Per `docs/adr/0054-testing-and-release-readiness.md`'s own release checklist (still accurate as
-of `docs/adr/0055`):
+Per `docs/adr/0054-testing-and-release-readiness.md`'s own release checklist, updated since
+`docs/adr/0055`:
 
-1. A real Flutter SDK run (`flutter analyze` / `flutter test`) — every line of Flutter code in
-   this repository has been hand-authored and statically verified, never executed
-   (`docs/adr/0002`).
-2. `android`/`ios` platform folders (`flutter create --platforms=android,ios .` against the
-   existing `apps/mobile/lib/`) — do not exist yet.
+1. ~~A real Flutter SDK run (`flutter analyze` / `flutter test`).~~ **Done** — see
+   `docs/adr/0002`'s "Update" note: 0 analyzer issues, 303/303 tests passing.
+2. ~~`android`/`ios` platform folders.~~ **Done** — generated and committed.
 3. A real device/TalkBack/VoiceOver accessibility pass, beyond the static audit in
-   `docs/adr/0053`.
+   `docs/adr/0053` (now covering 28 of 29 screens — `docs/TECH_DEBT.md` TD-0014).
 4. App icon, splash screen, and app-store metadata.
 5. A real backend deployment target (currently: none — see `SECURITY.md`).
 
-None of these is a design gap — each is explicitly named as pending, environment-dependent work
+Items 3-5 are not design gaps — each is explicitly named as pending, environment-dependent work
 in the ADRs above.
 
 ## GitHub Releases strategy

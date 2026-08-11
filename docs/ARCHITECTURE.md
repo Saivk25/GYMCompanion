@@ -2,11 +2,12 @@
 
 This document is onboarding-oriented: it exists so a new developer can understand how the
 system fits together without reading all 55 ADRs first. It reflects the codebase as of the
-final end-to-end integration audit (`docs/adr/0055-final-integration-audit.md`) — the
-production-integration roadmap (`docs/adr/0042` through `0054`) is complete, and the app is
-architecturally release-ready (real-device validation, `flutter analyze`/`flutter test`, and
-release engineering remain, per `docs/adr/0002`'s standing "no Flutter SDK in this build
-environment" constraint).
+final end-to-end integration audit (`docs/adr/0055-final-integration-audit.md`) plus the
+subsequent lint-cleanup/tech-debt-closure pass — the production-integration roadmap
+(`docs/adr/0042` through `0054`) is complete, `flutter analyze`/`flutter test` have now run for
+real (0 issues, 303/303 tests passing — see `docs/adr/0002`'s "Update" note), and the app is
+architecturally release-ready (real-device validation and release engineering remain — see
+§13).
 
 For the *why* behind any decision summarized here, the ADR index in Section 12 links to the
 document that made it. For known, deliberately-deferred gaps, see `docs/TECH_DEBT.md`.
@@ -534,13 +535,16 @@ Material ripple disabled in favor of a token-driven pressed/hovered/focused opac
   bottom-sheet/confirmation-dialog helpers in `app_overlays.dart`.
 
 A dedicated architecture review (`docs/adr/0035`) found and fixed every Critical/Important
-finding: touch targets meet the 48dp minimum everywhere (with two later, narrower exceptions
-tracked open — TD-0012, `ExerciseNav`'s own 40→48dp fix landed in the Step 5 audit), WCAG
-contrast was computed (not asserted) with two real failures found and fixed, loading buttons
-remain screen-reader accessible, and typography was audited under large accessibility text
-sizes across every named component. `test/accessibility/guideline_test.dart` (Step 6) is the
-first use of `flutter_test`'s `meetsGuideline` matchers, covering Today and Coach Home as a
-representative — not yet exhaustive — sample (TD-0014).
+finding: touch targets meet the 48dp minimum everywhere (`ExerciseNav`'s own 40→48dp fix landed
+in the Step 5 audit; `LoggedSetRow`'s tap target and Active Workout's Weight/Reps/RPE fields
+were two further sub-48dp targets found and fixed later — TD-0012 and the guideline-coverage
+widening below), WCAG contrast was computed (not asserted) with two real failures found and
+fixed, loading buttons remain screen-reader accessible, and typography was audited under large
+accessibility text sizes across every named component. `test/accessibility/guideline_test.dart`
+(Step 6) was the first use of `flutter_test`'s `meetsGuideline` matchers, initially covering
+Today and Coach Home as a representative sample; it now covers 28 of this app's 29 screens
+(every screen except the transient `SplashScreen`, which has no semantics nodes to check —
+TD-0014's "Resolution").
 
 ---
 
@@ -757,17 +761,25 @@ Section 11.1's Today flow diagram.
 
 ## 13. Known limitations (see `docs/TECH_DEBT.md` for full detail)
 
-14 tracked items (TD-0001 through TD-0014) as of ADR 0055; TD-0001 and TD-0002 (backend
-duplication and ownership-authorization gaps) are **resolved**. Open items relevant to a new
+14 tracked items (TD-0001 through TD-0014) as of ADR 0055, updated by the lint-cleanup/tech-debt
+pass that followed it. **7 resolved** (TD-0001, TD-0002, TD-0004, TD-0010, TD-0012, TD-0013,
+TD-0014), **1 partially resolved** (TD-0003), **6 open**. Open items relevant to a new
 developer: no exercise catalog or session-history-list endpoint exists server-side (TD-0007);
-`ReadinessTimelineScreen` renders its full unpaginated history eagerly, not lazily (TD-0010);
-Train's per-workout/session providers have no `.autoDispose` (TD-0011); `LoggedSetRow`'s tap
-target is likely under 48dp (TD-0012); three forms lack keyboard focus chaining (TD-0013); and
-accessibility guideline tests currently cover 2 of ~24 screens (TD-0014). None of these block
-onboarding — each has a concrete trigger condition for when to act on it.
+Train's per-workout/session providers have no `.autoDispose` (TD-0011); plus TD-0005, TD-0006,
+TD-0008, TD-0009 (each an accepted trade-off or a backend gap, not a defect — see the tech-debt
+doc for the specific trigger condition on each). None of these block onboarding.
 
-**What remains before release**, per ADR 0054/0055: real-device validation, `flutter analyze`/
-`flutter test` (no Flutter SDK exists in this build environment — every line of Flutter code in
-this repo has been hand-authored and statically/structurally verified, never executed, per ADR
-0002), `android`/`ios` platform folder generation, golden tests, a real TalkBack/VoiceOver pass,
-app icon/splash/store metadata, and store submission.
+Since ADR 0055: date/duration formatting was consolidated into one shared helper (TD-0004);
+`ReadinessTimelineScreen` was converted to a genuinely lazy `ListView.builder` (TD-0010);
+`LoggedSetRow`'s tap target was fixed to reach 48dp (TD-0012); the three forms TD-0013 named
+gained keyboard focus chaining; and accessibility guideline coverage was widened from 2 to 28 of
+this app's 29 screens (TD-0014) — which itself caught and fixed two further real bugs (Active
+Workout's Weight/Reps/RPE fields were also under 48dp; a guideline test's own pump timing was
+reading a still-transitioning route as a false contrast failure).
+
+**What remains before release**, per ADR 0054/0055: `flutter analyze`/`flutter test` have now
+run for real (0 issues, 303/303 tests passing — ADR 0002's "Update" note), and `android`/`ios`
+platform folders are committed. Still remaining: real-device validation (`flutter run` against
+an emulator/device has never happened), golden tests (blocked on the same real-device gap), a
+real TalkBack/VoiceOver pass (today's accessibility coverage is static-analysis only), app
+icon/splash/store metadata, and store submission.

@@ -24,8 +24,10 @@ as one of 55 ADRs.
 
 ---
 
-> **Screenshots and a demo GIF are not yet available.** The Flutter app has never been run on a
-> real device or simulator — see [Known limitations](#known-limitations) below and
+> **Screenshots and a demo GIF are not yet available.** `flutter analyze`/`flutter test` now run
+> clean on a real machine (0 issues, 303/303 tests passing — see
+> [Known limitations](#known-limitations) below), but the app itself has still never been run on
+> a real device or simulator, so there is nothing yet to screenshot — see
 > [`docs/screenshots/README.md`](docs/screenshots/README.md) for the exact planned set and why.
 > This README links to real, current documentation instead of placeholder images.
 
@@ -176,22 +178,17 @@ Verify: `curl http://localhost:8000/health`
 ```bash
 cd apps/mobile
 flutter pub get
-```
-
-**Real gap, stated plainly:** no `android`/`ios` platform folders exist in this repository yet
-(see [Known limitations](#known-limitations)). Generate them before `flutter run` will work:
-
-```bash
-flutter create --platforms=android,ios .
+flutter analyze
+flutter test
 flutter run
 ```
 
-This has not been executed in this project's own primary build environment
-([`docs/adr/0002`](docs/adr/0002-flutter-verification-constraint.md)) — every line of Dart in
-this repository has been hand-authored and statically/structurally verified, never run. If
-you're working from a machine with a real Flutter SDK, you have first-class verification the
-original author didn't for most of this project's history; please run `flutter analyze` and
-`flutter test` and report anything that fails.
+`android`/`ios` platform folders are committed to this repository, and `flutter analyze`/
+`flutter test` have now been run for real on a developer machine — 0 analyzer issues, 303/303
+tests passing. See [`docs/adr/0002`](docs/adr/0002-flutter-verification-constraint.md) for why
+that wasn't possible in this project's original build environment, and that ADR's own "Update"
+note for how it was resolved. `flutter run` against a real device/simulator has still not been
+done — see [Known limitations](#known-limitations).
 
 ### One-shot commands (repo root `Makefile`)
 
@@ -218,11 +215,12 @@ make precommit-install
 Concrete, sourced from [`docs/adr/0054`](docs/adr/0054-testing-and-release-readiness.md)'s
 release checklist and [`docs/RELEASE_PROCESS.md`](docs/RELEASE_PROCESS.md) — not aspirational:
 
-- [ ] Run a real Flutter SDK against this codebase (`flutter analyze` / `flutter test`) for the
-      first time.
-- [ ] Generate `android`/`ios` platform folders.
+- [x] Run a real Flutter SDK against this codebase (`flutter analyze` / `flutter test`) for the
+      first time — done: 0 analyzer issues, 303/303 tests passing.
+- [x] Generate `android`/`ios` platform folders — committed to the repository.
 - [ ] Real-device accessibility pass (TalkBack/VoiceOver) — the current pass is static-analysis
-      only ([`docs/adr/0053`](docs/adr/0053-performance-and-accessibility-audit.md)).
+      only, now covering 28 of this app's 29 screens
+      ([`docs/adr/0053`](docs/adr/0053-performance-and-accessibility-audit.md), TD-0014).
 - [ ] App icon, splash screen, app-store metadata.
 - [ ] A real backend deployment target (none exists today — see [`SECURITY.md`](SECURITY.md)).
 - [ ] Golden tests (blocked on a real Flutter SDK to generate baseline images).
@@ -235,15 +233,19 @@ behind each:
 
 - **No live deployment.** Neither the backend nor the mobile client has been deployed/published
   anywhere (see [`SECURITY.md`](SECURITY.md)).
-- **No Flutter SDK has run this codebase.** All ~50 Flutter files were hand-authored and
-  statically verified, never compiled or executed
-  ([`docs/adr/0002`](docs/adr/0002-flutter-verification-constraint.md)).
+- **The app has never run on a real device or simulator.** `flutter analyze`/`flutter test` now
+  run clean (0 issues, 303/303 tests passing —
+  [`docs/adr/0002`](docs/adr/0002-flutter-verification-constraint.md)'s "Update" note), but
+  `flutter run` against a real device/emulator, golden tests, and a TalkBack/VoiceOver pass on a
+  physical device all remain undone.
 - **No exercise catalog or session-history-list endpoint** exists on the backend yet — Active
   Workout's set logging is honestly disabled rather than faked (TD-0007).
 - **No AI/ML functionality** — see [What this is](#what-this-is) above; `app/ai/` is a reserved,
   empty adapter layer.
-- Full list: 14 tracked items in `docs/TECH_DEBT.md`, each with its own trigger condition for
-  when to act on it.
+- Full list: 14 tracked items in [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) — 7 resolved
+  (TD-0001, TD-0002, TD-0004, TD-0010, TD-0012, TD-0013, TD-0014), 1 partially resolved
+  (TD-0003), 6 open (TD-0005, TD-0006, TD-0007, TD-0008, TD-0009, TD-0011), each with its own
+  trigger condition for when to act on it.
 
 ## Testing
 
@@ -251,24 +253,27 @@ behind each:
   1:1 (`tests/domain/`, `tests/application/`, `tests/infra/`, `tests/api/`,
   `tests/composition/`). CI enforces **100% statement/branch coverage on `app.domain`** and runs
   the full suite against a real Postgres service container (`.github/workflows/ci.yml`).
-- **Mobile:** 30 test files, 240+ test cases (unit, widget, multi-screen flow, and — new as of
-  [`docs/adr/0054`](docs/adr/0054-testing-and-release-readiness.md) —
-  `flutter_test`'s `meetsGuideline` accessibility matchers on two representative screens). Uses
-  hand-rolled fakes throughout, no mocking framework. **Never executed against a real Flutter
-  SDK** — see [Known limitations](#known-limitations).
+- **Mobile:** 32 test files, 303 test cases (unit, widget, multi-screen flow, and
+  `flutter_test`'s `meetsGuideline` accessibility matchers, now covering 28 of this app's 29
+  screens — [`docs/adr/0054`](docs/adr/0054-testing-and-release-readiness.md), TD-0014). Uses
+  hand-rolled fakes throughout, no mocking framework. Run for real on a developer machine:
+  0 analyzer issues, 303/303 tests passing — see [Known limitations](#known-limitations).
 - **End-to-end:** scaffolded (`tests/e2e/`), not yet populated — blocked on the same real-device
   gap.
 
 ## Performance
 
 [`docs/adr/0053`](docs/adr/0053-performance-and-accessibility-audit.md) is a **static-analysis
-audit**, not a real-device profiling pass — no Flutter SDK/DevTools was available. It reviewed
-provider rebuild scope, `StatefulShellRoute.indexedStack` behavior, chart repaint boundaries, and
-the offline cache's interaction with this backend's unpaginated list endpoints, applying one
-low-risk fix (a touch target below the design system's 48dp minimum) and documenting four other
-findings as tracked debt (TD-0010–TD-0013) rather than making unreviewed changes. No throughput,
-latency, or memory benchmarks exist yet — reporting fabricated numbers here would violate this
-project's own "don't invent functionality/results" convention.
+audit**, not a real-device profiling pass — DevTools/real-device instrumentation still isn't
+available. It reviewed provider rebuild scope, `StatefulShellRoute.indexedStack` behavior, chart
+repaint boundaries, and the offline cache's interaction with this backend's unpaginated list
+endpoints, applying one low-risk fix at the time (a touch target below the design system's 48dp
+minimum) and documenting four other findings as tracked debt (TD-0010–TD-0013). All four have
+since been resolved — see [`docs/TECH_DEBT.md`](docs/TECH_DEBT.md) for each item's "Resolution"
+section, including two further real bugs (a second sub-48dp tap target, a false-positive
+contrast-test timing issue) the widened accessibility coverage itself caught and fixed. No
+throughput, latency, or memory benchmarks exist yet — reporting fabricated numbers here would
+violate this project's own "don't invent functionality/results" convention.
 
 ## Security
 

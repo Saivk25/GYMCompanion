@@ -62,13 +62,31 @@ the decision in full, rather than restating it here.
   configuration, and additional CI workflows (Markdown lint, spell check, dependency review,
   CodeQL, release).
 
+### Fixed
+
+- The first real `flutter analyze`/`flutter test` run against this codebase, on a developer
+  machine with a real Flutter SDK (`docs/adr/0002`'s "Update" note): fixed 61 pre-existing lint
+  issues, 6 real test bugs, and one genuine application bug (`active_workout_screen.dart`'s
+  `pushReplacement` to session summary was missing `extra: true`). Result: 0 analyzer issues,
+  303/303 tests passing.
+- Closed 4 tracked tech-debt items found during the performance/accessibility audit
+  (`docs/TECH_DEBT.md` TD-0004, TD-0010, TD-0012, TD-0013): consolidated duplicated date/
+  duration formatting into one shared helper; converted `ReadinessTimelineScreen` to a
+  genuinely lazy `ListView.builder`; fixed `LoggedSetRow`'s sub-48dp tap target; added keyboard
+  focus chaining to three multi-field forms.
+- Widened `test/accessibility/guideline_test.dart` from 2 representative screens to 28 of this
+  app's 29 screens (TD-0014), which itself caught and fixed two further real bugs: Active
+  Workout's Weight/Reps/RPE fields were also under the 48dp tap-target minimum, and one new
+  guideline test's own pump timing was reading a still-transitioning route as a false contrast
+  failure.
+
 ### Known limitations
 
-See `docs/TECH_DEBT.md` (14 tracked items) and `docs/ARCHITECTURE.md`'s "Known limitations"
-section. Notably: no Flutter SDK has been available in this project's primary build
-environment, so all Flutter code has been statically/structurally verified rather than run
-(`docs/adr/0002`); no `android`/`ios` platform folders exist yet; no app has been submitted to
-an app store; the backend has not been deployed anywhere live.
+See `docs/TECH_DEBT.md` (14 tracked items — 7 resolved, 1 partially resolved, 6 open) and
+`docs/ARCHITECTURE.md`'s "Known limitations" section. Notably: `flutter analyze`/`flutter test`
+now run clean on a real machine, but the app itself has never run on a real device or simulator
+(`docs/adr/0002`); no app has been submitted to an app store; the backend has not been deployed
+anywhere live.
 
 ---
 

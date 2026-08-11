@@ -49,10 +49,11 @@ flutter pub get
 ```
 
 Or `make mobile-get` from the repository root. `docs/adr/0002-flutter-verification-constraint.md`
-records that this repo's own primary build environment has no Flutter SDK available — if you're
-working from a machine that does, you have first-class verification the original author didn't
-during large parts of this project's history. Use it: `flutter analyze` and `flutter test` should
-both be run locally before opening a PR, not just left to CI.
+records that this repo's own primary build environment has no Flutter SDK available — that ADR's
+own "Update" note records the first real run against this codebase (0 analyzer issues, 303/303
+tests passing). If you're working from a machine with a Flutter SDK, you have the same
+first-class verification that run had: `flutter analyze` and `flutter test` should both be run
+locally before opening a PR, not just left to CI.
 
 ## Making a change
 
