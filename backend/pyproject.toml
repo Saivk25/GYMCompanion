@@ -30,7 +30,7 @@ dependencies = [
     # framework-free ports app/domain/auth/ports.py declares — see that
     # module's own docstring for why the algorithms themselves live only
     # here, never in app/domain.
-    "bcrypt>=4.2,<5.0",
+    "bcrypt>=4.2,<6.0",
     "pyjwt>=2.9,<3.0",
 ]
 
