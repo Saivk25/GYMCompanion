@@ -72,11 +72,19 @@ enum SessionCardStatus { loading, ready, completed, empty, error }
 /// [plannedDate] are what a real `Workout` genuinely has to show.
 class TodaySessionSummary {
   const TodaySessionSummary({
+    required this.workoutId,
     required this.name,
     required this.plannedDate,
     this.goal,
     this.notes,
   });
+
+  /// `Workout.id` / `WorkoutResponse.workout_id` — the real backend id
+  /// for this workout. Added so `TodayScreen`'s "Start session" action
+  /// can navigate to `/train/pre-session/$workoutId` with a real id
+  /// instead of a hardcoded placeholder; see that screen's own comment
+  /// and `ApiTodayRepository._buildViewState` for where this is sourced.
+  final String workoutId;
 
   /// The workout's own name (`Workout.name` / `WorkoutResponse.name`).
   final String name;

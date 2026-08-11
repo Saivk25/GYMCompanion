@@ -112,6 +112,7 @@ class ApiTodayRepository implements TodayRepository {
     final TodaySessionSummary? session = todaysWorkout == null
         ? null
         : TodaySessionSummary(
+            workoutId: todaysWorkout.workoutId,
             name: todaysWorkout.name,
             plannedDate: todaysWorkout.plannedDate,
             goal: todaysWorkout.goal,

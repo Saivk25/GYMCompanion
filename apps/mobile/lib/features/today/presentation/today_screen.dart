@@ -153,15 +153,14 @@ class _TodayContent extends StatelessWidget {
         session: state.session,
         // Real navigation into the now-built Train module — the natural-
         // continuation goal this project's Train directive named
-        // explicitly. 'workout-today' is `MockTrainRepository`'s own
-        // fixed id for today's workout; `TodaySessionSummary` (`today_
-        // models.dart`) has no `workoutId` field yet (it was built before
-        // Train existed to link to), so this is a disclosed, temporary
-        // coupling — the same posture every mock-repository seam in this
-        // project already takes — not a silent hack. A real repository
-        // pass will add a real `workoutId` to `TodaySessionSummary` and
-        // this literal goes away.
-        onStartSession: () => context.push('/train/pre-session/workout-today'),
+        // explicitly. Uses `state.session!.workoutId`, the real backend
+        // workout id `ApiTodayRepository` sources from `WorkoutDto`
+        // (`MockTodayRepository` mirrors this with its own fixed
+        // 'workout-today' id, matching `MockTrainRepository`'s fixture).
+        // `onStartSession` is only ever wired while `state.session` is
+        // non-null (`SessionCardStatus.ready`/`.completed`), so the `!`
+        // here is safe.
+        onStartSession: () => context.push('/train/pre-session/${state.session!.workoutId}'),
         onTwoMinuteWin: () => _notBuiltYet(context, 'Two-minute win'),
         onGetStarted: () => _notBuiltYet(context, 'Plan setup'),
         onBrowseLibrary: () => _notBuiltYet(context, 'Exercise library'),

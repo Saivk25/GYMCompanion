@@ -36,6 +36,10 @@ class MockTodayRepository implements TodayRepository {
       checkInCompletedToday: false,
       sessionStatus: SessionCardStatus.ready,
       session: TodaySessionSummary(
+        // Matches `MockTrainRepository`'s own fixture id for today's
+        // workout, so a mock-based tap-through from Today's "Start
+        // session" into Train's Pre-session screen still resolves.
+        workoutId: 'workout-today',
         name: 'Upper Body Strength',
         plannedDate: DateTime.now(),
         goal: 'Build strength',

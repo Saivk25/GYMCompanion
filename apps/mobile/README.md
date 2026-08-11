@@ -233,7 +233,10 @@ real implementation: real workout-plan and check-in-status data from `GET
 /api/v1/workouts`/`GET /api/v1/readiness`. The session card's shape changed with
 it — `TodaySessionSummary` now shows the workout's real name/goal/notes/planned
 date rather than an intensity tier, key-lifts list, duration estimate, or AI
-summary, none of which the real `Workout` aggregate models at all. The readiness
+summary, none of which the real `Workout` aggregate models at all. `TodaySessionSummary`
+also carries the real `workoutId` (`WorkoutDto.workoutId`), which "Start session"
+now navigates with — see the final end-to-end audit note below for why this field
+was added after Step 6. The readiness
 band, streak, and open-task card remain disclosed gaps with no backend source
 (`docs/TECH_DEBT.md`'s TD-0006) — not this repository's own limitation, the
 backend has no Habit/Streak or Task/Recommendation persistence, and no endpoint
@@ -479,3 +482,18 @@ validation-only scope — not a gap in what this roadmap planned. A
 dead-code/stale-documentation sweep found nothing needing a fix. This
 concludes the planned roadmap from `docs/adr/0042-production-
 integration-plan.md`; see ADR 0054 for the full assessment.
+
+A final, read-only end-to-end audit was performed after the roadmap's
+own conclusion, verifying repository/implementation consistency,
+`main.dart` provider wiring, route-table completeness, dead files, and
+README/ADR/TECH_DEBT consistency. It found and fixed one genuine
+correctness bug, per that audit's own explicit exception for
+read-only review: Today's "Start session" action pushed a hardcoded
+`'workout-today'` literal — valid only against `MockTrainRepository`'s
+own fixture id, never against the real backend `ApiTrainRepository`
+has called since Step 3. `TodaySessionSummary` gained a `workoutId`
+field (sourced from `WorkoutDto.workoutId` in `ApiTodayRepository`,
+and from `MockTodayRepository`'s own matching fixture id for the mock
+path), and `TodayScreen` now navigates with the real id. No other
+issue required a code change; see `docs/adr/0055-final-integration-
+audit.md` for the full audit report.

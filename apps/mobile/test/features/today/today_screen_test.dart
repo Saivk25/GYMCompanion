@@ -46,6 +46,7 @@ TodayViewState _baseState({
     sessionStatus: sessionStatus,
     session: session ??
         TodaySessionSummary(
+          workoutId: 'workout-today',
           name: 'Upper Body Strength',
           plannedDate: DateTime(2026, 8, 4),
         ),
