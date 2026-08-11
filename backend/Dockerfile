@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # psycopg[binary] (backend/pyproject.toml) ships its own libpq build, so this
 # image needs no compiler toolchain or libpq-dev — a deliberate dependency
