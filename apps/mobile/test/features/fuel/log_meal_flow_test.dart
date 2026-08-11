@@ -125,4 +125,27 @@ void main() {
 
     expect(find.text('Supplement tracking not connected yet'), findsOneWidget);
   });
+
+  testWidgets(
+      'TD-0013: manual entry fields chain keyboard focus, ending with a '
+      "done action that doesn't submit the form", (tester) async {
+    await _pumpToFuelHome(tester);
+
+    await tester.tap(find.text('Log a meal'));
+    await tester.pumpAndSettle();
+
+    // Declared order in _ManualEntryForm.build(): Calories, Protein,
+    // Carbs, Fat, Fiber, Sugar, then Notes last. Every field but Notes
+    // should chain to the next via the keyboard's "Next" action; Notes
+    // uses "Done" (and just dismisses — see log_meal_screen.dart's
+    // onSubmitted — since this stateless subtree has no direct access to
+    // the parent's real submit button, which stays separately gated on
+    // _canSubmit).
+    final Finder fields = find.byType(TextField);
+    expect(fields, findsNWidgets(7));
+    for (int i = 0; i < 6; i++) {
+      expect(tester.widget<TextField>(fields.at(i)).textInputAction, TextInputAction.next);
+    }
+    expect(tester.widget<TextField>(fields.at(6)).textInputAction, TextInputAction.done);
+  });
 }

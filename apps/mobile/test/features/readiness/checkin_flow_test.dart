@@ -135,12 +135,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Recovery timeline'), findsOneWidget); // AppBar title
-    // MockReadinessRepository seeds 14 days of history — the full,
-    // uncapped list, not the Home preview's 5. `findsAtLeastNWidgets`
-    // (not `findsNWidgets`) because Readiness Home's own route stays
-    // mounted underneath this pushed one, so its 5 preview tiles are
-    // still technically present in the tree alongside the timeline's.
-    expect(find.byType(ReadinessEntryTile), findsAtLeastNWidgets(14));
+    // TD-0010 (`docs/TECH_DEBT.md`): the timeline is now a genuinely
+    // lazy `ListView.builder` — only rows near the viewport are built,
+    // not all 14 seeded entries at once. Readiness Home's own route
+    // stays mounted underneath this pushed one, so the total found here
+    // is "5 preview tiles + however many timeline rows currently fit on
+    // screen" — well under "5 + all 14", which is exactly the laziness
+    // this conversion was for.
+    expect(find.byType(ReadinessEntryTile), findsWidgets);
+    expect(tester.widgetList(find.byType(ReadinessEntryTile)).length, lessThan(5 + 14));
+
+    // MockReadinessRepository seeds 14 days of history, oldest last
+    // (the repository's own newest-first order) — scrolling the
+    // timeline's own list (scoped via the `ClipRRect` this screen wraps
+    // it in, so this can't accidentally match Home's list underneath)
+    // to its end must still reach that oldest, 14th entry, proving the
+    // full, uncapped list is reachable even though it isn't all built
+    // at once. Its sleep/energy combination (8.0h, energy 6) is unique
+    // across all 14 seeded entries (`mock_readiness_repository.dart`),
+    // so matching this text is a real check of *which* entry scrolled
+    // into view, not just that *some* row did.
+    final Finder timelineList = find.descendant(
+      of: find.byType(ClipRRect),
+      matching: find.byType(ListView),
+    );
+    await tester.fling(timelineList, const Offset(0, -3000), 3000);
+    await tester.pumpAndSettle();
+
+    expect(find.text('8.0h sleep · energy 6/10 · stress 4/10'), findsOneWidget);
   });
 
   testWidgets('tapping a check-in in the recent list opens its real detail screen', (
@@ -173,5 +195,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Recovery score not connected yet'), findsOneWidget);
+  });
+
+  testWidgets(
+      'TD-0013: check-in text fields chain keyboard focus, ending with a '
+      "done action that doesn't submit the form", (tester) async {
+    await _pumpToReadinessHome(tester);
+
+    final Finder startCheckIn = find.text('Start check-in');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(startCheckIn);
+    await tester.pumpAndSettle();
+    await tester.tap(startCheckIn);
+    await tester.pumpAndSettle();
+
+    // Declared order in ReadinessCheckInScreen.build(): Hours, Resting HR,
+    // HRV, then Notes last — the four AppRatingSlider fields in between
+    // (Sleep quality, Energy, Stress, Soreness) aren't text-focusable, so
+    // they don't appear as TextFields at all. Every text field but Notes
+    // chains to the next via the keyboard's "Next" action; Notes uses
+    // "Done" and just dismisses (see readiness_checkin_screen.dart's
+    // onSubmitted) — the real submit button is always enabled here, so
+    // there's no gating state Notes' submission would need to trigger.
+    final Finder fields = find.byType(TextField);
+    expect(fields, findsNWidgets(4));
+    for (int i = 0; i < 3; i++) {
+      expect(tester.widget<TextField>(fields.at(i)).textInputAction, TextInputAction.next);
+    }
+    expect(tester.widget<TextField>(fields.at(3)).textInputAction, TextInputAction.done);
   });
 }

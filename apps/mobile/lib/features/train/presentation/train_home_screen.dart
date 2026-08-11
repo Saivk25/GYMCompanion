@@ -112,7 +112,7 @@ class _TrainHomeContent extends StatelessWidget {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     if (!state.hasActivePlan) {
-      return SafeArea(
+      return const SafeArea(
         child: Center(
           child: AppEmptyState(
             icon: AppIcons.train,

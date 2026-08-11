@@ -185,18 +185,18 @@ class _SessionCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return const AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const AppSkeletonBox(width: 140, height: 22),
-          const SizedBox(height: AppSpacing.sm),
-          const AppSkeletonBox(width: 100, height: 14),
-          const SizedBox(height: AppSpacing.sm),
-          const AppSkeletonBox(width: 220, height: 16),
-          const SizedBox(height: AppSpacing.lg),
-          const AppSkeletonBox(width: double.infinity, height: 48),
+          AppSkeletonBox(width: 140, height: 22),
+          SizedBox(height: AppSpacing.sm),
+          AppSkeletonBox(width: 100, height: 14),
+          SizedBox(height: AppSpacing.sm),
+          AppSkeletonBox(width: 220, height: 16),
+          SizedBox(height: AppSpacing.lg),
+          AppSkeletonBox(width: double.infinity, height: 48),
         ],
       ),
     );

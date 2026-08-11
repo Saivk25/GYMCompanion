@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_semantic_colors.dart';
-import '../tokens/tokens.dart';
 
 /// A restrained line chart — this app's one line-chart component, built
 /// for Progress's real trend surfaces (Section 12: "Consistent axis and

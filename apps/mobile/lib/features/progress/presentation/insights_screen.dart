@@ -34,7 +34,7 @@ class InsightsScreen extends StatelessWidget {
             title: 'Correlations not connected yet',
             message:
                 'Surfacing a real correlation — like how sleep relates to '
-                "training performance — needs backend statistics logic "
+                'training performance — needs backend statistics logic '
                 "that doesn't exist yet. The trends on each dashboard "
                 'above are your real logged data in the meantime.',
           ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
+import '../../../shared/presentation/app_date_format.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
 
@@ -96,7 +97,7 @@ class _SummaryContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            _formattedDate(session.sessionDate),
+            appMonthDayYear(session.sessionDate),
             style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -121,7 +122,7 @@ class _SummaryContent extends StatelessWidget {
                 Icon(AppIcons.info, size: 16, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: AppSpacing.xs),
                 Text(
-                  _formattedDuration(session.durationSeconds!),
+                  appDurationMinutes(session.durationSeconds!),
                   style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
               ],
@@ -180,18 +181,5 @@ class _SummaryContent extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _formattedDate(DateTime date) {
-    const List<String> months = <String>[
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  static String _formattedDuration(double seconds) {
-    final int minutes = (seconds / 60).round();
-    return '$minutes min';
   }
 }

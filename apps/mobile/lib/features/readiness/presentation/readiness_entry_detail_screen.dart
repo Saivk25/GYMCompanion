@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design/design.dart';
+import '../../../shared/presentation/app_date_format.dart';
 import '../application/readiness_controller.dart';
 import '../domain/readiness_models.dart';
 
@@ -85,7 +86,7 @@ class _EntryDetail extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: <Widget>[
-          Text(_formattedDate(entry.readinessDate), style: textTheme.headlineSmall),
+          Text(appMonthDayYear(entry.readinessDate), style: textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xl),
           AppCard(
             child: Column(
@@ -121,13 +122,5 @@ class _EntryDetail extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _formattedDate(DateTime date) {
-    const List<String> months = <String>[
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

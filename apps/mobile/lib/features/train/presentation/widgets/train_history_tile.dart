@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../../shared/presentation/app_date_format.dart';
 import '../../domain/train_models.dart';
 
 /// One past session, in Train Home's "History" list — reuses
@@ -25,17 +26,9 @@ class TrainHistoryTile extends StatelessWidget {
     return AppListTile(
       leadingIcon: AppIcons.train,
       title: session.workoutName,
-      subtitle: _formattedDate(session.sessionDate),
+      subtitle: appShortMonthDay(session.sessionDate),
       trailing: AppBadge(label: label, icon: icon, tone: tone),
       onTap: onTap,
     );
-  }
-
-  static String _formattedDate(DateTime date) {
-    const List<String> months = <String>[
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}';
   }
 }

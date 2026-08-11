@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../../shared/presentation/app_date_format.dart';
 import '../../domain/fuel_models.dart';
 
 /// One logged meal in Fuel Home's today list — reuses [AppListTile]
@@ -23,19 +24,12 @@ class MealEntryTile extends StatelessWidget {
       leadingIcon: AppIcons.fuel,
       title: title,
       subtitle: <String>[
-        _formattedTime(entry.recordedAt),
+        appTimeOfDay(entry.recordedAt),
         if (macroParts.isNotEmpty) macroParts.join(' · '),
       ].join(' · '),
       trailing: entry.notes.isNotEmpty
           ? Icon(AppIcons.info, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant)
           : null,
     );
-  }
-
-  static String _formattedTime(DateTime time) {
-    final int hour12 = time.hour % 12 == 0 ? 12 : time.hour % 12;
-    final String minute = time.minute.toString().padLeft(2, '0');
-    final String period = time.hour < 12 ? 'AM' : 'PM';
-    return '$hour12:$minute $period';
   }
 }

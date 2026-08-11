@@ -42,7 +42,7 @@ class CoachWeeklyReviewScreen extends StatelessWidget {
                 'A real week-over-week summary needs a backend rollup '
                 "endpoint that doesn't exist yet. Recent guidance on Coach "
                 'Home is real and current — this screen is ready the '
-                "moment that endpoint ships.",
+                'moment that endpoint ships.',
           ),
         ),
       ),

@@ -41,7 +41,7 @@ class ReadinessFormulaScreen extends StatelessWidget {
                 'A combined readiness score with its formula breakdown '
                 "needs a backend endpoint that doesn't exist yet. Your "
                 'check-ins are real and saved either way — this screen is '
-                "ready the moment that endpoint ships.",
+                'ready the moment that endpoint ships.',
           ),
         ),
       ),

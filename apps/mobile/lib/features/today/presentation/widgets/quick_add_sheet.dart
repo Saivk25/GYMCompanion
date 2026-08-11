@@ -53,7 +53,7 @@ class QuickAddSheet extends StatelessWidget {
           title: 'Log water',
           onTap: () {
             Navigator.of(context).pop();
-            showAppBottomSheet(
+            showAppBottomSheet<void>(
               context: context,
               builder: (BuildContext context) => const WaterLogSheet(),
             );

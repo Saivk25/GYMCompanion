@@ -176,7 +176,7 @@ void main() {
         cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+        const FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
       ]);
       final ApiReadinessRepository repo = await _repoWith(adapter, cache: cache);
 
@@ -228,7 +228,7 @@ void main() {
         <Map<String, dynamic>>[_entryJson(id: 'r-old', readinessDate: '2026-08-01')],
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 'r-new', 'warnings': <String>[]},
         ),
@@ -252,7 +252,7 @@ void main() {
   group('submitCheckIn', () {
     test('posts the submitted fields and returns the real warnings unchanged', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{
             'id': 'new-readiness-id',
@@ -328,7 +328,7 @@ void main() {
 
     test('a validation failure (real 400) propagates as ApiException', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid soreness_level'}),
+        const FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid soreness_level'}),
       ]);
       final ApiReadinessRepository repo = await _repoWith(adapter);
 

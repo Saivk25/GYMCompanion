@@ -210,7 +210,7 @@ void main() {
     expect(state.sessionStatus, SessionCardStatus.empty);
   });
 
-  test("a readiness entry recorded today sets checkInCompletedToday", () async {
+  test('a readiness entry recorded today sets checkInCompletedToday', () async {
     final ApiTodayRepository repo = await _repoWith(
       _adapterFor(
         workouts: <Map<String, dynamic>>[],

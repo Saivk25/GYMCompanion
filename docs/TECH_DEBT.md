@@ -366,9 +366,16 @@ actually go?
 
 ## TD-0004: Ad hoc date/duration formatting reimplemented independently in 7+ presentation files
 
-- Status: **Open.**
+- Status: **Resolved 2026-08-11.** Extracted into
+  `lib/shared/presentation/app_date_format.dart` (8 named functions).
+  All ten call sites (nine originally named, plus `pre_session_screen.
+  dart`'s own copy found during the extraction) updated to import and
+  call the shared functions; zero behavior or output-string changes.
+  See "Resolution" below.
 - Identified: 2026-08-08, during the Production Integration Phase 1
   architecture audit (`docs/adr/0042-production-integration-plan.md`).
+- Resolved: 2026-08-11, alongside the `flutter analyze` lint cleanup and
+  TD-0010/TD-0012/TD-0013/TD-0014 work. See "Resolution" below.
 
 ### What's duplicated
 
@@ -406,6 +413,43 @@ caller" precedent), not a drive-by fix.
    refactored.
 3. **If any two copies are ever found to disagree on the same output
    shape** — fires immediately.
+
+### Resolution
+
+Trigger condition 2 (Testing phase, golden-test risk) never fired
+first — this phase closed it directly as part of the same batch of
+work that also touched `LoggedSetRow` (TD-0012) and the three forms
+(TD-0013), making it the same "batch with the next real work in this
+area" precedent TD-0001 established, not a drive-by fix.
+
+`lib/shared/presentation/app_date_format.dart` keeps exactly one
+function per genuinely distinct output shape found across the ten
+copies (one more than originally named — `pre_session_screen.dart` had
+its own private top-level `_formattedDate`, missed by the original
+7-file count):
+
+- `appWeekdayMonthDay` — "Monday, January 5" (`TodayScreen`).
+- `appMonthDayYear` — "January 5, 2026" (`ReadinessEntryDetailScreen`,
+  `SessionSummaryScreen`).
+- `appShortMonthDay` — "Jan 5" (`ReadinessEntryTile`,
+  `TrainHistoryTile`).
+- `appRelativeDay` — "Today" / "Tomorrow" / short weekday
+  (`TrainWorkoutCard`, `PreSessionScreen`).
+- `appTimeOfDay` — "3:45 PM" (`MealEntryTile`).
+- `appMonthDayAtTime` — "January 5 at 3:45 PM"
+  (`CoachSignalDetailScreen`).
+- `appDurationMinutes` — "45 min", a completed session's rounded total
+  (`SessionSummaryScreen`).
+- `appElapsedTime` — "12:34", `ActiveWorkoutScreen`'s live ticking
+  stopwatch — kept distinct from `appDurationMinutes` since one is a
+  running mm:ss display and the other a one-time rounded total.
+
+Every call site's literal output string is unchanged — this was a
+pure extraction, not a reformat — and `test/shared/
+app_date_format_test.dart` (new) pins each function's exact output,
+including the boundary cases (`Today`/`Tomorrow`, AM/PM crossover at
+noon and midnight, seconds past 59) the original private copies never
+had dedicated tests for.
 
 ---
 
@@ -672,10 +716,16 @@ revalidate hit, so the app never runs meaningfully stale for long.
 
 ## TD-0010: `ReadinessTimelineScreen` eagerly builds its entire, unbounded check-in history
 
-- Status: **Open.**
+- Status: **Resolved 2026-08-11.** Converted to a genuinely lazy
+  `ListView.builder`; the grouped-card visual is recreated around the
+  *available space* (`DecoratedBox` + `ClipRRect`) rather than around
+  the *content* (the old `AppCard`), so the fix needed no per-row
+  corner-radius logic. See "Resolution" below.
 - Identified: 2026-08-11, during Step 5 (performance and accessibility
   audit — `docs/adr/0053-performance-and-accessibility-audit.md`) of
   `docs/adr/0042-production-integration-plan.md`.
+- Resolved: 2026-08-11, alongside the `flutter analyze` lint cleanup and
+  TD-0004/TD-0012/TD-0013/TD-0014 work. See "Resolution" below.
 
 ### What's inefficient
 
@@ -714,6 +764,32 @@ and low-risk" instruction argues against making unreviewed.
 3. **The next phase that substantively touches this screen or
    `ReadinessEntryTile`** should evaluate the `ListView.builder`
    conversion (with its corner-radius handling) as part of its own scope.
+
+### Resolution
+
+Trigger condition 3 fired: this phase substantively touches the
+screen. Rather than the "per-item corner-radius logic (rounding only
+the first/last row)" option this item's own "Why this was not fixed"
+section named, the fix recreates `AppCard`'s exact fill
+(`AppColorScheme.surfaceAt`), corner radius (`AppRadius.radiusMd`), and
+shadow (`AppElevation.shadowsFor`) via a `DecoratedBox`/`ClipRRect`
+pair wrapping the `ListView.builder`, sized to the *available space*
+rather than to content. This sidesteps corner-radius-per-row logic
+entirely — no row needs to know whether it's first, last, or middle —
+at the cost of one visible trade-off: a short history now renders as a
+tall card with empty space below the last row, rather than a card that
+shrinks to fit its content. Judged a reasonable, common ("grouped
+list") pattern, not a regression; the more content-hugging behavior
+was never a Bible requirement, just an incidental side effect of the
+prior eager-`Column` implementation.
+
+`ListView.builder` only builds rows near the viewport, same as every
+other genuinely lazy list in this app — `test/features/readiness/
+checkin_flow_test.dart`'s "every seeded entry" test was updated
+accordingly: it now asserts fewer tiles are built than the full seeded
+count (proving laziness), then scrolls the timeline's own list to its
+end and confirms the oldest (14th) seeded entry is still reachable
+there (proving nothing is lost, just deferred).
 
 ---
 
@@ -758,10 +834,15 @@ decision this phase is scoped to make unilaterally.
 
 ## TD-0012: `LoggedSetRow`'s "Mark complete" tap target is likely under 48dp
 
-- Status: **Open.**
+- Status: **Resolved 2026-08-11.** The `InkWell`'s own child is now a
+  `Container` constrained to `minWidth`/`minHeight:
+  kMinInteractiveDimension`, so the tappable/ink area itself — not just
+  the row around it — genuinely reaches 48x48dp. See "Resolution" below.
 - Identified: 2026-08-11, during Step 5 (`docs/adr/0053-performance-and-
   accessibility-audit.md`) of `docs/adr/0042-production-integration-
   plan.md`.
+- Resolved: 2026-08-11, alongside the `flutter analyze` lint cleanup and
+  TD-0004/TD-0010/TD-0013/TD-0014 work. See "Resolution" below.
 
 ### What's wrong
 
@@ -795,14 +876,48 @@ shouldn't make unreviewed, unlike `ExerciseNav`'s own touch-target fix
    Control) confirms this tap target is difficult to hit** — fires
    directly, regardless of density concerns.
 
+### Resolution
+
+Trigger condition 1 fired: this phase substantively touches
+`LoggedSetRow`. The fix is the "explicit `SizedBox`/`Align` around just
+the `InkWell`" option this item's own "Why this was not fixed" section
+already named, avoiding the density collision that ruled out stretching
+the tap target to the full row height:
+
+```dart
+child: Container(
+  constraints: const BoxConstraints(
+    minWidth: kMinInteractiveDimension,
+    minHeight: kMinInteractiveDimension,
+  ),
+  alignment: Alignment.center,
+  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+  child: Text('Mark complete', ...),
+),
+```
+
+The `InkWell`'s own hit area (measured via `tester.getSize`, not the
+row's) now genuinely reaches 48x48dp, growing only the one row that
+contains an incomplete set — rows with a completed set (a plain `Icon`,
+no tap target) are unaffected, so adjacent-row density in a mixed list
+is not changed. `test/features/train/widgets/logged_set_row_test.dart`
+(new) asserts the `InkWell`'s own size directly, the regression this
+item's trigger condition 2 would otherwise have needed a real device to
+catch.
+
 ---
 
 ## TD-0013: Three multi-field forms have no keyboard focus chaining
 
-- Status: **Open.**
+- Status: **Resolved 2026-08-11.** Every text field across the three
+  forms now sets `textInputAction`, chaining "Next" through the field in
+  declared order and ending each form on a "Done" action. See
+  "Resolution" below.
 - Identified: 2026-08-11, during Step 5 (`docs/adr/0053-performance-and-
   accessibility-audit.md`) of `docs/adr/0042-production-integration-
   plan.md`.
+- Resolved: 2026-08-11, alongside the `flutter analyze` lint cleanup and
+  TD-0004/TD-0010/TD-0012/TD-0014 work. See "Resolution" below.
 
 ### What's missing
 
@@ -836,17 +951,55 @@ document findings like this rather than implement them speculatively.
    Control) confirms this materially slows down logging a meal/
    measurement/check-in** — fires directly.
 
+### Resolution
+
+Trigger condition 1 fired: this phase substantively touches all three
+screens. The actual fix ended up simpler than this item's own "Why this
+was not fixed" section speculated: a full read of
+`lib/design/components/app_text_field.dart` showed it exposes no
+`focusNode` parameter at all, and `LoginScreen`/`RegisterScreen` — the
+two screens this item names as the reference pattern — don't wire one
+either. Flutter's default focus traversal already advances to the next
+`TextField` on a "Next" `textInputAction` with no `onEditingComplete`
+override and no explicit `FocusNode`, so the real established pattern
+(confirmed by reading those two screens directly, not by trusting this
+item's own prose) is just setting `textInputAction` per field — no
+per-field `FocusNode` creation/disposal, no `nextFocus()` wiring.
+
+Every field but each form's last now sets `textInputAction:
+TextInputAction.next`. Each form's last field (`Notes` in all three)
+sets `textInputAction: TextInputAction.done` with `onSubmitted: (_) =>
+FocusScope.of(context).unfocus()` rather than submitting — `LogMealScreen`
+and `LogMeasurementScreen`'s `_ManualEntryForm`/build methods gate their
+real submit button on separate `_canSubmit`/validation state the Notes
+field has no access to trigger correctly, and `ReadinessCheckInScreen`'s
+submit has no such gate but keeps the same dismiss-only behavior for
+consistency across all three forms. `ReadinessCheckInScreen`'s four
+`AppRatingSlider` fields (Sleep quality, Energy, Stress, Soreness) are
+not text-focusable, so Flutter's default traversal already skips them
+without any extra handling.
+
+`test/features/fuel/log_meal_flow_test.dart`,
+`test/features/progress/log_measurement_flow_test.dart`, and
+`test/features/readiness/checkin_flow_test.dart` each gained a new test
+asserting every field's `textInputAction` directly (`.next` for all but
+the last field, `.done` for the last) — a deterministic regression guard
+that doesn't depend on simulating real IME focus-transition events.
+
 ---
 
 ## TD-0014: Automated accessibility guideline tests cover only 2 of ~24 screens
 
-- Status: **Open — representative coverage, not exhaustive.** Trigger
-  condition 1 below has now fired and passed; the follow-up (widening
-  coverage to the remaining ~22 screens) has not been done — see
-  "Update (2026-08-11)" below.
+- Status: **Resolved 2026-08-11.** `test/accessibility/guideline_test.dart`
+  now runs both `meetsGuideline` matchers against every reachable screen
+  except `SplashScreen` (deliberately excluded — see "Resolution" below).
+  See "Resolution" below for what changed since the "Update (2026-08-11)"
+  note kept this item open pending the mechanical follow-up.
 - Identified: 2026-08-11, during Step 6 (testing and release readiness —
   `docs/adr/0054-testing-and-release-readiness.md`) of `docs/adr/0042-
   production-integration-plan.md`.
+- Resolved: 2026-08-11, alongside the `flutter analyze` lint cleanup and
+  TD-0004/TD-0010/TD-0012/TD-0013 work. See "Resolution" below.
 
 ### What's covered, and what isn't
 
@@ -915,3 +1068,39 @@ pattern across 22 files is exactly the kind of batchable, mechanical
 follow-up this item's own original reasoning said to defer until it could
 be its own scoped unit of work, now that it can actually be verified by
 running it. This item stays **Open** until that follow-up is done.
+
+### Resolution
+
+The follow-up this "Update" deferred is now done, as its own scoped unit
+of work alongside TD-0004/TD-0010/TD-0012/TD-0013. `test/accessibility/
+guideline_test.dart` was rewritten to add one `meetsGuideline` pair per
+remaining screen — 26 new checks across Auth (Login, Register),
+Train (Train Home, Pre-session, Active Workout, Exercise Detail,
+Session Summary, Personal Records), Fuel (Fuel Home, Log a meal, Food
+Search, Supplements), Progress (Progress Home, Log measurements,
+Measurement Trend, Photo Check-in, Photo Comparison, Insights/
+Correlations), Readiness (Readiness Home, Readiness Check-in, Recovery
+Timeline, Check-in Detail, Recovery Score), and Coach (Weekly Review,
+Coaching History, Guidance Detail) — bringing the actual screen count
+this codebase has (29, not the ~24 this item originally estimated) to
+28 of 29 covered.
+
+`SplashScreen` is the one deliberate exclusion, not an oversight: it
+renders a bare `CircularProgressIndicator` with no text and no tappable
+element, so `meetsGuideline` would pass on it vacuously — there is no
+semantics node either guideline could find a violation on. A check with
+no possible failure mode isn't real coverage, so padding the count with
+it would misrepresent what this suite actually verifies.
+
+Every new check reuses a navigation sequence already proven to work by
+this suite's own `*_flow_test.dart`/`*_screen_test.dart` files — the
+scroll-then-`ensureVisible` pattern for below-the-fold targets
+(`readiness_home_screen_test.dart`'s own reasoning), and bounded `pump()`
+instead of `pumpAndSettle()` past Active Workout's live `Timer.periodic`
+(`active_workout_screen_test.dart`'s own reasoning) — rather than
+inventing new navigation paths that would be unverified in a different
+way than the mechanical-copy risk this item originally flagged. Every
+tab is mounted simultaneously under this app's `IndexedStack` shell, so
+every helper still overrides all six repository providers regardless of
+which single screen a given test is checking, matching the pattern every
+other multi-module test in this suite already established.

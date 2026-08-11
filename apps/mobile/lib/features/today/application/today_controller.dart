@@ -32,7 +32,8 @@ final Provider<TodayRepository> todayRepositoryProvider =
           'todayRepositoryProvider has no default implementation — see '
           'lib/main.dart, which overrides it with MockTodayRepository '
           'until a real API-backed repository exists.',
-        ));
+        ),
+    );
 
 /// Owns Today's page-level fetch lifecycle. Deliberately thin — an
 /// [AsyncNotifier] whose only job is calling [TodayRepository.fetchToday]

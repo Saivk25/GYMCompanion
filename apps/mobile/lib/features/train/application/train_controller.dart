@@ -88,7 +88,8 @@ final Provider<TrainRepository> trainRepositoryProvider =
           'trainRepositoryProvider has no default implementation — see '
           'lib/main.dart, which overrides it with MockTrainRepository '
           'until a real API-backed repository exists.',
-        ));
+        ),
+    );
 
 /// Train Home's page-level fetch lifecycle — thin, like `TodayController`:
 /// its only job is calling [TrainRepository.fetchHome] and re-exposing the

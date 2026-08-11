@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _FakeAuthRepository implements AuthRepository {
   _FakeAuthRepository({
     this.failLogin = false,
+    // ignore: unused_element_parameter
     this.failRegister = false,
     this.failRefresh = false,
   });

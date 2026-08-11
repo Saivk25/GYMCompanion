@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
 import '../../../shared/domain/session_tier.dart';
+import '../../../shared/presentation/app_date_format.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
 import 'widgets/tier_picker.dart';
@@ -158,7 +159,7 @@ class _PreSessionContent extends StatelessWidget {
           Text(workout.name, style: textTheme.headlineSmall),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            _formattedDate(workout.plannedDate),
+            appRelativeDay(workout.plannedDate),
             style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           if (workout.goal != null) ...<Widget>[
@@ -186,20 +187,4 @@ class _PreSessionContent extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Same day-relative formatting as `TrainWorkoutCard._formattedDate` —
-/// duplicated rather than shared because it is presentation-only,
-/// four lines, and each widget already owns its own private copy
-/// (`train_workout_card.dart`); promoting it to the design system was
-/// judged unnecessary churn for this phase.
-String _formattedDate(DateTime date) {
-  final DateTime now = DateTime.now();
-  final DateTime today = DateTime(now.year, now.month, now.day);
-  final DateTime target = DateTime(date.year, date.month, date.day);
-  final int diff = target.difference(today).inDays;
-  if (diff == 0) return 'Today';
-  if (diff == 1) return 'Tomorrow';
-  const List<String> weekdays = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return weekdays[date.weekday - 1];
 }

@@ -220,7 +220,7 @@ class _HowCoachWorksCard extends StatelessWidget {
           Text(
             'Every item below comes from a real, rule-based check that ran '
             'when you checked in, logged a meal, or completed a session — '
-            "not a chat assistant and not a predicted score. Nothing here "
+            'not a chat assistant and not a predicted score. Nothing here '
             "is generated unless you've taken an action for it to respond to.",
             style: textTheme.bodyMedium,
           ),

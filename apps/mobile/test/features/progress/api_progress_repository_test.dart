@@ -263,7 +263,7 @@ void main() {
         cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+        const FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
       ]);
       final ApiProgressRepository repo = await _repoWith(adapter, cache: cache);
 
@@ -315,7 +315,7 @@ void main() {
         'readiness': <Map<String, dynamic>>[],
       });
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 'p-new', 'warnings': <String>[]},
         ),
@@ -341,7 +341,7 @@ void main() {
     test('posts hardcoded unit/source plus only the submitted fields, and returns real warnings',
         () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{
             'id': 'new-progress-id',
@@ -396,7 +396,7 @@ void main() {
 
     test('a validation failure (real 400) propagates as ApiException', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid body_weight'}),
+        const FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid body_weight'}),
       ]);
       final ApiProgressRepository repo = await _repoWith(adapter);
 

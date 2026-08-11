@@ -181,13 +181,15 @@ class MockTrainRepository implements TrainRepository {
       }
       final List<TrainExerciseSet> sets = List<TrainExerciseSet>.from(perf.sets)
         ..removeWhere((s) => s.setNumber == setNumber)
-        ..add(TrainExerciseSet(
-          setNumber: setNumber,
-          weight: weight,
-          reps: reps,
-          rpe: rpe,
-          completed: false,
-        ))
+        ..add(
+          TrainExerciseSet(
+            setNumber: setNumber,
+            weight: weight,
+            reps: reps,
+            rpe: rpe,
+            completed: false,
+          ),
+        )
         ..sort((a, b) => a.setNumber.compareTo(b.setNumber));
       return TrainExercisePerformance(
         performanceId: perf.performanceId,

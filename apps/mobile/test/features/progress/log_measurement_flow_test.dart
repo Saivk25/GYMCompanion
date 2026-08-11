@@ -179,4 +179,29 @@ void main() {
 
     expect(find.text('Correlations not connected yet'), findsOneWidget);
   });
+
+  testWidgets(
+      'TD-0013: measurement fields chain keyboard focus, ending with a '
+      "done action that doesn't submit the form", (tester) async {
+    await _pumpToProgressTransformation(tester);
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Log measurements'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Log measurements'));
+    await tester.pumpAndSettle();
+
+    // Declared order in LogMeasurementScreen.build(): Weight, Body fat,
+    // Lean mass, Muscle mass, Waist, Chest, Hip, Arm, Thigh, Calf, Neck,
+    // then Notes last. Every field but Notes chains to the next via the
+    // keyboard's "Next" action; Notes uses "Done" and just dismisses,
+    // since the real submit button stays separately gated on _canSubmit.
+    final Finder fields = find.byType(TextField);
+    expect(fields, findsNWidgets(12));
+    for (int i = 0; i < 11; i++) {
+      expect(tester.widget<TextField>(fields.at(i)).textInputAction, TextInputAction.next);
+    }
+    expect(tester.widget<TextField>(fields.at(11)).textInputAction, TextInputAction.done);
+  });
 }

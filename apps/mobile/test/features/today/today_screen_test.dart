@@ -97,7 +97,7 @@ void main() {
   });
 
   testWidgets(
-    "an outstanding check-in outranks the session card, appearing above it",
+    'an outstanding check-in outranks the session card, appearing above it',
     (tester) async {
       await _pumpToday(tester, _baseState(checkInCompletedToday: false));
 

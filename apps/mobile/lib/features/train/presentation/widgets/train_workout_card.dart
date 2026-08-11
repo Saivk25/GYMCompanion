@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../../shared/presentation/app_date_format.dart';
 import '../../domain/train_models.dart';
 
 /// One planned workout, in Train Home's "This Week" list. An [AppCard]
@@ -30,7 +31,7 @@ class TrainWorkoutCard extends StatelessWidget {
                 Text(workout.name, style: textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _formattedDate(workout.plannedDate),
+                  appRelativeDay(workout.plannedDate),
                   style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
                 if (workout.goal != null) ...<Widget>[
@@ -50,18 +51,5 @@ class TrainWorkoutCard extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _formattedDate(DateTime date) {
-    final DateTime now = DateTime.now();
-    final DateTime today = DateTime(now.year, now.month, now.day);
-    final DateTime target = DateTime(date.year, date.month, date.day);
-    final int diff = target.difference(today).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Tomorrow';
-    const List<String> weekdays = <String>[
-      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-    ];
-    return weekdays[date.weekday - 1];
   }
 }

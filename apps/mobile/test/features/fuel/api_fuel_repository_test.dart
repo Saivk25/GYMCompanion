@@ -179,7 +179,7 @@ void main() {
         cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+        const FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
       ]);
       final ApiFuelRepository repo = await _repoWith(adapter, cache: cache);
 
@@ -227,7 +227,7 @@ void main() {
         <Map<String, dynamic>>[_entryJson(id: 'n-old', nutritionDate: todayKey, calories: 300)],
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 'n-new', 'warnings': <String>[]},
         ),
@@ -254,7 +254,7 @@ void main() {
         <Map<String, dynamic>>[_entryJson(id: 'n-old', nutritionDate: todayKey, calories: 300)],
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 'n-water', 'warnings': <String>[]},
         ),
@@ -278,7 +278,7 @@ void main() {
     test('posts only the submitted macro fields plus meal_type, and returns real warnings',
         () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{
             'id': 'new-nutrition-id',
@@ -334,7 +334,7 @@ void main() {
 
     test('a validation failure (real 400) propagates as ApiException', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid calories'}),
+        const FakeResponse(statusCode: 400, body: <String, dynamic>{'detail': 'invalid calories'}),
       ]);
       final ApiFuelRepository repo = await _repoWith(adapter);
 
@@ -345,7 +345,7 @@ void main() {
   group('logWater', () {
     test('posts only nutrition_date and water_intake', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 'n-water', 'warnings': <String>[]},
         ),

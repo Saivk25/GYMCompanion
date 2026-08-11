@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
+import '../../../shared/presentation/app_date_format.dart';
 import '../application/today_controller.dart';
 import '../domain/today_models.dart';
 import 'widgets/readiness_checkin_card.dart';
@@ -213,7 +214,7 @@ class _TodayHeader extends StatelessWidget {
         Row(
           children: <Widget>[
             Expanded(
-              child: Text(_formattedDate(state.date), style: textTheme.titleLarge),
+              child: Text(appWeekdayMonthDay(state.date), style: textTheme.titleLarge),
             ),
             // Only shown once today's check-in is done — while it's
             // outstanding, ReadinessCheckInCard itself is the signal;
@@ -234,17 +235,6 @@ class _TodayHeader extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  static String _formattedDate(DateTime date) {
-    const List<String> weekdays = <String>[
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-    ];
-    const List<String> months = <String>[
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
   }
 }
 

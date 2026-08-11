@@ -111,8 +111,6 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -156,17 +154,17 @@ class _LogMealScreenState extends ConsumerState<LogMealScreen> {
                   notes: _notes,
                   onChanged: () => setState(() {}),
                 ),
-              _CaptureMode.photo => NotConnectedPlaceholder(
+              _CaptureMode.photo => const NotConnectedPlaceholder(
                   title: 'Photo capture not connected yet',
                   message:
-                      "Reading a meal photo needs a vision AI backend that "
+                      'Reading a meal photo needs a vision AI backend that '
                       "doesn't exist yet. Text entry works the same as "
                       'photo would — nothing here is a degraded fallback.',
                 ),
-              _CaptureMode.menu => NotConnectedPlaceholder(
+              _CaptureMode.menu => const NotConnectedPlaceholder(
                   title: 'Menu reading not connected yet',
                   message:
-                      "Interpreting a mess-menu photo needs a vision AI "
+                      'Interpreting a mess-menu photo needs a vision AI '
                       "backend that doesn't exist yet. Text entry works the "
                       'same as menu reading would.',
                 ),
@@ -251,6 +249,7 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
                 onChanged: (_) => onChanged(),
               ),
             ),
@@ -263,6 +262,7 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
               ),
             ),
           ],
@@ -278,6 +278,7 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -289,6 +290,7 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
               ),
             ),
           ],
@@ -309,6 +311,7 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -320,12 +323,18 @@ class _ManualEntryForm extends StatelessWidget {
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                 ],
+                textInputAction: TextInputAction.next,
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        AppTextField(label: 'Notes (optional)', controller: notes),
+        AppTextField(
+          label: 'Notes (optional)',
+          controller: notes,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => FocusScope.of(context).unfocus(),
+        ),
       ],
     );
   }

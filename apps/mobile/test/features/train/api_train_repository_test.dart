@@ -204,7 +204,7 @@ void main() {
         cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
       );
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
+        const FakeResponse(statusCode: 500, body: <String, dynamic>{'detail': 'boom'}),
       ]);
       final ApiTrainRepository repo = await _repoWith(adapter, cache: cache);
 
@@ -269,7 +269,7 @@ void main() {
   group('startSession', () {
     test('posts session_date only (never tier), then refetches session + workout', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{'id': 's-new', 'warnings': <String>[]},
         ),
@@ -297,7 +297,7 @@ void main() {
 
     test('surfaces real warnings from the mutation as lastMutationWarnings', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           statusCode: 201,
           body: <String, dynamic>{
             'id': 's-new',
@@ -350,7 +350,7 @@ void main() {
   group('completeSession', () {
     test('posts duration/completion/rating, then refetches, surfacing real warnings', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           body: <String, dynamic>{
             'id': 's1',
             'warnings': <String>['[advisory] Real training-load advice.'],
@@ -380,7 +380,7 @@ void main() {
 
     test('omits rating from the body when null', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(body: <String, dynamic>{'id': 's1', 'warnings': <String>[]}),
+        const FakeResponse(body: <String, dynamic>{'id': 's1', 'warnings': <String>[]}),
         FakeResponse(body: _sessionJson(id: 's1')),
         FakeResponse(body: _workoutJson(plannedDate: '2026-08-08')),
       ]);

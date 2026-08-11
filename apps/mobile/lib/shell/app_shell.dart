@@ -79,11 +79,11 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+        leading: const Padding(
+          padding: EdgeInsets.all(AppSpacing.sm),
           child: Chip(
-            label: const Text('Home'),
-            avatar: const Icon(AppIcons.location, size: 18),
+            label: Text('Home'),
+            avatar: Icon(AppIcons.location, size: 18),
             onDeleted: null,
           ),
         ),
@@ -111,7 +111,7 @@ class AppShell extends ConsumerWidget {
       floatingActionButton: navigationShell.currentIndex == 0
           ? FloatingActionButton(
               tooltip: 'Quick add',
-              onPressed: () => showAppBottomSheet(
+              onPressed: () => showAppBottomSheet<void>(
                 context: context,
                 builder: (BuildContext context) => const QuickAddSheet(),
               ),

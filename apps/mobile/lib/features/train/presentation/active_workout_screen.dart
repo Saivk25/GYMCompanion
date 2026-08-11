@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../design/design.dart';
+import '../../../shared/presentation/app_date_format.dart';
 import '../application/train_controller.dart';
 import '../domain/train_models.dart';
 import 'widgets/exercise_nav.dart';
@@ -81,7 +82,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   }
 
   Future<void> _logSet(TrainExercisePerformance perf, int setNumber,
-      {required double weight, required int reps, required int rpe}) async {
+      {required double weight, required int reps, required int rpe,}) async {
     try {
       await ref.read(activeSessionControllerProvider(widget.sessionId).notifier).logSet(
             exerciseId: perf.exerciseId,
@@ -174,7 +175,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         actions: <Widget>[
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.lg),
-            child: Center(child: Text(_formattedElapsed(_elapsed))),
+            child: Center(child: Text(appElapsedTime(_elapsed))),
           ),
         ],
       ),
@@ -277,11 +278,6 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     );
   }
 
-  static String _formattedElapsed(Duration d) {
-    final int minutes = d.inMinutes;
-    final int seconds = d.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
 }
 
 class _ExerciseCard extends StatelessWidget {

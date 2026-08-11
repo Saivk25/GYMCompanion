@@ -26,7 +26,7 @@ void main() {
 
     test('getList() returns the decoded JSON array, not unwrapped further', () async {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
-        FakeResponse(
+        const FakeResponse(
           body: <Map<String, dynamic>>[
             <String, dynamic>{'id': 'g1'},
             <String, dynamic>{'id': 'g2'},

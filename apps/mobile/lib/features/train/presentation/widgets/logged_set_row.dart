@@ -44,11 +44,19 @@ class LoggedSetRow extends StatelessWidget {
               child: InkWell(
                 onTap: onComplete,
                 borderRadius: AppRadius.radiusSm,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
+                // A `Padding`-wrapped `Text` alone hit-tests only its own
+                // (much smaller than 48dp) content box — the row's own
+                // `kMinInteractiveDimension` height applies to the *row*,
+                // never automatically stretches to any one child's own
+                // tap target. This `Container`'s own min constraints make
+                // the `InkWell` itself genuinely >=48x48dp, per TD-0012.
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: kMinInteractiveDimension,
+                    minHeight: kMinInteractiveDimension,
                   ),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                   child: Text(
                     'Mark complete',
                     style: textTheme.labelMedium?.copyWith(color: colorScheme.primary),

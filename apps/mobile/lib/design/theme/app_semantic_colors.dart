@@ -39,7 +39,7 @@ import 'app_color_scheme.dart';
 /// them Material 3's own published state-layer numbers), so this class
 /// only decides *which color* each state tints, never a new number.
 ///
-/// Because deriving these needs real [Color.withOpacity] arithmetic (not
+/// Because deriving these needs real `Color.withOpacity` arithmetic (not
 /// expressible as a `const` literal), [light]/[dark] are `static final`
 /// — computed once, on first access, and cached for the app's lifetime,
 /// the same "compute once, not on every read" discipline `AppTheme`

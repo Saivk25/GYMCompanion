@@ -140,7 +140,7 @@ class _FuelHomeContent extends StatelessWidget {
               onTap: () => context.push('/fuel/supplements'),
             ),
             const SizedBox(height: AppSpacing.xxl),
-            AppSectionHeader(title: "Today"),
+            const AppSectionHeader(title: 'Today'),
             if (!state.hasLoggedAnyMealEver)
               const AppEmptyState(
                 icon: AppIcons.fuel,
@@ -183,7 +183,6 @@ class _HydrationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final double fraction = totalMl / _dailyWaterTargetMl;
 
     return AppCard(
@@ -203,7 +202,7 @@ class _HydrationCard extends StatelessWidget {
                 label: 'Log water',
                 variant: AppButtonVariant.tertiary,
                 fullWidth: false,
-                onPressed: () => showAppBottomSheet(
+                onPressed: () => showAppBottomSheet<void>(
                   context: context,
                   builder: (BuildContext context) => const WaterLogSheet(),
                 ),

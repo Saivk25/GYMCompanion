@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/design.dart';
+import '../../../../shared/presentation/app_date_format.dart';
 import '../../domain/readiness_models.dart';
 
 /// One logged check-in in Readiness Home's recent list or the full
@@ -23,7 +24,7 @@ class ReadinessEntryTile extends StatelessWidget {
 
     return AppListTile(
       leadingIcon: AppIcons.progress,
-      title: _formattedDate(entry.readinessDate),
+      title: appShortMonthDay(entry.readinessDate),
       subtitle: parts.isEmpty ? 'No values recorded' : parts.join(' · '),
       trailing: onTap != null
           ? Icon(AppIcons.chevronRight, color: colorScheme.onSurfaceVariant, size: 20)
@@ -35,13 +36,5 @@ class ReadinessEntryTile extends StatelessWidget {
   static String _formatHours(Duration d) {
     final double hours = d.inMinutes / 60;
     return '${hours.toStringAsFixed(1)}h';
-  }
-
-  static String _formattedDate(DateTime date) {
-    const List<String> months = <String>[
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}';
   }
 }

@@ -30,7 +30,7 @@ class PhotoComparisonScreen extends StatelessWidget {
             title: 'Photo comparison not connected yet',
             message:
                 'Comparing two check-in photos side by side needs the same '
-                "backend photo capability photo check-in does, and neither "
+                'backend photo capability photo check-in does, and neither '
                 'exists yet. Your measurement trends are real in the '
                 'meantime.',
           ),
