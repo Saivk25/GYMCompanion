@@ -1,5 +1,3 @@
-import 'progress_models.dart';
-
 /// Pure data-shaping helpers for turning real [ProgressEntry] lists into
 /// the value/label arrays `AppLineChart` renders. Kept out of any
 /// widget's `build()` per this project's "no business logic inside
@@ -8,6 +6,8 @@ import 'progress_models.dart';
 /// real data that deserves to live somewhere unit-testable and reusable
 /// rather than inlined once per screen.
 library;
+
+import 'progress_models.dart';
 
 /// A simple trailing rolling average — the mean of up to [window] values
 /// ending at each index (fewer, if fewer exist yet). Mirrors the Bible's

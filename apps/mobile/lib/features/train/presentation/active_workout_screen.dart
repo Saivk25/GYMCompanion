@@ -145,7 +145,10 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
             completionPercentage: completion,
           );
       if (!mounted) return;
-      context.pushReplacement('/train/session/${widget.sessionId}/summary');
+      context.pushReplacement(
+        '/train/session/${widget.sessionId}/summary',
+        extra: true,
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _isEnding = false);
@@ -196,8 +199,10 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                 icon: AppIcons.success,
                 title: 'This session has already ended',
                 actionLabel: 'View summary',
-                onAction: () =>
-                    context.pushReplacement('/train/session/${session.sessionId}/summary'),
+                onAction: () => context.pushReplacement(
+                  '/train/session/${session.sessionId}/summary',
+                  extra: true,
+                ),
               ),
             );
           }

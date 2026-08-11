@@ -33,7 +33,7 @@ extension JsonFieldExtraction on Map<String, dynamic> {
         'Field "$key" was ${value.runtimeType}, expected $T, in JSON object: $this',
       );
     }
-    return value;
+    return value as T;
   }
 
   /// A required `str` field.

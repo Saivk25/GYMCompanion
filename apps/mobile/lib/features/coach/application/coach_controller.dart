@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/application/coach_signal_log.dart';
@@ -58,7 +59,13 @@ class CoachHomeController extends AsyncNotifier<CoachHomeViewState> {
   @override
   Future<CoachHomeViewState> build() {
     ref.listen<List<CoachSignal>>(coachSignalLogProvider, (previous, next) {
-      if (previous != next) {
+      // Content equality, not reference equality: `coachSignalLogProvider`
+      // can hand back a new list instance whose contents are unchanged
+      // (e.g. the initial `const <CoachSignal>[]`), and a `previous !=
+      // next` reference check would invalidate this controller on every
+      // such rebuild — an unnecessary, and in a screen also watched by
+      // `CoachSignalDetailScreen`, potentially compounding re-fetch.
+      if (previous == null || !listEquals(previous, next)) {
         ref.invalidateSelf();
       }
     });

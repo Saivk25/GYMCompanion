@@ -840,7 +840,10 @@ document findings like this rather than implement them speculatively.
 
 ## TD-0014: Automated accessibility guideline tests cover only 2 of ~24 screens
 
-- Status: **Open — representative coverage, not exhaustive.**
+- Status: **Open — representative coverage, not exhaustive.** Trigger
+  condition 1 below has now fired and passed; the follow-up (widening
+  coverage to the remaining ~22 screens) has not been done — see
+  "Update (2026-08-11)" below.
 - Identified: 2026-08-11, during Step 6 (testing and release readiness —
   `docs/adr/0054-testing-and-release-readiness.md`) of `docs/adr/0042-
   production-integration-plan.md`.
@@ -873,10 +876,42 @@ representative sample already demonstrates.
 
 ### Trigger conditions for closing this item
 
-1. **The first real `flutter test` run** (release checklist item 1,
-   `docs/adr/0042`) should include running this file and, if it passes,
-   extending the same two-matcher pattern to every remaining `XHomeScreen`
-   and drill-in screen as a mechanical follow-up.
+1. ~~**The first real `flutter test` run**~~ — **fired and passed,
+   2026-08-11.** See "Update" below for what this run covered and why
+   the mechanical-follow-up half of this condition is deliberately not
+   done as part of it.
 2. **Any screen redesign or new screen** should add its own
    `meetsGuideline` pair as part of that work, rather than waiting for a
    dedicated sweep.
+
+### Update (2026-08-11)
+
+The first real `flutter test` run against this repo (this environment
+never had a Flutter SDK available before now — `docs/adr/0002`) executed
+the full suite: 256 tests, all passing, including `guideline_test.dart`'s
+two `Today` checks unchanged from when this item was written.
+`flutter analyze` also ran clean: 0 errors, 61 pre-existing lint-level
+issues (unused imports, missing `const`, one `withOpacity` deprecation),
+none of which touch accessibility.
+
+Getting there required fixing 6 real, previously-undiagnosed test bugs
+across three files (`active_workout_screen_test.dart`,
+`log_measurement_flow_test.dart`, `readiness_home_screen_test.dart`) —
+a cascading double-`Future.delayed` needing two pumps instead of one, an
+unsupported `ensureVisible(alignment:)` parameter on this SDK version, and
+a freshly-pushed route's one-frame `Offstage(offstage: true)` "warm-up"
+state that `find.byType`'s default `skipOffstage: true` correctly
+excludes from matches. One genuine *application* bug also surfaced and
+was fixed along the way: `active_workout_screen.dart`'s `pushReplacement`
+to the session-summary route was missing `extra: true`, so "Return to
+Today" never rendered after actually ending a session.
+
+Condition 1's first half (run the file, confirm it passes) is now
+satisfied. Its second half — mechanically extending the same
+`meetsGuideline` pair to the remaining ~22 screens — was deliberately
+not done as part of this run: that run's own scope was "get the existing
+suite genuinely green," not "expand test coverage," and copying this
+pattern across 22 files is exactly the kind of batchable, mechanical
+follow-up this item's own original reasoning said to defer until it could
+be its own scoped unit of work, now that it can actually be verified by
+running it. This item stays **Open** until that follow-up is done.

@@ -53,8 +53,27 @@ Future<void> _pumpToActiveWorkout(WidgetTester tester) async {
   await tester.tap(find.text('Upper Body Strength').first);
   await tester.pumpAndSettle();
 
-  await tester.tap(find.text('Start session'));
+  // "Start session" can sit below the fold on shorter viewports.
+  // ensureVisible alone (no preceding coarse drag) — PreSessionScreen's
+  // content is short and TierPicker has no nested Scrollable, so the
+  // button is already built; a coarse drag here isn't needed and risks
+  // disturbing the tap's timing relative to this screen's animations.
+  final Finder startSession = find.text('Start session');
+  await tester.ensureVisible(startSession);
+  await tester.pumpAndSettle();
+  await tester.tap(startSession);
   await tester.pump();
+  // Two delays happen back-to-back here, not one: `_startSession` awaits
+  // `MockTrainRepository.startSession`'s own 300ms delay, then calls
+  // `context.pushReplacement` into Active Workout — whose
+  // `ActiveSessionController.build` immediately calls
+  // `fetchSession(sessionId)`, a *second* 300ms `_delay()` on the same
+  // repository (`train_controller.dart`'s `ActiveSessionController.
+  // build`). A single 350ms pump only covers the first delay, so the
+  // route always arrived with its own fetch still pending — this, not
+  // scrolling or tap targeting, was the actual reason "Exercise 1 of 3"
+  // never appeared. Two pumps, one per delay.
+  await tester.pump(const Duration(milliseconds: 350));
   await tester.pump(const Duration(milliseconds: 350));
 }
 
@@ -105,6 +124,18 @@ void main() {
 
     await tester.tap(find.text('End session'));
     await tester.pump();
+    // A single 350ms pump (enough for completeSession's own 300ms delay)
+    // wasn't enough here even though SessionSummaryScreen reads the same
+    // keep-alive `activeSessionControllerProvider` family instance
+    // Active Workout already populated (AsyncNotifierProvider.family,
+    // not autoDispose, so no second fetchSession fetch is expected) —
+    // this route is reached via a *second* consecutive
+    // `pushReplacement` (Pre-session -> Active Workout was already one),
+    // and GoRouter evidently needs more than one settle cycle to land
+    // on it. Same generous two-pump budget as `_pumpToActiveWorkout`'s
+    // own start-session transition, for the same reason: better to give
+    // real margin than chase the exact frame count.
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.text('Session summary'), findsOneWidget);

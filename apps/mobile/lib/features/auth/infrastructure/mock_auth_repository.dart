@@ -33,9 +33,11 @@ class MockAuthRepository implements AuthRepository {
     createdAt: DateTime.utc(2026, 1, 1),
   );
 
+  static const String mockRefreshToken = 'mock-refresh-token';
+
   static const AuthTokens mockTokens = AuthTokens(
     accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
+    refreshToken: mockRefreshToken,
     tokenType: 'bearer',
     expiresIn: 900,
   );
@@ -72,7 +74,7 @@ class MockAuthRepository implements AuthRepository {
 /// test that specifically wants to start from [AuthUnauthenticated]
 /// (the login-flow test itself).
 class MockTokenStorage implements TokenStorage {
-  MockTokenStorage({String? seedRefreshToken = MockAuthRepository.mockTokens.refreshToken})
+  MockTokenStorage({String? seedRefreshToken = MockAuthRepository.mockRefreshToken})
       : _refreshToken = seedRefreshToken;
 
   String? _refreshToken;

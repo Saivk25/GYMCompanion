@@ -233,6 +233,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Progress').last);
+    // See coach_home_screen_test.dart's identical fix for why this pump
+    // matters: without it, nothing is awaiting the repository's Future
+    // yet when completeWithError fires, and Dart reports that as an
+    // unhandled async error rather than letting the app catch it.
+    await tester.pump();
     repo.completeWithError();
     await tester.pumpAndSettle();
 

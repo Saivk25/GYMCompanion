@@ -173,7 +173,16 @@ void main() {
   ) async {
     await _pumpCoach(tester, const <CoachSignal>[]);
 
-    await tester.tap(find.text('Coaching history'));
+    // "Coaching history" sits below the signal feed, near the bottom of
+    // Coach Home's content — it can be below the fold. See
+    // readiness_home_screen_test.dart's identical fix: unconditional
+    // drag first, then ensureVisible for exact positioning.
+    final Finder coachingHistory = find.text('Coaching history');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(coachingHistory);
+    await tester.pumpAndSettle();
+    await tester.tap(coachingHistory);
     await tester.pumpAndSettle();
 
     expect(find.text('Coaching history not connected yet'), findsOneWidget);
@@ -227,6 +236,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Coach').last);
+    // A pump between the tap and completeWithError isn't cosmetic: without
+    // it, the fetch call this navigation triggers hasn't happened yet, so
+    // nothing is awaiting the repository's Future when the error completes
+    // it — Dart's zone reports that as an unhandled async error instead of
+    // the app ever getting a chance to catch it, exactly the false failure
+    // this test would otherwise show. Same pattern the "shows a skeleton"
+    // test above already uses.
+    await tester.pump();
     repo.completeWithError();
     await tester.pumpAndSettle();
 

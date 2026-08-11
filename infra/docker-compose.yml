@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: gymcompanion
       POSTGRES_DB: gymcompanion
     ports:
-      - "5432:5432"
+      - "5433:5432" # host 5433 -> container 5432 — host 5432 is already used by another project
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

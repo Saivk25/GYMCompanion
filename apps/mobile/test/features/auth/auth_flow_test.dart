@@ -117,7 +117,10 @@ void main() {
     await tester.tap(find.text("Don't have an account? Create one"));
     await tester.pumpAndSettle();
 
-    expect(find.text('Create account'), findsOneWidget);
+    // find.text('Create account') would match 2 widgets here — the
+    // AppBar title and the submit button both use this exact text
+    // (register_screen.dart) — so this checks the AppBar specifically.
+    expect(find.widgetWithText(AppBar, 'Create account'), findsOneWidget);
   });
 
   testWidgets('a real registration submit also redirects to Today', (tester) async {
@@ -129,7 +132,11 @@ void main() {
     await tester.enterText(fields.at(0), 'new@example.com');
     await tester.enterText(fields.at(1), 'a-strong-password');
     await tester.enterText(fields.at(2), 'a-strong-password');
-    await tester.tap(find.text('Create account'));
+    // find.text('Create account') would match 2 widgets — the AppBar
+    // title and this submit button both use this exact text — so this
+    // targets the button specifically (AppButton's primary variant
+    // renders as ElevatedButton — see app_button.dart).
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
     expect(find.text('Today').first, findsOneWidget);
@@ -145,13 +152,15 @@ void main() {
     await tester.enterText(fields.at(0), 'new@example.com');
     await tester.enterText(fields.at(1), 'password-one');
     await tester.enterText(fields.at(2), 'password-two');
-    await tester.tap(find.text('Create account'));
+    // See the registration-submit test above: targets the button, not
+    // the ambiguous 'Create account' text shared with the AppBar title.
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Create account'));
     await tester.pumpAndSettle();
 
     expect(find.text('Passwords do not match.'), findsOneWidget);
     // Still on Register — a local validation failure never reaches
     // AuthController/the backend at all.
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Create account'), findsOneWidget);
   });
 
   testWidgets('logging out from the top bar returns to Login', (tester) async {

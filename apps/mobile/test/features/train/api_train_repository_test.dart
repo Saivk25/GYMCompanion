@@ -305,7 +305,7 @@ void main() {
           },
         ),
         FakeResponse(body: _sessionJson(id: 's-new')),
-        FakeResponse(body: _workoutJson()),
+        FakeResponse(body: _workoutJson(plannedDate: '2026-08-08')),
       ]);
       final ApiTrainRepository repo = await _repoWith(adapter);
 
@@ -382,7 +382,7 @@ void main() {
       final FakeHttpClientAdapter adapter = FakeHttpClientAdapter(<FakeResponse>[
         FakeResponse(body: <String, dynamic>{'id': 's1', 'warnings': <String>[]}),
         FakeResponse(body: _sessionJson(id: 's1')),
-        FakeResponse(body: _workoutJson()),
+        FakeResponse(body: _workoutJson(plannedDate: '2026-08-08')),
       ]);
       final ApiTrainRepository repo = await _repoWith(adapter);
 

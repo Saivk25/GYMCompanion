@@ -19,7 +19,7 @@ RUN groupadd --system gymcompanion \
 # --no-deps right after, so the image also has an installed
 # gym-companion-backend distribution (needed for its own metadata), without
 # letting that second install re-resolve anything.
-COPY pyproject.toml requirements-lock.txt ./
+COPY pyproject.toml requirements-lock.txt README.md ./
 RUN pip install --no-cache-dir -r requirements-lock.txt \
     && pip install --no-cache-dir --no-deps .
 COPY app ./app

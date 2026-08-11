@@ -45,7 +45,21 @@ Future<void> _pumpToReadinessHome(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Recovery'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Readiness check-ins'));
+  // The Recovery segment's content is taller than the 600px test
+  // viewport — "Readiness check-ins" sits below the fold. Neither
+  // ensureVisible nor scrollUntilVisible alone is reliable here:
+  // ensureVisible needs the element already built (throws if it's far
+  // enough below the fold that Sliver virtualization hasn't built it),
+  // and scrollUntilVisible's loop only scrolls while the finder is
+  // empty — since this target IS already built (just off-screen), that
+  // loop never runs and silently does nothing. An unconditional drag
+  // first, then ensureVisible for exact positioning, handles both.
+  final Finder readinessLink = find.text('Readiness check-ins');
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(readinessLink);
+  await tester.pumpAndSettle();
+  await tester.tap(readinessLink);
   await tester.pumpAndSettle();
 }
 
@@ -74,11 +88,24 @@ void main() {
       'submitted without editing anything', (tester) async {
     await _pumpToReadinessHome(tester);
 
-    await tester.tap(find.text('Start check-in'));
+    // See _pumpToReadinessHome's comment: this link can sit below the
+    // fold and needs an unconditional drag before ensureVisible.
+    final Finder startCheckIn = find.text('Start check-in');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(startCheckIn);
+    await tester.pumpAndSettle();
+    await tester.tap(startCheckIn);
     await tester.pumpAndSettle();
 
     expect(find.text('Readiness check-in'), findsOneWidget);
     final Finder submitButton = find.widgetWithText(ElevatedButton, 'Submit check-in');
+    // The form has several fields above it, so the submit button itself
+    // can sit below the fold — same reasoning as above.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
     expect(submitButton, findsOneWidget);
     // Unlike Progress's Log-measurement form, Readiness's check-in has no
     // gating validation — every field is optional per the backend's own
@@ -135,7 +162,14 @@ void main() {
       'fabricated score', (tester) async {
     await _pumpToReadinessHome(tester);
 
-    await tester.tap(find.text('Recovery score'));
+    // MockReadinessRepository's full 14-day seed pushes this well below
+    // the fold — unconditional drag first, then ensureVisible.
+    final Finder recoveryScore = find.text('Recovery score');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(recoveryScore);
+    await tester.pumpAndSettle();
+    await tester.tap(recoveryScore);
     await tester.pumpAndSettle();
 
     expect(find.text('Recovery score not connected yet'), findsOneWidget);

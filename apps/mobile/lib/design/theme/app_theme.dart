@@ -198,7 +198,22 @@ abstract final class AppTheme {
           disabledBackgroundColor: semanticColors.disabledContainer,
           disabledForegroundColor: semanticColors.disabledContent,
           elevation: 0,
-          minimumSize: const Size.fromHeight(48),
+          // `Size(48, 48)`, not `Size.fromHeight(48)` — the latter is
+          // `Size(double.infinity, 48)`, a full-width minimum. That's
+          // wrong to assert unconditionally at the theme level: `AppButton`
+          // already owns "does this button stretch?" via its own
+          // `fullWidth` flag (`SizedBox(width: double.infinity)` when
+          // true), so the theme forcing infinite width underneath it is
+          // redundant when `fullWidth: true` and actively breaks
+          // `fullWidth: false` — an inline primary/secondary `AppButton`
+          // (e.g. `WaterLogSheet`'s "Log" button beside its amount field)
+          // still inherits this theme minimum even though it isn't
+          // wrapped in a stretching `SizedBox`, which crashes layout with
+          // "BoxConstraints forces an infinite width" the moment nothing
+          // else happens to clip it to a finite width first (see the
+          // matching fix and longer explanation on `textButtonTheme`
+          // below, where this exact bug was first found).
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.radiusSm,
@@ -215,7 +230,8 @@ abstract final class AppTheme {
           foregroundColor: colorScheme.onSurface,
           disabledForegroundColor: semanticColors.disabledContent,
           side: BorderSide(color: colorScheme.outline),
-          minimumSize: const Size.fromHeight(48),
+          // Same reasoning as elevatedButtonTheme above.
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.radiusSm,
@@ -237,7 +253,18 @@ abstract final class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
           disabledForegroundColor: semanticColors.disabledContent,
-          minimumSize: const Size.fromHeight(48),
+          // `Size.fromHeight(48)` (used by Elevated/OutlinedButton above)
+          // is `Size(double.infinity, 48)` — a full-width minimum, right
+          // for those two variants' stretched primary/secondary CTA
+          // usage, but wrong here: TextButton is this app's *inline*
+          // tertiary action (e.g. "Weekly review" beside a title in a
+          // `Row` — see `AppSectionHeader`), and an infinite-width
+          // minimum crashes with "BoxConstraints forces an infinite
+          // width" the moment a TextButton sits somewhere that doesn't
+          // independently clip it to a finite width first. `Size(48,
+          // 48)` gives the real 48dp-by-48dp Android minimum tap target
+          // in both dimensions without forcing the button to stretch.
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.radiusSm,
@@ -319,7 +346,11 @@ abstract final class AppTheme {
         inactiveTrackColor: colorScheme.surfaceContainerHighest,
         trackHeight: 4,
         thumbColor: colorScheme.primary,
-        overlayColor: AppOpacity.overlayFor(colorScheme.primary),
+        // SliderThemeData.overlayColor is a flat Color, unlike ButtonStyle's
+        // WidgetStateProperty<Color?> — AppOpacity.overlayFor is built for
+        // the latter, so this uses the same token's `pressed` opacity
+        // directly rather than reusing that helper.
+        overlayColor: colorScheme.primary.withValues(alpha: AppOpacity.pressed),
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
         valueIndicatorColor: colorScheme.inverseSurface,

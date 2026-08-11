@@ -59,8 +59,10 @@ void main() {
     await tester.tap(find.text('Log meal'));
     await tester.pumpAndSettle();
 
-    // Back on Fuel Home, the new meal is visible.
-    expect(find.text('Fuel'), findsOneWidget);
+    // Back on Fuel Home, the new meal is visible. 'Fuel' matches both
+    // the bottom-nav tab label and Fuel Home's own page heading
+    // (fuel_home_screen.dart), so this is findsWidgets, not findsOneWidget.
+    expect(find.text('Fuel'), findsWidgets);
     expect(find.textContaining('550 kcal'), findsOneWidget);
   });
 

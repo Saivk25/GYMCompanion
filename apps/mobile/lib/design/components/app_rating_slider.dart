@@ -69,7 +69,6 @@ class AppRatingSlider extends StatelessWidget {
           max: max.toDouble(),
           divisions: max - min,
           label: '$value',
-          semanticFormatterValue: (double v) => '${v.round()} out of $max',
           onChanged: (double v) => onChanged(v.round()),
         ),
       ],

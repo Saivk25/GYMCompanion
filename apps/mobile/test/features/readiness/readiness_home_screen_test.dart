@@ -90,7 +90,22 @@ Future<void> _pumpToReadinessHome(WidgetTester tester, ReadinessHomeViewState st
   await tester.pumpAndSettle();
   await tester.tap(find.text('Recovery'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Readiness check-ins'));
+  // The Recovery segment's content is taller than the 600px test
+  // viewport — "Readiness check-ins" sits below the fold until scrolled
+  // into view. Neither ensureVisible nor scrollUntilVisible alone is
+  // reliable here: ensureVisible needs the element already built (throws
+  // "Bad state: No element" if it's far enough below the fold that
+  // Sliver virtualization hasn't built it yet), and scrollUntilVisible's
+  // loop only scrolls while the finder comes up empty — since this
+  // target IS already built (just off-screen), that loop never runs and
+  // silently does nothing. An unconditional drag first, then
+  // ensureVisible for exact positioning, handles both cases.
+  final Finder readinessLink = find.text('Readiness check-ins');
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(readinessLink);
+  await tester.pumpAndSettle();
+  await tester.tap(readinessLink);
   await tester.pumpAndSettle();
 }
 
@@ -148,7 +163,43 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Recovery'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Readiness check-ins'));
+    // Changing only the post-tap pump duration (bare pump -> 300ms ->
+    // 500ms) produced byte-for-byte the same "AppSkeletonBox not found"
+    // failure every time — strong evidence the real problem was never
+    // timing at all. This test was the one place in the file relying on
+    // a bare `ensureVisible` with no preceding coarse drag (on the
+    // untested assumption that "Readiness check-ins" sits close enough
+    // to the fold not to need one) — every other reach of this same
+    // link, including this file's own `_pumpToReadinessHome` helper,
+    // uses the drag-then-ensureVisible pattern. Matching that proven
+    // pattern here too, in case the tap was landing on the wrong target
+    // (or missing entirely) and navigation to Readiness Home was never
+    // actually happening.
+    //
+    // Once navigation is confirmed to land, AppSkeletonBox's own
+    // indefinitely-repeating shimmer AnimationController (`app_states
+    // .dart`, `..repeat(reverse: true)`, 900ms) rules out
+    // pumpAndSettle() the same way ActiveWorkoutScreen's ticker does —
+    // a bounded pump() covering the push transition is still the right
+    // tool, so that part of the fix stays.
+    final Finder readinessLink = find.text('Readiness check-ins');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(readinessLink);
+    await tester.pumpAndSettle();
+    await tester.tap(readinessLink);
+    await tester.pump(const Duration(milliseconds: 500));
+    // `debugDumpApp()` at this point (once, for diagnosis) showed
+    // ReadinessHomeScreen's `_ReadinessHomeSkeleton` and its
+    // `AppSkeletonBox` descendants genuinely built and mounted, with
+    // active shimmer tickers — but wrapped in `Offstage(offstage: true,
+    // ...)`. That's Flutter's normal "warm-up frame" for a freshly
+    // pushed route: built for layout on the frame it lands, not yet
+    // painted/onstage until the following frame. `find.byType` defaults
+    // to `skipOffstage: true`, so it correctly found nothing while that
+    // flag was still set — neither the pump duration nor the scroll
+    // pattern was ever the real cause. One more zero-duration pump lets
+    // Flutter flip the route onstage.
     await tester.pump();
 
     expect(find.byType(AppSkeletonBox), findsWidgets);
@@ -294,7 +345,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Recovery'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Readiness check-ins'));
+    // See _pumpToReadinessHome's comment for why this needs an
+    // unconditional drag first, then ensureVisible for exact positioning.
+    final Finder readinessLink = find.text('Readiness check-ins');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(readinessLink);
+    await tester.pumpAndSettle();
+    await tester.tap(readinessLink);
+    // See coach_home_screen_test.dart's identical fix for why this pump
+    // matters: without it, nothing is awaiting the repository's Future
+    // yet when completeWithError fires, and Dart reports that as an
+    // unhandled async error rather than letting the app catch it.
+    await tester.pump();
     repo.completeWithError();
     await tester.pumpAndSettle();
 

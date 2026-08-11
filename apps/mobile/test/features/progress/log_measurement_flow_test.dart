@@ -48,18 +48,54 @@ void main() {
     // MockProgressRepository's seeded weekly weights end at 80.8 kg.
     expect(find.text('80.8 kg'), findsOneWidget);
 
-    await tester.tap(find.text('Log measurements'));
+    // See readiness_home_screen_test.dart's identical fix: this link can
+    // sit below the fold. An unconditional drag first, then ensureVisible
+    // for exact positioning — scrollUntilVisible alone doesn't work when
+    // the target is already built (just off-screen), since its loop only
+    // scrolls while the finder comes up empty.
+    final Finder logMeasurements = find.text('Log measurements');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(logMeasurements);
+    await tester.pumpAndSettle();
+    await tester.tap(logMeasurements);
     await tester.pumpAndSettle();
 
     expect(find.text('Log measurements'), findsOneWidget); // the AppBar title
     final Finder submitButton = find.widgetWithText(ElevatedButton, 'Log check-in');
+    // The form has several fields above the submit button, so it can
+    // also sit below the fold — same reasoning as above.
+    //
+    // ensureVisible's default alignment (0.0, edge-align — this SDK's
+    // WidgetController.ensureVisible has no `alignment` parameter to
+    // override it) left the button's tap center computed at just past
+    // the 600px viewport edge (a real trace showed Offset(400, 606),
+    // outside Size(800, 600)), causing a silent hit-test-miss no-op tap.
+    // A small extra drag after ensureVisible nudges the button away from
+    // that exact boundary and into real margin — there's more form
+    // content above it to scroll through, so this can't overshoot past
+    // the top.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -60));
+    await tester.pumpAndSettle();
     expect(tester.widget<ElevatedButton>(submitButton).onPressed, isNull);
 
     await tester.enterText(find.widgetWithText(TextField, 'Weight (kg)'), '77.5');
     await tester.pump();
     expect(tester.widget<ElevatedButton>(submitButton).onPressed, isNotNull);
 
-    await tester.tap(find.text('Log check-in'));
+    // Entering text can shift this button's position (e.g. a validation
+    // hint appearing/disappearing above it), so re-resolve its on-screen
+    // position immediately before tapping rather than reusing the
+    // position from before text entry.
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -60));
+    await tester.pumpAndSettle();
+    await tester.tap(submitButton);
     await tester.pumpAndSettle();
 
     expect(find.text('77.5 kg'), findsOneWidget);
@@ -78,7 +114,14 @@ void main() {
       "isn't connected", (tester) async {
     await _pumpToProgressTransformation(tester);
 
-    await tester.tap(find.text('New photo check-in'));
+    // See readiness_home_screen_test.dart's identical fix: unconditional
+    // drag first, then ensureVisible.
+    final Finder newPhotoCheckIn = find.text('New photo check-in');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(newPhotoCheckIn);
+    await tester.pumpAndSettle();
+    await tester.tap(newPhotoCheckIn);
     await tester.pumpAndSettle();
 
     expect(find.text('Photo check-in not connected yet'), findsOneWidget);
@@ -88,7 +131,14 @@ void main() {
       "isn't connected", (tester) async {
     await _pumpToProgressTransformation(tester);
 
-    await tester.tap(find.text('Compare photos'));
+    // See readiness_home_screen_test.dart's identical fix: unconditional
+    // drag first, then ensureVisible.
+    final Finder comparePhotos = find.text('Compare photos');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(comparePhotos);
+    await tester.pumpAndSettle();
+    await tester.tap(comparePhotos);
     await tester.pumpAndSettle();
 
     expect(find.text('Photo comparison not connected yet'), findsOneWidget);
@@ -117,7 +167,14 @@ void main() {
     await tester.tap(find.text('Recovery'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Correlations'));
+    // See readiness_home_screen_test.dart's identical fix: unconditional
+    // drag first, then ensureVisible.
+    final Finder correlations = find.text('Correlations');
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(correlations);
+    await tester.pumpAndSettle();
+    await tester.tap(correlations);
     await tester.pumpAndSettle();
 
     expect(find.text('Correlations not connected yet'), findsOneWidget);

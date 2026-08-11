@@ -42,6 +42,12 @@ class CoachSignalLog extends Notifier<List<CoachSignal>> {
   /// rule at all (`RuleResult.recommendations` is `()` far more often
   /// than not), and Coach must never treat "nothing to report" as
   /// something to fabricate a signal about.
+  ///
+  /// "Newest first" applies across separate [add] calls (this call's
+  /// signals go before whatever [state] already held) — it does not mean
+  /// reversing the order *within* one call's own [rawWarnings], which
+  /// would scramble the relative order two warnings from the same rule
+  /// engine run were produced in.
   void add(CoachModule module, List<String> rawWarnings) {
     if (rawWarnings.isEmpty) return;
     final DateTime now = DateTime.now();
@@ -54,7 +60,7 @@ class CoachSignalLog extends Notifier<List<CoachSignal>> {
           occurredAt: now,
         ),
     ];
-    state = <CoachSignal>[...parsed.reversed, ...state];
+    state = <CoachSignal>[...parsed, ...state];
   }
 }
 

@@ -54,7 +54,15 @@ void main() {
       // the very first submission.
       await tester.tap(find.text('Complete check-in'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Submit check-in'));
+      // The check-in form has several fields above the submit button, so
+      // it can sit below the fold — see checkin_flow_test.dart's
+      // identical fix: unconditional drag first, then ensureVisible.
+      final Finder submitButton = find.widgetWithText(ElevatedButton, 'Submit check-in');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(submitButton);
+      await tester.pumpAndSettle();
+      await tester.tap(submitButton);
       await tester.pumpAndSettle();
 
       // Back on Today. Coach Home has no route of its own reachable from

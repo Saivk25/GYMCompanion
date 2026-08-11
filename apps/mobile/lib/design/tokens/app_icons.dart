@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// The icon system — a curated allow-list of semantic names mapped to
 /// [IconData], per the UX/UI Design Bible ("a single, consistent,
