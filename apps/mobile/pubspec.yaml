@@ -19,7 +19,7 @@ dependencies:
   # Routing: chosen in the Engineering Master Plan (Section 3.6, "the go_router
   # route table") — StatefulShellRoute gives each bottom-tab its own navigation
   # stack, which the UX/UI Design Bible's back-behavior rules (Section 4) assume.
-  go_router: ^14.2.0
+  go_router: ^18.0.0
 
   # State management: not pinned by any of the six frozen documents. Chosen here
   # (see docs/adr/0003-state-management.md) over alternatives for testability
