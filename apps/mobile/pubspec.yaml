@@ -33,7 +33,7 @@ dependencies:
   # lib/core/network/interceptors/ builds the bearer-token-injection,
   # retry, and debug-logging behavior on top of without hand-rolling
   # request/response middleware.
-  dio: ^5.4.0
+  dio: ^5.11.1
 
   # Secure storage for the refresh token (`lib/features/auth/
   # infrastructure/secure_token_storage.dart`) — Keychain on iOS,
