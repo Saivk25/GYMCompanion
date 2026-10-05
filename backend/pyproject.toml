@@ -7,8 +7,8 @@ readme = "README.md"
 license = { text = "See repository LICENSE" }
 
 dependencies = [
-    "fastapi>=0.115,<0.116",
-    "uvicorn[standard]>=0.32,<0.33",
+    "fastapi>=0.115,<0.143",
+    "uvicorn[standard]>=0.32,<0.55",
     "pydantic>=2.9,<3.0",
     "pydantic-settings>=2.6,<3.0",
     "sqlalchemy>=2.0,<2.1",
