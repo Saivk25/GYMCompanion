@@ -33,7 +33,7 @@ dependencies:
   # lib/core/network/interceptors/ builds the bearer-token-injection,
   # retry, and debug-logging behavior on top of without hand-rolling
   # request/response middleware.
-  dio: ^5.4.0
+  dio: ^5.11.1
 
   # Secure storage for the refresh token (`lib/features/auth/
   # infrastructure/secure_token_storage.dart`) — Keychain on iOS,
@@ -50,7 +50,7 @@ dependencies:
   # key-value store this shape calls for, not the encrypted secret store
   # `flutter_secure_storage` above already covers for the one real
   # secret this app persists.
-  shared_preferences: ^2.3.2
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:
