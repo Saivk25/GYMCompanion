@@ -40,7 +40,7 @@ dependencies:
   # EncryptedSharedPreferences/Keystore-backed on Android. The access
   # token is deliberately never written here (or anywhere on disk) — see
   # that file's own doc comment for why only the refresh token persists.
-  flutter_secure_storage: ^9.2.2
+  flutter_secure_storage: ^11.0.0
 
   # Local read-through cache for offline reads (`lib/core/cache/`) — see
   # docs/adr/0052-offline-caching.md for the trade-off record against
